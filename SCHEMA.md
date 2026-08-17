@@ -1,0 +1,76 @@
+# School LMS — Database Schema
+
+Plain-English companion to `prisma/schema.prisma`. Every model in Prisma should have a matching entry here explaining *why* it exists and how it relates to others — the `.prisma` file alone doesn't carry that context.
+
+**Status: scaffold only.** Final entities and fields are pending `SRS.md`. The list below reflects the entities implied by the architecture discussion so far and will be revised once features are locked per role.
+
+## How to Use This Document
+
+- Every table/model gets a section: purpose, key fields, relationships, notes.
+- When the SRS is finalized, this file should be updated *before* writing the Prisma schema, not after — schema changes should trace back to a documented decision here.
+- Keep field-level detail in `schema.prisma` itself (types, constraints); keep this file focused on relationships and rationale.
+
+## Conventions for This Schema
+
+- Primary keys: `id` (cuid or uuid, TBD — pick one and use consistently across all models)
+- Foreign keys: `<entity>Id` (e.g. `studentId`, `classId`)
+- Timestamps: every model gets `createdAt` and `updatedAt`
+- Soft deletes: TBD — decide whether records (e.g. students, teachers) are ever hard-deleted or only deactivated (`isActive` flag). Recommend soft delete for anything tied to academic records (attendance, grades) since historical data shouldn't disappear.
+- Enums over free-text strings for fixed sets: `Role`, `AttendanceStatus`, etc.
+
+## Anticipated Entities (pending SRS confirmation)
+
+### School
+Root tenant record. Even in a single-school deployment, having this model makes multi-tenancy possible later without a rewrite.
+- Fields: name, logo (for sidebar masthead per DESIGN.md), address, contact info
+
+### User
+Base identity for everyone who logs in. Role determines what they can access.
+- Fields: name, email/username, passwordHash, role (enum: `ADMIN`, `TEACHER`, `STUDENT`, `PARENT`)
+- Relationships: one User may link to one Teacher or Student profile; Parent links to one or more Students
+
+### ClassSection
+A specific class/section (e.g. "Grade 5 - A") for a given academic year.
+- Relationships: has many Students (via Enrollment), has many Subjects, has a homeroom Teacher
+
+### Subject
+A course/subject taught within a class (e.g. Math, Science).
+- Relationships: belongs to ClassSection(s), taught by Teacher(s)
+
+### Enrollment
+Join table linking Student to ClassSection for a given academic year — needed because students move between sections/years.
+
+### Attendance
+One record per student, per subject or day (TBD which granularity — daily vs per-period, per SRS).
+- Fields: date, status (enum: `PRESENT`, `ABSENT`, `LATE`, `EXCUSED`), markedBy (Teacher), studentId
+- This is the highest-traffic table (marked daily/per-period by teachers, often from mobile) — index on (studentId, date) at minimum.
+
+### Assignment
+Created by a Teacher for a Subject/ClassSection.
+- Fields: title, description, dueDate, attachments
+
+### Submission
+A Student's response to an Assignment.
+- Fields: submittedAt, files/content, status
+
+### Grade
+Score for an assignment, exam, or term.
+- Fields: value, maxValue, type (assignment/exam/term), studentId, subjectId
+- Needs to support tabular-figure display per DESIGN.md — store as numeric, not string.
+
+### Timetable / ScheduleSlot
+Recurring weekly schedule per ClassSection/Subject/Teacher.
+
+### Announcement
+Posted by Admin or Teacher, scoped to a School, ClassSection, or individual.
+
+## Not Yet Modeled (pending SRS decisions)
+
+- Fee management (optional module — confirm if in scope)
+- Library management (optional module — confirm if in scope)
+- File storage references (once storage provider is finalized in `ARCHITECTURE.md`)
+
+## Migration Notes
+
+- Use Prisma Migrate (`npx prisma migrate dev` locally, `migrate deploy` in production).
+- Every migration should have a one-line comment in the PR/commit explaining the "why," matching the corresponding update to this file.
