@@ -1,0 +1,87 @@
+# School LMS — Architecture
+
+This document defines the technical architecture for the School LMS. Any AI or developer working on this project should follow this spec for consistency. SRS/feature list will be added separately and should map onto this architecture, not replace it.
+
+## Summary
+
+Full web application (no Electron, no desktop client). Single Next.js codebase serving both frontend and backend, deployed to Vercel free tier, with PostgreSQL hosted on Neon free tier. Primary usage pattern: desktop for admin dashboards/reports, mobile browser for teachers marking attendance on the go.
+
+## Stack
+
+| Layer | Choice | Notes |
+|---|---|---|
+| Framework | Next.js (App Router) | Frontend + backend in one codebase |
+| Language | TypeScript | |
+| ORM | Prisma | Migrations, type-safe queries |
+| Database | PostgreSQL (Neon, free tier) | Serverless Postgres; note cold-start on inactivity and storage cap on free tier |
+| Auth | NextAuth (Auth.js), Credentials provider | Username/password auth against local `users` table; JWT-based sessions |
+| Styling | Tailwind CSS | Config tokens should map 1:1 to DESIGN.md |
+| Icons | Lucide | Single icon library, per DESIGN.md |
+| Hosting | Vercel (free tier) | Git-push deploy, automatic SSL, serverless functions |
+| File storage | TBD — Cloudflare R2 (S3-compatible, free tier) suggested | For assignment uploads, profile photos |
+
+## Why this stack (decisions made and rationale)
+
+- **No Electron**: Originally considered for a desktop app, but dropped once it was clear teachers need to mark attendance from their phones — Electron does not run on mobile. A responsive web app covers phone, tablet, and desktop from one codebase.
+- **Next.js over separate Express backend**: One codebase for frontend + API routes reduces deployment complexity and pairs natively with Vercel.
+- **Neon over self-managed Postgres**: Free tier, managed backups, works well with Prisma. Avoids the risk of losing grade/attendance data to unmanaged VPS issues.
+- **NextAuth Credentials over custom JWT**: School auth is simple username/password per role, not OAuth/social login. NextAuth handles session management for free while still allowing full control over the credentials check against the Postgres `users` table.
+- **Vercel over VPS + Nginx**: Removes ops burden (SSL, reverse proxy, scaling) entirely. Was originally planned as VPS but changed once cost/simplicity were prioritized.
+
+## Roles & Access
+
+Role-based access control (RBAC), four roles:
+- **Admin** — school setup, user management, reporting
+- **Teacher** — attendance, grades, assignments, class materials
+- **Student** — view courses, submit work, view grades/timetable
+- **Parent** — view child's progress, attendance, fee status (optional module), notices
+
+RBAC should be enforced at the API route level (middleware checking session role) and reflected in UI navigation (nav items differ per role — see DESIGN.md sidebar spec).
+
+## High-Level System Diagram
+
+```
+Browser (desktop or mobile)
+   |
+   |  HTTPS
+   v
+Vercel — Next.js App Router
+   ├── App Router pages (React Server Components) — role-aware UI
+   ├── API Route Handlers (app/api/**) — business logic
+   ├── NextAuth — session/auth, Credentials provider
+   └── Prisma Client
+          |
+          v
+   Neon — PostgreSQL (serverless)
+```
+
+## Known Free-Tier Constraints (plan around these)
+
+- **Neon**: database auto-suspends after inactivity (cold-start delay on first request after idle); storage cap on free tier — verify current limits before scaling.
+- **Vercel**: serverless function execution time limit (10s default) — fine for typical CRUD, but heavy operations (e.g. bulk PDF report card generation) may need a background job approach or queue later, not synchronous API routes.
+
+Both are easy to upgrade incrementally; starting on free tiers is low-risk for initial build and pilot use.
+
+## Data Layer Notes
+
+- Prisma schema will be derived from the SRS (per-role user stories) once finalized — not defined yet in this document.
+- Expect core entities to include: School, User (with role), Class/Section, Subject, Enrollment, Attendance, Assignment, Submission, Grade, Timetable/Schedule, Announcement. This list will be finalized against the SRS.
+- Tabular/numeric fields (grades, roll numbers, IDs) should be modeled to support tabular-figure display per DESIGN.md.
+
+## Print & Export
+
+Report cards and attendance sheets require print-optimized output — plan a dedicated print stylesheet (see DESIGN.md) and/or PDF export route early, since this is a recurring requirement across roles (admin generating report cards, teachers printing attendance registers).
+
+## Open / Not Yet Decided
+
+- File storage provider (leaning Cloudflare R2, not finalized)
+- Background job strategy for anything exceeding Vercel's serverless time limits (e.g. bulk report generation)
+- Fee management and library management modules — optional, TBD pending SRS
+- Multi-school / multi-tenancy — currently assumed single school per deployment; revisit if that changes
+
+## Next Step
+
+SRS (Software Requirements Specification) to be written role by role (Admin, Teacher, Student, Parent), which will drive:
+1. Final Prisma schema
+2. Full API route list
+3. Final feature set (this document currently lists only architecture, not features)
