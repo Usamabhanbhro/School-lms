@@ -4,7 +4,7 @@ A web-based Learning Management System for schools — attendance, gradebooks, a
 
 Full web app (no desktop client). Built to be usable from a phone browser, since teachers need to mark attendance on the go.
 
-> **Status: foundation skeleton (v0.1).** The architecture, design system, auth, RBAC, database schema, and routing shell are verified and frozen. **No LMS features are implemented yet.** The SRS (`SRS.md`) is not finalized, so all product functionality is intentionally deferred pending it. Do not treat this repository as a finished product.
+> **Status: Foundation skeleton (v0.1).** The architecture, design system, authentication foundation, RBAC foundation, database schema (migrated), and routing shell are verified and frozen. **No LMS features are implemented.** The SRS (`SRS.md`) is not finalized; all product functionality is intentionally deferred pending it, and **product functionality must not be implemented until the SRS is finalized and reconciled against the frozen architecture**. Do not treat this repository as a finished product.
 
 ## Stack
 
@@ -50,7 +50,9 @@ Read these in order before making changes:
 | `/api/auth/[...nextauth]` | — | NextAuth handler (login/logout/session) |
 | `/api/users` | ADMIN | List / create users — the reference RBAC route pattern |
 
-Role pages are placeholders only. Role navigation (sidebar) is wired; module links are marked "planned" until the SRS defines them.
+Role pages are placeholder shells only. Role navigation (sidebar) is wired; module links are marked "planned" until the SRS defines them.
+
+`/api/users` (GET list / POST create, ADMIN only) is the **reference RBAC/API pattern**: session check → `requireRole()` → Zod validation → Prisma, with the `{ data }` / `{ error }` response shapes. It exists to establish that pattern — full user-management workflows remain deferred pending the SRS.
 
 ## Local Setup
 
@@ -97,26 +99,42 @@ NextAuth v4 reads the `NEXTAUTH_*` names above (the `AUTH_*` aliases apply to Au
 
 ## Intentionally Deferred (pending SRS)
 
-- All feature modules: attendance, gradebooks, assignments, timetables, announcements
-- User / student / teacher / parent management workflows, enrollments, classes, subjects
-- Notifications, messaging, payments, reports, analytics, file uploads, email / SMS / push
+None of the following are implemented, and the SRS has not finalized any of them — do not read this list as confirmed product requirements:
+
+- Attendance (daily/per-period granularity and the roll-call marking flow)
+- Gradebooks and grading workflows
+- Assignments and assignment submissions
+- Timetables
+- Announcements / communication
+- User management (admin, teacher, student, parent account workflows)
+- Enrollment, classes, and subjects management
+- Notifications and messaging
+- Payments and fees
+- Reports, analytics, and print / PDF export
+- File uploads / storage (storage provider pending — see `ARCHITECTURE.md`)
+- Email / SMS / push
 - OAuth providers, password reset, email verification
-- Fee & library modules (also open in `ARCHITECTURE.md`)
+- Library module (also open in `ARCHITECTURE.md`)
 - Lint and test tooling (no framework chosen yet — see `CONVENTIONS.md`)
-- File storage provider (leaning Cloudflare R2 — see `ARCHITECTURE.md`)
+
+The database schema (`SCHEMA.md`) models anticipated entities, but that is a technical foundation only — it does not imply that any corresponding business workflow exists.
 
 ## Roles
+
+Four roles are defined: **ADMIN**, **TEACHER**, **STUDENT**, **PARENT**. The descriptions below are **planned responsibilities, not implemented capabilities** — the SRS will confirm or revise them.
 
 - **Admin** — school setup, user management, reporting
 - **Teacher** — attendance, grades, assignments, class materials
 - **Student** — courses, submissions, grades, timetable
 - **Parent** — child's progress, attendance, notices
 
-Role behavior is enforced at the API layer (`lib/rbac.ts`) and reflected in UI navigation (see `DESIGN.md` sidebar spec).
+Role enforcement is wired at the API layer (`lib/rbac.ts`) and reflected in UI navigation (see `DESIGN.md` sidebar spec); the role pages themselves are placeholder shells (see Current Routes).
 
 ## Deployment
 
 Deployed via Vercel, git-push deploy from `main`. Database hosted on Neon. See `ARCHITECTURE.md` for free-tier constraints (Neon cold-start, Vercel function time limits). Set `DATABASE_URL`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL` in the production environment, and run `bun run db:deploy` against the production database after deploying.
+
+The foundation is verified and deployable; the product is not complete — no LMS functionality is implemented yet, so the deployed skeleton must not be treated as a finished LMS.
 
 ## Credits
 
