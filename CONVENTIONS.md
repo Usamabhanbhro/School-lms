@@ -5,22 +5,23 @@ Coding standards for this repo. The goal is that any contributor — human or AI
 ## Folder Structure
 
 ```
-app/
-  (auth)/              # login, register — public routes
-  (dashboard)/
-    admin/             # admin-only pages
-    teacher/           # teacher-only pages
-    student/           # student-only pages
-    parent/            # parent-only pages
-  api/
-    <resource>/        # route handlers, grouped by resource (e.g. api/attendance/)
-components/
-  ui/                  # generic reusable components (Button, Card, Table, Skeleton)
-  <feature>/           # feature-specific components (e.g. components/attendance/)
-lib/
-  prisma.ts            # Prisma client singleton
-  auth.ts              # NextAuth config
-  rbac.ts              # role-check helpers
+src/
+  app/
+    (auth)/            # login, register — public routes
+    (dashboard)/
+      admin/           # admin-only pages
+      teacher/         # teacher-only pages
+      student/         # student-only pages
+      parent/          # parent-only pages
+    api/
+      <resource>/      # route handlers, grouped by resource (e.g. api/attendance/)
+  components/
+    ui/                # generic reusable components (Button, Card, Table, Skeleton)
+    <feature>/         # feature-specific components (e.g. components/attendance/)
+  lib/
+    prisma.ts          # Prisma client singleton
+    auth.ts            # NextAuth config
+    rbac.ts            # role-check helpers
 prisma/
   schema.prisma
   migrations/
@@ -60,8 +61,14 @@ prisma/
 ## Styling
 
 - Tailwind only — no separate CSS files except globals.
-- All colors, spacing, and font sizes come from `tailwind.config.ts` tokens mapped from `DESIGN.md` — no arbitrary hex values or magic numbers in `className`.
+- Tailwind v4 is CSS-first: the design tokens from `DESIGN.md` are mapped in `src/app/globals.css` via `@theme` (e.g. `--color-primary` → `bg-primary`). There is no `tailwind.config.ts` — do not add one.
+- No arbitrary hex values or magic numbers in `className` — everything comes from the tokens in `globals.css`.
 - No inline `style={}` unless truly dynamic (e.g. a computed width).
+
+## Tooling
+
+- Package manager: **bun** (single lockfile: `bun.lock`). Install with `bun install`, run scripts with `bun run <script>` (e.g. `bun run dev`, `bun run typecheck`).
+- No lint or test framework has been chosen yet — do not add one without a documented decision.
 
 ## Forms
 
@@ -82,5 +89,6 @@ prisma/
 ## What Not To Do
 
 - Don't introduce a second icon library, a second font, or a second component styling approach (e.g. CSS modules) — everything routes through Tailwind + Lucide per `DESIGN.md`.
+- Don't introduce a second lockfile or switch package managers — bun is the established package manager.
 - Don't add new npm dependencies for something a few lines of code can do, especially for free-tier-sensitive concerns (bundle size, cold start).
 - Don't bypass Prisma with raw SQL unless there's a documented performance reason (note it inline if you do).

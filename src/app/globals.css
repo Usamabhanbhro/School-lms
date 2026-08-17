@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens mapped 1:1 from DESIGN.md. Tailwind v4 is CSS-first: these
+ * become `bg-bg`, `text-text`, `border-border`, `bg-surface`, etc.
+ */
+@theme inline {
+  --font-sans: var(--font-inter);
+  --color-bg: #ffffff;
+  --color-text: #0f172a;
+  --color-primary: #2563eb;
+  --color-success: #16a34a;
+  --color-danger: #dc2626;
+  --color-surface: #f1f5f9;
+  --color-border: #e2e8f0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/*
+ * Corners are square per DESIGN.md (border-radius: 0 default; 2px max if ever
+ * needed for checkboxes). Element selectors lose to utility classes, so a
+ * rounded-* utility would still win if one is ever truly required.
+ */
+* {
+  border-radius: 0;
+}
+
+/* Visible keyboard focus everywhere, per DESIGN.md accessibility baseline. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Motion consistency + reduced-motion respect per DESIGN.md. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

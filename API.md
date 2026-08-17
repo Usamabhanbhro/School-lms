@@ -26,6 +26,7 @@ Living document. Every API route must be added here when created — see `CONVEN
 
 ### POST /api/auth/[...nextauth]
 Handled by NextAuth — login/logout/session, not manually documented route-by-route here. See `lib/auth.ts` for provider config.
+**Status:** implemented (skeleton) — Credentials provider against the `users` table, JWT sessions.
 
 ---
 
@@ -33,13 +34,16 @@ Handled by NextAuth — login/logout/session, not manually documented route-by-r
 
 ### GET /api/users
 **Role required:** Admin
-**Purpose:** List users, filterable by role
-**Response:** `{ data: User[] }`
+**Purpose:** List users
+**Response:** `{ data: [{ id, username, email, name, role, isActive, createdAt }] }`
+**Status:** implemented (skeleton)
 
 ### POST /api/users
 **Role required:** Admin
-**Purpose:** Create a user (teacher, student, parent, admin)
-**Request body:** `{ name, email, role, ...roleSpecificFields }`
+**Purpose:** Create a user (admin, teacher, student, parent)
+**Request body:** `{ username, email?, name, password, role }`
+**Response (201):** `{ data: { id, username, email, name, role, isActive, createdAt } }`
+**Status:** implemented (skeleton) — establishes the `requireRole()` + Zod validation pattern every route follows
 
 ---
 

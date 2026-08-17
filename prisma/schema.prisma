@@ -1,0 +1,259 @@
+// School LMS — database schema (skeleton).
+// Mirrors the entities documented in SCHEMA.md. Field-level decisions marked
+// there as "TBD" have been settled for the skeleton as follows:
+//   - Primary keys: cuid
+//   - Soft delete: User.isActive (academic records are never hard-deleted)
+//   - Attendance granularity: one record per student/class/date
+//   - Timetable times: "HH:MM" strings (recurring weekly schedule)
+// Revisit all of this when the SRS is finalized.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum GradeType {
+  ASSIGNMENT
+  EXAM
+  TERM
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  GRADED
+  RETURNED
+}
+
+/// Root tenant record. Single-school deployment for now; this model keeps
+/// multi-tenancy possible later without a rewrite.
+model School {
+  id            String         @id @default(cuid())
+  name          String
+  logoUrl       String?
+  address       String?
+  contact       String?
+  users         User[]
+  classSections ClassSection[]
+  subjects      Subject[]
+  announcements Announcement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Base identity for everyone who logs in. Role is enforced at the app layer
+/// (lib/rbac.ts), not by the database.
+model User {
+  id           String  @id @default(cuid())
+  username     String  @unique
+  email        String? @unique
+  name         String
+  passwordHash String
+  role         Role
+  isActive     Boolean @default(true)
+  schoolId     String?
+  school       School?  @relation(fields: [schoolId], references: [id])
+
+  taughtSubjects      Subject[]        @relation("SubjectTeachers")
+  taughtClassSections ClassSection[]   @relation("HomeroomTeacher")
+  enrollments         Enrollment[]     @relation("StudentEnrollments")
+  attendanceMarked    Attendance[]     @relation("AttendanceMarkedBy")
+  attendanceRecords   Attendance[]     @relation("AttendanceStudent")
+  assignmentsCreated  Assignment[]     @relation("AssignmentTeacher")
+  submissions         Submission[]
+  grades              Grade[]
+  timetableSlots      TimetableSlot[]  @relation("TimetableTeacher")
+  announcements       Announcement[]   @relation("AnnouncementAuthor")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// A specific class/section (e.g. "Grade 5 - A") for a given academic year.
+model ClassSection {
+  id                 String           @id @default(cuid())
+  name               String
+  academicYear       String
+  schoolId           String
+  school             School           @relation(fields: [schoolId], references: [id])
+  homeroomTeacherId  String?
+  homeroomTeacher    User?            @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
+  subjects           Subject[]        @relation("ClassSubjects")
+  enrollments        Enrollment[]
+  assignments        Assignment[]
+  attendance         Attendance[]
+  timetableSlots     TimetableSlot[]
+  announcements      Announcement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// A course/subject taught within a class (e.g. Math, Science).
+model Subject {
+  id            String         @id @default(cuid())
+  name          String
+  code          String?
+  schoolId      String
+  school        School         @relation(fields: [schoolId], references: [id])
+  classSections ClassSection[] @relation("ClassSubjects")
+  teachers      User[]         @relation("SubjectTeachers")
+  assignments   Assignment[]
+  grades        Grade[]
+  attendance    Attendance[]
+  timetableSlots TimetableSlot[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([schoolId, name])
+}
+
+/// Join table linking a student to a class for an academic year (students move
+/// between sections/years, so this must be its own record).
+model Enrollment {
+  id             String       @id @default(cuid())
+  studentId      String
+  student        User         @relation("StudentEnrollments", fields: [studentId], references: [id])
+  classSectionId String
+  classSection   ClassSection @relation(fields: [classSectionId], references: [id])
+  academicYear   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, classSectionId, academicYear])
+}
+
+/// Highest-traffic table: marked daily by teachers, often from a phone.
+/// One record per student/class/date (idempotent re-submission per API.md).
+model Attendance {
+  id             String           @id @default(cuid())
+  date           DateTime         @db.Date
+  status         AttendanceStatus
+  studentId      String
+  student        User             @relation("AttendanceStudent", fields: [studentId], references: [id])
+  markedById     String
+  markedBy       User             @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
+  classSectionId String
+  classSection   ClassSection     @relation(fields: [classSectionId], references: [id])
+  subjectId      String?
+  subject        Subject?         @relation(fields: [subjectId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, classSectionId, date])
+  @@index([studentId, date])
+}
+
+/// Created by a teacher for a class/subject.
+model Assignment {
+  id             String        @id @default(cuid())
+  title          String
+  description    String?
+  dueDate        DateTime
+  classSectionId String
+  classSection   ClassSection  @relation(fields: [classSectionId], references: [id])
+  subjectId      String?
+  subject        Subject?      @relation(fields: [subjectId], references: [id])
+  teacherId      String
+  teacher        User          @relation("AssignmentTeacher", fields: [teacherId], references: [id])
+  submissions    Submission[]
+  grades         Grade[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// A student's response to an assignment.
+model Submission {
+  id           String           @id @default(cuid())
+  assignmentId String
+  assignment   Assignment       @relation(fields: [assignmentId], references: [id])
+  studentId    String
+  student      User             @relation(fields: [studentId], references: [id])
+  content      String?
+  fileUrl      String? // populated once file storage is wired (Cloudflare R2 planned)
+  status       SubmissionStatus @default(SUBMITTED)
+  submittedAt  DateTime         @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([assignmentId, studentId])
+}
+
+/// Score for an assignment, exam, or term. Numeric (not string) per DESIGN.md
+/// so grades display as tabular figures.
+model Grade {
+  id           String    @id @default(cuid())
+  value        Decimal   @db.Decimal(5, 2)
+  maxValue     Decimal   @db.Decimal(5, 2)
+  type         GradeType
+  studentId    String
+  student      User      @relation(fields: [studentId], references: [id])
+  subjectId    String
+  subject      Subject   @relation(fields: [subjectId], references: [id])
+  assignmentId String?
+  assignment   Assignment? @relation(fields: [assignmentId], references: [id])
+  term         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId, subjectId])
+}
+
+/// Recurring weekly schedule per class/subject/teacher. Times are "HH:MM"
+/// strings — simple to store and render, no timezone parsing for a schedule.
+model TimetableSlot {
+  id             String        @id @default(cuid())
+  dayOfWeek      Int // 1 = Monday ... 7 = Sunday
+  startTime      String // "HH:MM"
+  endTime        String // "HH:MM"
+  classSectionId String
+  classSection   ClassSection  @relation(fields: [classSectionId], references: [id])
+  subjectId      String
+  subject        Subject       @relation(fields: [subjectId], references: [id])
+  teacherId      String
+  teacher        User          @relation("TimetableTeacher", fields: [teacherId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Posted by Admin or Teacher; scoped to a school, a class, or (later) an
+/// individual.
+model Announcement {
+  id             String        @id @default(cuid())
+  title          String
+  body           String
+  authorId       String
+  author         User          @relation("AnnouncementAuthor", fields: [authorId], references: [id])
+  schoolId       String
+  school         School        @relation(fields: [schoolId], references: [id])
+  classSectionId String?
+  classSection   ClassSection? @relation(fields: [classSectionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

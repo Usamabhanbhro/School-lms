@@ -94,5 +94,5 @@ The **roll-call tick**: attendance marking uses a distinct check-mark "stamp" in
 
 ## Component Notes for Implementation
 
-- Tailwind CSS is the styling approach (see ARCHITECTURE.md). Map all tokens above directly into `tailwind.config` (colors, spacing, borderRadius, fontFamily) rather than using arbitrary values in components.
+- Tailwind CSS v4 is the styling approach (see ARCHITECTURE.md). Map the tokens above 1:1 into the CSS-first `@theme` block in `src/app/globals.css` (colors, spacing, fontFamily) rather than using arbitrary values in components. There is no `tailwind.config.ts` (see CONVENTIONS.md) — do not add one.
 - Use `impeccable` and `ui-ux-pro-max` skills (if available to the AI working on this) for UI/UX pattern decisions — layout hierarchy, form patterns, accessibility, responsive behavior — while keeping all visual tokens (color/type/spacing/motion) consistent with this document.
