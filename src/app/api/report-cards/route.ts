@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
 import { getTeacherProfile, getScopedClassSectionIds } from "@/lib/teacher-scope";
-import { requireSubjectTeacher } from "@/lib/subject-teacher";
+import { requireActiveClassTeacher } from "@/lib/class-teacher";
 
 /**
  * GET /api/report-cards
@@ -95,14 +95,20 @@ export async function GET(request: Request) {
 /**
  * POST /api/report-cards
  *
- * Teacher ONLY. Must hold SubjectTeacherAssignment(s) for each test's
- * class+subject. Generates an aggregate ReportCard linking selected tests.
+ * Teacher ONLY. Must be the active Class Teacher for the target ClassSection.
+ * Generates an aggregate ReportCard linking selected tests from any subject
+ * within that class section.
  *
  * Body: { studentId, classSectionId, termId, testIds: [...] }
  *
+ * Authorization:
+ *   - Requires active ClassTeacherAssignment for the specified classSectionId.
+ *   - Tests can come from any subject within that class section.
+ *   - A Subject Teacher who is NOT the active Class Teacher is rejected.
+ *
  * Rules:
  *   - All testIds must belong to the specified classSectionId
- *   - Teacher must hold SubjectTeacherAssignment for each test's subject
+ *   - Student must belong to the specified classSectionId
  *   - Wrapped in a transaction: creates ReportCard + ReportCardTest links
  */
 const createReportCardSchema = z.object({
@@ -119,6 +125,10 @@ export async function POST(request: Request) {
 
     const profile = await getTeacherProfile(authedSession.user.id);
     const body = createReportCardSchema.parse(await request.json());
+
+    // Require active Class Teacher for this class section.
+    // This is the authoritative authorization: not Subject Teacher, not any assignment.
+    await requireActiveClassTeacher(profile.id, body.classSectionId);
 
     // Verify student exists and belongs to the class section
     const student = await prisma.student.findFirst({
@@ -149,7 +159,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch all tests and verify they belong to the class section + teacher has assignment
+    // Fetch all tests and verify they all belong to the specified class section.
+    // Tests from any subject within this class section are allowed.
     const tests = await prisma.test.findMany({
       where: {
         id: { in: body.testIds },
@@ -170,13 +181,6 @@ export async function POST(request: Request) {
         },
         { status: 400 },
       );
-    }
-
-    // Verify teacher holds SubjectTeacherAssignment for each test's subject
-    const uniqueSubjectIds = [...new Set(tests.map((t) => t.subjectId))];
-
-    for (const subjectId of uniqueSubjectIds) {
-      await requireSubjectTeacher(profile.id, body.classSectionId, subjectId);
     }
 
     // Create ReportCard + ReportCardTest links in a transaction
