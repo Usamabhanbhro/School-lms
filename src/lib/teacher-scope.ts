@@ -26,7 +26,8 @@ export async function getTeacherProfile(userId: string) {
 export async function getScopedClassSectionIds(
   session: Session,
 ): Promise<string[] | undefined> {
-  if (session.user.role === "ADMIN") return undefined; // no filter
+  // Admin and Academics see everything (global read access)
+  if (session.user.role === "ADMIN" || session.user.role === "ACADEMICS") return undefined;
 
   const profile = await getTeacherProfile(session.user.id);
 
