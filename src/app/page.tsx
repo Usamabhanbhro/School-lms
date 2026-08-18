@@ -9,7 +9,6 @@ import {
   Printer,
   ShieldCheck,
   UserCheck,
-  Users,
 } from "lucide-react";
 import { buttonClasses } from "@/components/ui/button";
 
@@ -47,10 +46,8 @@ const modules = [
 ];
 
 const roles = [
-  { icon: ShieldCheck, name: "Admin", body: "School setup, user management, reporting." },
-  { icon: UserCheck, name: "Teacher", body: "Attendance, grades, assignments, class materials." },
-  { icon: GraduationCap, name: "Student", body: "Courses, submissions, grades, timetable." },
-  { icon: Users, name: "Parent", body: "Child's progress, attendance, and notices." },
+  { icon: ShieldCheck, name: "Admin", body: "School setup, teacher management, class/subject assignment, and reporting." },
+  { icon: UserCheck, name: "Teacher", body: "Attendance, tests, marks, and report cards — scoped to assigned classes." },
 ];
 
 export default function HomePage() {
@@ -82,7 +79,7 @@ export default function HomePage() {
               Attendance, grades, and timetables — one quiet system for your whole school.
             </h1>
             <p className="mt-4 max-w-xl text-base text-text/70 md:text-lg">
-              A web-based learning management system for admins, teachers, students, and parents.
+              A web-based learning management system for school admins and teachers.
               Fast on a phone for the classroom, comfortable on a desktop for the office.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
@@ -121,11 +118,11 @@ export default function HomePage() {
         {/* Roles */}
         <section className="border-b border-border">
           <div className="mx-auto w-full max-w-5xl px-4 py-16 md:px-8">
-            <h2 className="text-2xl font-bold">Built for four roles</h2>
+            <h2 className="text-2xl font-bold">Built for Admin &amp; Teacher</h2>
             <p className="mt-2 text-sm text-text/60">
               Role-based access control at every API boundary; navigation adapts per role.
             </p>
-            <div className="mt-8 grid gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-8 grid gap-px border border-border bg-border sm:grid-cols-2">
               {roles.map(({ icon: Icon, name, body }) => (
                 <div key={name} className="flex flex-col gap-4 bg-bg p-6">
                   <Icon className="size-5 text-text/60" aria-hidden="true" />

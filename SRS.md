@@ -1,6 +1,6 @@
 # School LMS — Software Requirements Specification (SRS)
 
-**Status: Draft v4 — functionally complete, including Fee Challan structure. Only visual/print design remains deferred** (Certificates, Fee Challan's three-copy layout, Report Card). Two login roles only: **Admin** (single account, the Principal) and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
+**Status: Draft v5 — functionally complete, including Fee Challan structure. Only visual/print design remains deferred** (Certificates, Fee Challan's three-copy layout, Report Card). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
 
 ---
 
@@ -67,11 +67,11 @@ Since there is exactly one Admin and no one above them, Admin cannot rely on "so
 
 ### 1.8 Certificates *(design deferred)*
 
-Admin generates, per student: **Leaving Certificate**, **Character Certificate**. Layout/design not yet decided — this is a functional placeholder until a design pass happens. Anticipated fields once designed: student name, father/guardian name, class/section, admission date, date of leaving (leaving certificate), DOB, conduct remark (character certificate).
+Admin (and Academics — see §1A) generate, per student: **Leaving Certificate**, **Character Certificate**. Layout/design not yet decided — this is a functional placeholder until a design pass happens. Anticipated fields once designed: student name, father/guardian name, class/section, admission date, date of leaving (leaving certificate), DOB, conduct remark (character certificate).
 
 ### 1.9 Fee Challan
 
-Admin generates a fee challan by selecting a student. The generation view:
+Admin (and Academics — see §1A) generate a fee challan by selecting a student. The generation view:
 
 - **Bank details** — bank name, bank account number. Sourced from a school-wide **Bank Settings** singleton (a "Fees" tab where Admin can edit these independently of any single challan). Snapshotted onto the challan at generation time, so historical challans stay accurate even if bank details change later.
 - **Student details** (read-only, pulled from the Student record) — name, father/guardian name, guardian CNIC, class, section. Also snapshotted at generation time, for the same reason (a student changing class later shouldn't retroactively alter an old challan).
@@ -81,6 +81,39 @@ Admin generates a fee challan by selecting a student. The generation view:
 **Print layout:** one page containing **three identical copies** of the same challan — Bank Copy, Student Copy, School Copy — each prominently labeled. Exact visual design still deferred (per Open Items), but the three-copy structure is confirmed and drives the schema/print-stylesheet work.
 
 Once saved, a challan is treated as an immutable historical record (consistent with the snapshot approach above) — regenerating for the same student creates a new challan rather than editing the old one.
+
+---
+
+## 1A. Academics
+
+Multiple accounts — staff delegated to handle certificate and fee challan generation, without full admin privileges.
+
+### 1A.1 Permissions
+
+Academics users can:
+- Generate **Leaving Certificates** and **Character Certificates** for students (same flow as Admin, see §1.8)
+- Generate **Fee Challans** for students, including adding fee line items and printing (same flow as Admin, see §1.9)
+- **Read-only oversight** of: student lists, attendance records, tests, marks, and report cards — to provide context when generating certificates and challans
+
+### 1A.2 Boundaries
+
+Academics **cannot**:
+- Manage user accounts (Admin, Teacher, or other Academics)
+- Create or edit classes, sections, or subjects
+- Assign Class Teachers or Subject Teachers
+- Edit global Bank Settings (Admin-only per §1.9)
+- Override locked attendance
+- Mark or confirm attendance
+- Create tests, enter marks, or generate report cards
+
+### 1A.3 Account Management
+
+Academics accounts are managed exclusively by Admin:
+- Admin can create, edit, revoke (disable login), and delete Academics accounts
+- Admin can directly reset an Academics user's password
+- Required fields: Name, CNIC, Phone, Email, Password (set by Admin at creation)
+
+Admin retains full authority to perform every action an Academics user can — Academics is a delegation, not a separate permission layer.
 
 ---
 
@@ -99,7 +132,7 @@ Attendance is per **class+section+date** (one record per student per day — not
 **Two-step lock flow:**
 1. Class teacher marks each student Present/Absent/Leave → saved as **draft** (editable)
 2. Class teacher clicks **Confirm** → attendance locks; class teacher can no longer edit it
-3. Only Admin can edit after this point (per 1.5)
+3. Only Admin can edit after this point (per §1.5 — Academics have read-only access, not override)
 
 Class teacher can retrieve any past attendance sheet (read-only once confirmed) and download it as CSV.
 
@@ -132,8 +165,9 @@ Report card print layout/design not yet decided — same deferred status as Cert
 
 ## 3. Entities Implied (for SCHEMA.md reconciliation)
 
-- **User** — role enum `ADMIN` (single account) or `TEACHER`; Admin additionally has `recoveryCodeHash` for self-service password recovery (see 1.7)
+- **User** — role enum `ADMIN` (single account), `TEACHER` (multiple), or `ACADEMICS` (multiple); Admin additionally has `recoveryCodeHash` for self-service password recovery (see §1.7)
 - **TeacherProfile** — name, father/spouse name, CNIC, phone, email, isActive
+- **AcademicsProfile** — name, CNIC, phone, email (mirrors TeacherProfile pattern for the Academics role)
 - **ClassSection** — e.g. "Grade 5 - A"
 - **Subject**
 - **ClassTeacherAssignment** — one teacher per ClassSection, attendance rights
@@ -145,9 +179,9 @@ Report card print layout/design not yet decided — same deferred status as Cert
 - **Mark** — test, student, marksObtained
 - **Term** — name, created flexibly (no fixed dates)
 - **ReportCard** — student, classSection, term, list of included tests, aggregated result, generated by teacher
-- **Certificate** — student, type (Leaving/Character), generated by admin, design TBD
-- **BankSettings** — school-wide singleton: bankName, bankAccountNumber, editable by Admin
-- **FeeChallan** — student (snapshot), classSection/section (snapshot), bank details (snapshot), generatedByAdminId, issuedDate, total
+- **Certificate** — student, type (Leaving/Character), generated by admin or Academics, design TBD
+- **BankSettings** — school-wide singleton: bankName, bankAccountNumber, editable by Admin only
+- **FeeChallan** — student (snapshot), classSection/section (snapshot), bank details (snapshot), generatedByUserId (Admin or Academics), issuedDate, total
 - **FeeChallanLineItem** — challanId, description, amount
 
 Still out of scope: Assignment/Submission, Timetable, Announcement, general Enrollment history, Library. Not part of this SRS unless added later.
@@ -161,11 +195,11 @@ Still out of scope: Assignment/Submission, Timetable, Announcement, general Enro
 3. Teacher attendance has no draft/confirm lock — admin edits directly.
 4. Attendance is per class+date, not per subject — and restricted to the designated class teacher only.
 5. Terms are flexible/ad hoc, not fixed periods.
-6. Single Admin account only.
+6. Single Admin account only. Academics accounts are multiple, managed by Admin.
 7. Student has no CNIC of their own; father/guardian CNIC is captured instead.
 8. Admin creates students and allots class/section; teachers see only their own students.
 9. Certificate design deferred to a later pass.
-10. Fee Challan structure confirmed: editable bank settings (Admin, school-wide), student+bank details snapshotted per challan, free-form fee line items (base fee + arrears/late fee/etc.), print action saves then prints, three identical copies per page (Bank/Student/School, prominently labeled). Visual layout of those three copies still deferred.
+10. Fee Challan structure confirmed: editable bank settings (Admin only, school-wide), student+bank details snapshotted per challan, free-form fee line items (base fee + arrears/late fee/etc.), print action saves then prints, three identical copies per page (Bank/Student/School, prominently labeled). Visual layout of those three copies still deferred. Admin and Academics can both generate challans.
 11. Admin password recovery is self-service via a one-time recovery code (2FA-backup-code pattern), generated at admin account setup and rotated on each use — no vendor/developer involvement required.
 12. Term creation is teacher-driven, on the fly, at report-card-generation time — not pre-defined by Admin.
 
@@ -178,4 +212,4 @@ Still out of scope: Assignment/Submission, Timetable, Announcement, general Enro
 
 ## Next Step
 
-This SRS is functionally complete for all core flows (Admin/Teacher management, Attendance, Marks, Report Cards, Fee Challan, Admin recovery). `SCHEMA.md`, `API.md`, and `README.md` have been updated to match. Remaining work is implementation, plus the deferred visual-design pass for Certificates/Fee Challan/Report Card printing.
+This SRS is functionally complete for all core flows (Admin/Academics/Teacher management, Attendance, Marks, Report Cards, Fee Challan, Admin recovery). `SCHEMA.md`, `API.md`, and `README.md` have been updated to match. Remaining work is implementation, plus the deferred visual-design pass for Certificates/Fee Challan/Report Card printing.

@@ -2,7 +2,8 @@
 
 Living document. Every API route must be added here when created — see `CONVENTIONS.md` and `AGENTS.md`.
 
-**Status: reconciled with SRS.md v3.** Two login roles only: Admin, Teacher. No Student/Parent-facing endpoints.
+**Status: reconciled with SRS.md v5.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
+Phase 1 routes (Teachers, ClassSections, Subjects, Students) are implemented.
 
 ## Conventions Recap
 
@@ -34,61 +35,106 @@ Wording TBD at implementation — likely `POST /api/admin/recovery-code/regenera
 
 ### GET /api/teachers
 **Role required:** Admin
-**Purpose:** List teachers
+**Purpose:** List teachers (with profile data)
+**Status:** implemented
 
 ### POST /api/teachers
 **Role required:** Admin
-**Purpose:** Create a teacher account
+**Purpose:** Create a teacher account (User + TeacherProfile in transaction)
 **Request body:** `{ name, fatherOrSpouseName, cnic, phone, email, password }`
-**Notes:** validates CNIC (`xxxxx-xxxxxxx-x`) and phone (`03xx-xxxxxxx`) formats server-side
+**Notes:** validates CNIC (`xxxxx-xxxxxxx-x`) and phone (`03xx-xxxxxxx`) formats server-side; derives username from email prefix or CNIC
+**Status:** implemented
 
 ### PATCH /api/teachers/:id
 **Role required:** Admin
 **Purpose:** Edit teacher fields, or set `isActive: false` to revoke
+**Request body:** partial `{ name, fatherOrSpouseName, cnic, phone, email, isActive }`
+**Status:** implemented
 
 ### DELETE /api/teachers/:id
 **Role required:** Admin
-**Purpose:** Delete a teacher record
+**Purpose:** Delete a teacher record (cascades to User via FK)
+**Status:** implemented
 
 ### POST /api/teachers/:id/reset-password
 **Role required:** Admin
 **Purpose:** Directly set a new password for a teacher who forgot theirs
 **Request body:** `{ newPassword }`
+**Status:** implemented
 
 ---
 
 ## Classes, Sections, Subjects (Admin-managed)
 
-### GET/POST /api/class-sections
-**Role required:** Admin (write); Admin + assigned Teacher (read, scoped to their own assignments)
+### GET /api/class-sections
+**Role required:** Admin (all); Teacher (scoped to assigned classes only); Academics (read-only)
+**Purpose:** List class sections with class teacher info and student count
+**Status:** implemented
 
-### GET/POST /api/subjects
-**Role required:** Admin (write); Admin + Teacher (read)
+### POST /api/class-sections
+**Role required:** Admin
+**Purpose:** Create a class section
+**Request body:** `{ className, sectionName }`
+**Status:** implemented
+
+### PATCH /api/class-sections/:id
+**Role required:** Admin
+**Purpose:** Edit class section name/section
+**Request body:** partial `{ className, sectionName }`
+**Status:** implemented
+
+### GET /api/subjects
+**Role required:** Admin + Teacher + Academics (read)
+**Purpose:** List all subjects with assignment count
+**Status:** implemented
+
+### POST /api/subjects
+**Role required:** Admin
+**Purpose:** Create a subject
+**Request body:** `{ name }`
+**Status:** implemented
+
+### PATCH /api/subjects/:id
+**Role required:** Admin
+**Purpose:** Edit subject name
+**Request body:** partial `{ name }`
+**Status:** implemented
 
 ### POST /api/class-sections/:id/class-teacher
 **Role required:** Admin
 **Purpose:** Assign (or reassign) the single Class Teacher for a ClassSection
 **Request body:** `{ teacherId }`
-**Notes:** reassigning should deactivate the previous ClassTeacherAssignment, not create a second active one
+**Notes:** reassigning deletes the previous assignment (enforced by `@@unique([classSectionId])`)
+**Status:** implemented
 
 ### POST /api/class-sections/:id/subject-teachers
 **Role required:** Admin
 **Purpose:** Assign a Subject Teacher to a ClassSection+Subject
 **Request body:** `{ teacherId, subjectId }`
+**Notes:** unique constraint prevents duplicate assignments
+**Status:** implemented
 
 ---
 
 ## Students (Admin-managed, Teacher read-only within scope)
 
 ### GET /api/students
-**Role required:** Admin (all students); Teacher (only students in classes they're assigned to)
+**Role required:** Admin (all students); Teacher (only students in classes they're assigned to as Class Teacher or Subject Teacher); Academics (all students, read-only)
+**Purpose:** List students with class section info
+**Status:** implemented
 
 ### POST /api/students
 **Role required:** Admin
+**Purpose:** Create a student record and allot to a class/section
 **Request body:** `{ name, guardianName, guardianCnic, dateOfBirth, admissionDate, classSectionId }`
+**Notes:** validates guardian CNIC format server-side
+**Status:** implemented
 
 ### PATCH /api/students/:id
 **Role required:** Admin
+**Purpose:** Edit student fields or reallot to a different class/section
+**Request body:** partial `{ name, guardianName, guardianCnic, dateOfBirth, admissionDate, classSectionId }`
+**Status:** implemented
 
 ---
 
@@ -107,7 +153,7 @@ Wording TBD at implementation — likely `POST /api/admin/recovery-code/regenera
 ## Student Attendance
 
 ### GET /api/attendance
-**Role required:** Admin (any class); Teacher (only if Class Teacher for that ClassSection)
+**Role required:** Admin (any class); Teacher (only if Class Teacher for that ClassSection); Academics (read-only, any class)
 **Purpose:** Fetch attendance records, filterable by class/date range/student
 **Notes:** highest-traffic endpoint, expect mobile use from teachers — keep payload lean
 
@@ -135,7 +181,7 @@ Wording TBD at implementation — likely `POST /api/admin/recovery-code/regenera
 ## Tests & Marks (Subject Teacher)
 
 ### GET/POST /api/tests
-**Role required:** Teacher (must hold a SubjectTeacherAssignment for the given ClassSection+Subject); Admin (read, oversight)
+**Role required:** Teacher (must hold a SubjectTeacherAssignment for the given ClassSection+Subject); Admin (read, oversight); Academics (read-only)
 **Request body (POST):** `{ classSectionId, subjectId, title, date, maxMarks }`
 
 ### POST /api/tests/:id/marks
@@ -161,14 +207,42 @@ Reused from above — powers the "select which tests count" step in report card 
 **Request body:** `{ studentId, classSectionId, termId, testIds: [...] }`
 
 ### GET /api/report-cards
-**Role required:** Admin (oversight, any); Teacher (own)
+**Role required:** Admin (oversight, any); Teacher (own); Academics (read-only)
+
+---
+
+## Academics (Admin-managed)
+
+### GET /api/academics
+**Role required:** Admin
+**Purpose:** List academics users (with profile data)
+
+### POST /api/academics
+**Role required:** Admin
+**Purpose:** Create an academics account (User + AcademicsProfile in transaction)
+**Request body:** `{ name, cnic, phone, email, password }`
+**Notes:** validates CNIC (`xxxxx-xxxxxxx-x`) and phone (`03xx-xxxxxxx`) formats server-side
+
+### PATCH /api/academics/:id
+**Role required:** Admin
+**Purpose:** Edit academics fields, or set `isActive: false` to revoke
+**Request body:** partial `{ name, cnic, phone, email, isActive }`
+
+### DELETE /api/academics/:id
+**Role required:** Admin
+**Purpose:** Delete an academics record (cascades to User via FK)
+
+### POST /api/academics/:id/reset-password
+**Role required:** Admin
+**Purpose:** Directly set a new password for an academics user
+**Request body:** `{ newPassword }`
 
 ---
 
 ## Certificates — functional stub, design deferred
 
 ### POST /api/certificates
-**Role required:** Admin
+**Role required:** Admin, Academics
 **Request body:** `{ studentId, type }` (`LEAVING` | `CHARACTER`)
 **Notes:** output format/layout not implemented until a design pass happens; this route exists to establish the data record
 
@@ -177,27 +251,27 @@ Reused from above — powers the "select which tests count" step in report card 
 ## Fee Challan
 
 ### GET /api/settings/bank
-**Role required:** Admin
+**Role required:** Admin, Academics (read-only)
 **Purpose:** Fetch current bank settings (name + account number) for the challan-generation form
 
 ### PATCH /api/settings/bank
-**Role required:** Admin
+**Role required:** Admin only (Academics cannot edit bank settings)
 **Purpose:** Edit bank name/account number (the "Fees" tab setting)
 **Request body:** `{ bankName, bankAccountNumber }`
 **Notes:** does not retroactively change already-issued challans (they hold a snapshot)
 
 ### POST /api/students/:id/fee-challans
-**Role required:** Admin
+**Role required:** Admin, Academics
 **Purpose:** Generate + save a fee challan for a student. This is the combined "edit line items then Print" action — saving and print-readiness happen together.
 **Request body:** `{ lineItems: [{ description, amount }, ...] }`
 **Notes:** server snapshots current student details (name, guardian name, guardian CNIC, class+section) and current bank settings onto the new row at creation time; computes `total` server-side from line items
 
 ### GET /api/fee-challans/:id
-**Role required:** Admin
+**Role required:** Admin, Academics
 **Purpose:** Retrieve a saved challan (e.g. to reprint) — returns the full snapshot + line items, ready for the print view to render three copies (Bank/Student/School) client-side per the print stylesheet in DESIGN.md
 
 ### GET /api/students/:id/fee-challans
-**Role required:** Admin
+**Role required:** Admin, Academics
 **Purpose:** List a student's fee challan history
 
 ---

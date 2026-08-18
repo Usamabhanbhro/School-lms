@@ -1,13 +1,14 @@
 # School LMS — Implementation Roadmap
 
-Build order for reconciling and implementing the SRS (v4). Each phase unlocks the next — don't skip ahead, since later phases read data/patterns established earlier.
+Build order for reconciling and implementing the SRS (v5). Each phase unlocks the next — don't skip ahead, since later phases read data/patterns established earlier.
 
 ## Phase 0 — Reconciliation
 
 The existing skeleton was built against an earlier four-role assumption (Admin/Teacher/Student/Parent). Before any new feature work:
 
 - Remove `/student` and `/parent` routes and their placeholder shells
-- Rewrite `prisma/schema.prisma` from scratch to match `SCHEMA.md` (current models: `User`, `TeacherProfile`, `ClassSection`, `Subject`, `ClassTeacherAssignment`, `SubjectTeacherAssignment`, `Student`, `StudentAttendance`, `TeacherAttendance`, `Test`, `Mark`, `Term`, `ReportCard`, `ReportCardTest`, `Certificate`, `BankSettings`, `FeeChallan`, `FeeChallanLineItem`)
+- Rewrite `prisma/schema.prisma` from scratch to match `SCHEMA.md` (current models: `User`, `TeacherProfile`, `AcademicsProfile`, `ClassSection`, `Subject`, `ClassTeacherAssignment`, `SubjectTeacherAssignment`, `Student`, `StudentAttendance`, `TeacherAttendance`, `Test`, `Mark`, `Term`, `ReportCard`, `ReportCardTest`, `Certificate`, `BankSettings`, `FeeChallan`, `FeeChallanLineItem`)
+- Three-role enum: `ADMIN`, `TEACHER`, `ACADEMICS`
 - Run a fresh migration; the old migration history tied to the four-role schema should not carry forward
 - Decide whether `/api/users` (the existing RBAC reference route) becomes `/api/teachers` or stays as a pattern reference only — see `API.md`
 
@@ -18,6 +19,7 @@ This is cleanup, not new functionality. Nothing in later phases should be built 
 Admin-only CRUD, no attendance/marks/challans yet:
 
 - Teacher: create (with CNIC/phone format validation), edit, delete, revoke, admin-driven password reset
+- Academics: create (with CNIC/phone format validation), edit, delete, revoke, admin-driven password reset (same CRUD pattern as Teacher)
 - ClassSection: create/edit
 - Subject: create/edit
 - ClassTeacherAssignment: assign/reassign the one class teacher per class (deactivate old on reassignment, never two active)
@@ -55,8 +57,9 @@ Sequential — each step depends on the last:
 
 ## Phase 5 — Fee Challan
 
-- BankSettings: admin edits bank name/account number (singleton, "Fees" tab)
-- Challan generation: admin selects a student, edits fee line items (base + arrears/late fee/etc.), clicks Print — this both snapshots student+bank details and saves the challan, then produces the printable output
+- BankSettings: admin edits bank name/account number (singleton, "Fees" tab — Admin only; Academics can read but not edit)
+- Certificate generation: Admin and Academics can both generate Leaving/Character certificates
+- Challan generation: Admin and Academics can both generate fee challans — select a student, edit fee line items (base + arrears/late fee/etc.), click Print to snapshot and save
 - Challan history: list past challans per student, reprint from a saved snapshot (does not reflect later changes to bank settings or student class/section, by design)
 
 Depends only on Phase 1 (Student records) — can run in parallel with Phase 4 if bandwidth allows.
@@ -71,6 +74,6 @@ Deliberately last — these three are functionally specified but visually undesi
 
 Use `DESIGN.md`'s print stylesheet guidance as the starting point for all three.
 
-## Not in Any Phase (explicitly out of scope for SRS v4)
+## Not in Any Phase (explicitly out of scope for SRS v5)
 
 Assignments/Submissions, Timetables, Announcements, Notifications/messaging, OAuth or email-based password reset, Library module. Do not add these without a new SRS discussion first.

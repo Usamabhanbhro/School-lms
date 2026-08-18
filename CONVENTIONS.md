@@ -11,8 +11,6 @@ src/
     (dashboard)/
       admin/           # admin-only pages
       teacher/         # teacher-only pages
-      student/         # student-only pages
-      parent/          # parent-only pages
     api/
       <resource>/      # route handlers, grouped by resource (e.g. api/attendance/)
   components/
@@ -26,6 +24,8 @@ prisma/
   schema.prisma
   migrations/
 ```
+
+> **Note:** Two login roles only (Admin, Teacher) per SRS v4. Students are data records, not logins — no `/student` or `/parent` route groups.
 
 ## Naming
 

@@ -1,10 +1,10 @@
 # School LMS
 
-A web-based Learning Management System for schools — attendance, marks/tests, report cards, certificates, and fee challans, managed by a school's Admin (Principal) and Teachers.
+A web-based Learning Management System for schools — attendance, marks/tests, report cards, certificates, and fee challans, managed by a school's Admin (Principal), Academics staff, and Teachers.
 
 Full web app (no desktop client). Built to be usable from a phone browser, since class teachers need to mark attendance on the go.
 
-**Status: Foundation skeleton (v0.1), SRS finalized at v4** (see `SRS.md`). The architecture, design system, authentication foundation, RBAC foundation, database schema, and routing shell were originally built against an earlier four-role assumption (Admin/Teacher/Student/Parent) — **that assumption is superseded.** Two login roles only: **Admin** (single account) and **Teacher** (multiple accounts). Students are data records, not accounts; there is no Parent access.
+**Status: Foundation skeleton (v0.1), SRS finalized at v5** (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation), and **Teacher** (multiple accounts). Students are data records, not accounts; there is no Parent access.
 
 `SCHEMA.md` and `API.md` have been updated to match SRS v4, including a fully specified Fee Challan module (bank settings, snapshot-based challans, three-copy print structure). The Prisma schema, routes, and role pages **have not yet been rebuilt to match** — see `ROADMAP.md` for the phased build-out plan, starting with reconciling the stale `/student` and `/parent` routes before any new feature work.
 
@@ -33,7 +33,7 @@ Read these in order before making changes:
 |---|---|
 | `ARCHITECTURE.md` | System design, stack decisions, data layer overview |
 | `DESIGN.md` | Visual design system — colors, type, spacing, motion, components |
-| `SRS.md` | Feature scope — **finalized (v4)**, Admin/Teacher only |
+| `SRS.md` | Feature scope — **finalized (v5)**, Admin/Academics/Teacher |
 | `SCHEMA.md` | Database entities, fields, relationships — updated to match SRS v4 |
 | `API.md` | API route list — updated to match SRS v4 |
 | `ROADMAP.md` | Phased implementation build order |
@@ -84,9 +84,10 @@ No email/SMS/OAuth provider variables are required — Admin password recovery i
 
 ## Roles
 
-Two login roles (per SRS v4):
+Three login roles (per SRS v5):
 
-- **Admin** — the Principal, single account. Manages teachers, classes/sections/subjects, students, teacher attendance; oversees all student attendance, marks, and report cards; overrides locked attendance; generates certificates and fee challans; self-service password recovery via recovery code.
+- **Admin** — the Principal, single account. Manages teachers, academics staff, classes/sections/subjects, students, teacher attendance; oversees all student attendance, marks, and report cards; overrides locked attendance; generates certificates and fee challans; edits bank settings; self-service password recovery via recovery code.
+- **Academics** — multiple accounts, delegated staff. Can generate certificates and fee challans (including adding line items and printing). Has read-only oversight of student lists, attendance records, tests, marks, and report cards for context. Cannot manage users, create/edit classes/subjects, assign teachers, or edit bank settings.
 - **Teacher** — multiple accounts, scoped to assignments:
   - **Class Teacher** (one per class+section) — the only role that can mark/confirm student attendance for that class
   - **Subject Teacher** (per class+section+subject) — creates tests, enters marks, generates report cards for that subject
@@ -109,7 +110,11 @@ The routes below reflect the original four-role skeleton and predate SRS v4. `/s
 | `/student` | — | **Remove** — students are not logins under SRS v4 |
 | `/parent` | — | **Remove** — no parent access under SRS v4 |
 | `/api/auth/[...nextauth]` | — | NextAuth handler |
-| `/api/users` | ADMIN | Reference RBAC route pattern — superseded by `/api/teachers` per `API.md`, keep as pattern reference or migrate |
+| `/api/teachers` | ADMIN | Teacher CRUD + password reset — implemented |
+| `/api/academics` | ADMIN | Academics CRUD + password reset — **not yet built** |
+| `/api/class-sections` | ADMIN, TEACHER (read) | Class section management — implemented |
+| `/api/subjects` | ADMIN, TEACHER (read) | Subject management — implemented |
+| `/api/students` | ADMIN, TEACHER (read) | Student management — implemented |
 
 ## Intentionally Deferred (pending implementation, not pending SRS anymore)
 

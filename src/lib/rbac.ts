@@ -19,8 +19,7 @@ export class ApiError extends Error {
 export const roleHomes: Record<Role, string> = {
   ADMIN: "/admin",
   TEACHER: "/teacher",
-  STUDENT: "/student",
-  PARENT: "/parent",
+  ACADEMICS: "/academics",
 };
 
 export function roleHome(role: Role): string {
