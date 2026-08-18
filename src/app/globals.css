@@ -46,3 +46,60 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ─── Print stylesheet (Phase 6) ──────────────────────────────────── */
+@media print {
+  /* Hide all screen-only chrome */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Ensure backgrounds and borders print correctly */
+  body {
+    background: white;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Page setup */
+  @page {
+    margin: 1.5cm;
+  }
+
+  /* Prevent awkward page splits inside key containers */
+  .print-break-inside-avoid {
+    break-inside: avoid;
+  }
+
+  /* Fee Challan: each copy gets its own page break */
+  .challan-copy {
+    page-break-after: always;
+    break-after: page;
+  }
+  .challan-copy:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  /* Certificate: prevent splitting */
+  .certificate-document {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Report Card tables: keep rows together */
+  .report-table tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Tabular figures for all numeric columns */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Remove hover states and transitions */
+  * {
+    transition: none !important;
+  }
+}
