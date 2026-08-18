@@ -142,39 +142,48 @@ Wording TBD at implementation — likely `POST /api/admin/recovery-code/regenera
 
 ### GET /api/teacher-attendance
 **Role required:** Admin
+**Purpose:** Fetch teacher attendance records, filterable by teacherId and date range
+**Query params:** `teacherId`, `from`, `to` (all optional)
+**Status:** implemented
 
 ### POST /api/teacher-attendance
 **Role required:** Admin
-**Purpose:** Mark or directly edit a teacher's attendance for a date — no lock/confirm step
+**Purpose:** Mark or directly edit a teacher's attendance for a date — upsert by teacherId+date, no lock/confirm step
 **Request body:** `{ teacherId, date, status }`
+**Status:** implemented
 
 ---
 
 ## Student Attendance
 
 ### GET /api/attendance
-**Role required:** Admin (any class); Teacher (only if Class Teacher for that ClassSection); Academics (read-only, any class)
-**Purpose:** Fetch attendance records, filterable by class/date range/student
-**Notes:** highest-traffic endpoint, expect mobile use from teachers — keep payload lean
+**Role required:** Admin (any class); Teacher (only if active Class Teacher); Academics (read-only, any class)
+**Purpose:** Fetch attendance records, filterable by classSectionId, date, studentId, from/to date range
+**Status:** implemented
 
 ### POST /api/attendance
 **Role required:** Teacher (must be the active Class Teacher for the given ClassSection)
 **Purpose:** Save a draft attendance sheet for a class+date
 **Request body:** `{ classSectionId, date, records: [{ studentId, status }] }`
-**Notes:** idempotent while draft (`isConfirmed: false`) — resubmitting updates rather than duplicates
+**Notes:** upserts as `isConfirmed: false` (Draft); rejects if any record for the class+date is already locked
+**Status:** implemented
 
 ### POST /api/attendance/:classSectionId/:date/confirm
-**Role required:** Teacher (must be the Class Teacher who owns the draft)
-**Purpose:** Lock the attendance sheet — irreversible for the teacher after this point
-**Notes:** once locked, only Admin can modify (see below)
+**Role required:** Teacher (must be the active Class Teacher for that ClassSection)
+**Purpose:** Lock all draft attendance records for this class+date — batch confirm in a transaction
+**Status:** implemented
 
 ### PATCH /api/attendance/:id
-**Role required:** Admin only, and only when `isConfirmed: true` (this is the override path)
-**Notes:** should set `lastEditedByAdmin` per SCHEMA.md
+**Role required:** Admin only
+**Purpose:** Override a locked record after confirmation — sets `lastEditedByAdmin` for audit trail
+**Request body:** `{ status }`
+**Status:** implemented
 
 ### GET /api/attendance/export
-**Role required:** Admin (any class); Teacher (own class, if Class Teacher)
-**Purpose:** Download attendance sheet as printable CSV
+**Role required:** Admin (any class); Academics (any class); Teacher (own class, if active Class Teacher)
+**Purpose:** Download attendance sheet as CSV
+**Query params:** `classSectionId` (required), `date` (required)
+**Status:** implemented
 
 ---
 

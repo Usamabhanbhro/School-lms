@@ -40,9 +40,9 @@ Created by Admin (e.g. "Mathematics"). Global to the school, not per-class — a
 - Fields: `name`
 
 ### ClassTeacherAssignment
-Exactly one active teacher per ClassSection — this is the teacher with attendance-marking rights for that class. Distinct from subject teaching.
-- Fields: `classSectionId`, `teacherId`
-- Constraint: one active assignment per ClassSection at a time (reassigning should deactivate the old one, not create a conflicting second active row)
+Tracks class teacher assignments over time. Only one row per ClassSection should have `isActive = true` at any time. Reassigning soft-deletes the old (sets `isActive = false`) and creates a new active row.
+- Fields: `classSectionId`, `teacherId`, `isActive` (default: true)
+- Constraint: `@@unique([classSectionId, isActive])` — only one active assignment per ClassSection
 
 ### SubjectTeacherAssignment
 A teacher assigned to teach one Subject within one ClassSection — holds rights to create tests, enter marks, and generate report cards for that subject/class.
