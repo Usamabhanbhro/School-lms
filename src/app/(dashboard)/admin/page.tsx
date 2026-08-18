@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { ShieldCheck } from "lucide-react";
-import { RolePlaceholder } from "@/components/dashboard/role-placeholder";
 import { authOptions } from "@/lib/auth";
 import { roleHome } from "@/lib/rbac";
+import { UserManagement } from "@/components/admin/user-management";
 
 export const metadata: Metadata = {
-  title: "Admin",
+  title: "Admin — User Management",
 };
 
 export default async function AdminPage() {
@@ -15,12 +14,5 @@ export default async function AdminPage() {
   if (!session?.user) redirect("/login");
   if (session.user.role !== "ADMIN") redirect(roleHome(session.user.role));
 
-  return (
-    <RolePlaceholder
-      icon={ShieldCheck}
-      title="Admin"
-      blurb="School setup, user management, and reporting."
-      planned={["User management", "Classes & subjects", "Attendance reports", "Report cards"]}
-    />
-  );
+  return <UserManagement />;
 }
