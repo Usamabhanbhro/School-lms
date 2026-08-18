@@ -3,7 +3,7 @@
 Living document. Every API route must be added here when created — see `CONVENTIONS.md` and `AGENTS.md`.
 
 **Status: reconciled with SRS.md v5.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
-Phase 1 routes (Teachers, ClassSections, Subjects, Students) are implemented.
+Phase 1–5 routes are implemented. Phase 6 (print layouts) is frontend-only.
 
 ## Conventions Recap
 
@@ -22,12 +22,14 @@ NextAuth handler — login/logout/session. Credentials provider only.
 Wording TBD at implementation — likely `POST /api/admin/recovery-code/regenerate`.
 **Role required:** Admin (authenticated)
 **Purpose:** Manually rotate the admin's recovery code. Returns the new plaintext code once; only its hash is persisted.
+**Status:** implemented
 
 ### POST /api/admin/recover
 **Role required:** none (public route — this is the recovery path for a locked-out Admin)
 **Purpose:** Verify username/email + recovery code, then allow setting a new password
 **Request body:** `{ usernameOrEmail, recoveryCode, newPassword }`
 **Notes:** on success, invalidates the used code and generates+returns a new one. Rate-limit this route — it's a public endpoint accepting a secret.
+**Status:** implemented
 
 ---
 
@@ -53,7 +55,7 @@ Wording TBD at implementation — likely `POST /api/admin/recovery-code/regenera
 
 ### DELETE /api/teachers/:id
 **Role required:** Admin
-**Purpose:** Delete a teacher record (cascades to User via FK)
+**Purpose:** Delete a teacher record (cascades to User via FK). Refuses hard delete if historical records exist.
 **Status:** implemented
 
 ### POST /api/teachers/:id/reset-password
@@ -102,9 +104,8 @@ Wording TBD at implementation — likely `POST /api/admin/recovery-code/regenera
 
 ### POST /api/class-sections/:id/class-teacher
 **Role required:** Admin
-**Purpose:** Assign (or reassign) the single Class Teacher for a ClassSection
+**Purpose:** Assign (or reassign) the single Class Teacher for a ClassSection. Atomic transaction: deactivates old assignment, creates new active one.
 **Request body:** `{ teacherId }`
-**Notes:** reassigning deletes the previous assignment (enforced by `@@unique([classSectionId])`)
 **Status:** implemented
 
 ### POST /api/class-sections/:id/subject-teachers
@@ -189,34 +190,44 @@ Wording TBD at implementation — likely `POST /api/admin/recovery-code/regenera
 
 ## Tests & Marks (Subject Teacher)
 
-### GET/POST /api/tests
-**Role required:** Teacher (must hold a SubjectTeacherAssignment for the given ClassSection+Subject); Admin (read, oversight); Academics (read-only)
-**Request body (POST):** `{ classSectionId, subjectId, title, date, maxMarks }`
+### GET /api/tests
+**Role required:** Admin (read, oversight); Teacher (scoped to assigned class+subject combinations); Academics (read-only)
+**Query params (optional):** `classSectionId`, `subjectId`
+**Status:** implemented
+
+### POST /api/tests
+**Role required:** Teacher (must hold a SubjectTeacherAssignment for the given ClassSection+Subject)
+**Request body:** `{ classSectionId, subjectId, title, date, maxMarks }`
+**Status:** implemented
 
 ### POST /api/tests/:id/marks
 **Role required:** Teacher (must own the Test's SubjectTeacherAssignment)
 **Purpose:** Enter/update marks for students against a test
 **Request body:** `{ records: [{ studentId, marksObtained }] }`
+**Notes:** server-side validation rejects marksObtained > maxMarks; upserts in transaction
+**Status:** implemented
 
 ---
 
-## Report Cards (Subject Teacher)
+## Report Cards (Class Teacher)
 
-### GET /api/tests?classSectionId=&subjectId=
-Reused from above — powers the "select which tests count" step in report card generation.
+### GET /api/report-cards
+**Role required:** Admin (oversight, any); Teacher (scoped to assigned classes); Academics (read-only)
+**Query params (optional):** `classSectionId`, `studentId`, `termId`
+**Status:** implemented
+
+### POST /api/report-cards
+**Role required:** Teacher (must be the active Class Teacher for the target ClassSection)
+**Purpose:** Generate an aggregate report card from selected tests across any subject within the class
+**Request body:** `{ studentId, classSectionId, termId, testIds: [...] }`
+**Notes:** transaction creates ReportCard + ReportCardTest links; cross-subject test selection allowed within class
+**Status:** implemented
 
 ### POST /api/terms
 **Role required:** Teacher
 **Purpose:** Create a Term label on the fly (e.g. "Mid Term")
 **Request body:** `{ name }`
-
-### POST /api/report-cards
-**Role required:** Teacher (must own the underlying SubjectTeacherAssignment(s))
-**Purpose:** Generate an aggregate report card from selected tests
-**Request body:** `{ studentId, classSectionId, termId, testIds: [...] }`
-
-### GET /api/report-cards
-**Role required:** Admin (oversight, any); Teacher (own); Academics (read-only)
+**Status:** implemented
 
 ---
 
@@ -225,67 +236,82 @@ Reused from above — powers the "select which tests count" step in report card 
 ### GET /api/academics
 **Role required:** Admin
 **Purpose:** List academics users (with profile data)
+**Status:** implemented
 
 ### POST /api/academics
 **Role required:** Admin
 **Purpose:** Create an academics account (User + AcademicsProfile in transaction)
 **Request body:** `{ name, cnic, phone, email, password }`
 **Notes:** validates CNIC (`xxxxx-xxxxxxx-x`) and phone (`03xx-xxxxxxx`) formats server-side
+**Status:** implemented
 
 ### PATCH /api/academics/:id
 **Role required:** Admin
 **Purpose:** Edit academics fields, or set `isActive: false` to revoke
 **Request body:** partial `{ name, cnic, phone, email, isActive }`
+**Status:** implemented
 
 ### DELETE /api/academics/:id
 **Role required:** Admin
 **Purpose:** Delete an academics record (cascades to User via FK)
+**Status:** implemented
 
 ### POST /api/academics/:id/reset-password
 **Role required:** Admin
 **Purpose:** Directly set a new password for an academics user
 **Request body:** `{ newPassword }`
+**Status:** implemented
 
 ---
 
-## Certificates — functional stub, design deferred
+## Certificates
 
 ### POST /api/certificates
 **Role required:** Admin, Academics
+**Purpose:** Generate a certificate record for a student
 **Request body:** `{ studentId, type }` (`LEAVING` | `CHARACTER`)
-**Notes:** output format/layout not implemented until a design pass happens; this route exists to establish the data record
+**Notes:** `generatedByUserId` is set from the authenticated session; print layout available at `/print/certificates/[id]`
+**Status:** implemented
 
 ---
 
-## Fee Challan
+## Bank Settings
 
 ### GET /api/settings/bank
 **Role required:** Admin, Academics (read-only)
 **Purpose:** Fetch current bank settings (name + account number) for the challan-generation form
+**Status:** implemented
 
 ### PATCH /api/settings/bank
 **Role required:** Admin only (Academics cannot edit bank settings)
 **Purpose:** Edit bank name/account number (the "Fees" tab setting)
 **Request body:** `{ bankName, bankAccountNumber }`
 **Notes:** does not retroactively change already-issued challans (they hold a snapshot)
+**Status:** implemented
+
+---
+
+## Fee Challans
+
+### GET /api/students/:id/fee-challans
+**Role required:** Admin, Academics
+**Purpose:** List a student's fee challan history (newest first)
+**Status:** implemented
 
 ### POST /api/students/:id/fee-challans
 **Role required:** Admin, Academics
 **Purpose:** Generate + save a fee challan for a student. This is the combined "edit line items then Print" action — saving and print-readiness happen together.
 **Request body:** `{ lineItems: [{ description, amount }, ...] }`
-**Notes:** server snapshots current student details (name, guardian name, guardian CNIC, class+section) and current bank settings onto the new row at creation time; computes `total` server-side from line items
+**Notes:** server snapshots current student details (name, guardian name, guardian CNIC, class+section) and current bank settings onto the new row at creation time; computes `total` server-side from line items; requires BankSettings to exist (400 if not); transaction wraps FeeChallan + FeeChallanLineItems
+**Status:** implemented
 
 ### GET /api/fee-challans/:id
 **Role required:** Admin, Academics
 **Purpose:** Retrieve a saved challan (e.g. to reprint) — returns the full snapshot + line items, ready for the print view to render three copies (Bank/Student/School) client-side per the print stylesheet in DESIGN.md
-
-### GET /api/students/:id/fee-challans
-**Role required:** Admin, Academics
-**Purpose:** List a student's fee challan history
+**Status:** implemented
 
 ---
 
 ## Not Yet Scoped
 
-- Certificate/report card/fee challan PDF or print rendering (three-copy layout for fee challan specifically)
 - Rate limiting on `/api/admin/recover` — needs a concrete policy before going to production, since it's the one public, secret-accepting endpoint in the system
