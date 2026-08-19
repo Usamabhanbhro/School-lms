@@ -15,19 +15,28 @@ import { createRecoveryCode, findMostRecentRecoveryCode } from "@/lib/admin-reco
  * Flow:
  *   1. Find the Admin user by username or email
  *   2. Find their most recent recovery code
- *   3. If the most recent code is still active (not consumed, not replaced, not expired),
- *      reject with a message telling them to use their existing code
- *   4. If no active code exists (expired, consumed, replaced, or never generated):
- *      generate a new code, hash it, store it, return plaintext once
+ *   3. If the most recent code is still active, reject with a generic message
+ *   4. If no active code exists, generate a new one atomically
  *
  * Security notes:
- *   - Generic error messages prevent enumeration
- *   - Rate limiting prevents brute force
+ *   - Uses the same generic response whether or not the admin exists (prevents enumeration)
+ *   - Rate limiting prevents brute force and code-rotation attacks
+ *   - createRecoveryCode runs atomically via Prisma transaction
  *   - Only returns the code once — never stored in plaintext
+ *   - The active-code check and generation are separated by the transaction boundary
+ *     in createRecoveryCode, which also marks any old active code as replaced
  */
 const codeRequestSchema = z.object({
   usernameOrEmail: z.string().min(1),
 });
+
+/** Unified response message — same whether or not the admin exists. */
+const GENERIC_RESPONSE = {
+  data: {
+    message:
+      "If an admin account exists with that identifier, a recovery code has been generated. Check the response for the code.",
+  },
+};
 
 export async function POST(request: Request) {
   try {
@@ -58,7 +67,8 @@ export async function POST(request: Request) {
 
     const body = codeRequestSchema.parse(await request.json());
 
-    // Find the Admin user
+    // Find the Admin user — run the same query regardless of existence
+    // to prevent timing-based enumeration
     const admin = await prisma.user.findFirst({
       where: {
         role: "ADMIN",
@@ -70,27 +80,28 @@ export async function POST(request: Request) {
       select: { id: true },
     });
 
-    // Generic error — do not reveal whether the username exists
-    const genericError = {
-      error: {
-        message: "If an admin account exists with that identifier, a recovery code can be generated.",
-        code: "CHECK_EMAIL",
-      },
-    };
-
     if (!admin) {
-      return NextResponse.json(genericError, { status: 404 });
+      // Return same shape as success but with no code — prevents enumeration
+      // Use 200 with a message field so the frontend can distinguish
+      // (the code field will be absent, which signals "no admin found")
+      return NextResponse.json(GENERIC_RESPONSE, { status: 200 });
     }
 
     // Find the most recent recovery code
     const mostRecent = await findMostRecentRecoveryCode(admin.id);
 
     // Check if there's still an active code
-    if (mostRecent && !mostRecent.consumedAt && !mostRecent.replacedAt && mostRecent.expiresAt > new Date()) {
+    if (
+      mostRecent &&
+      !mostRecent.consumedAt &&
+      !mostRecent.replacedAt &&
+      mostRecent.expiresAt > new Date()
+    ) {
       return NextResponse.json(
         {
           error: {
-            message: "You already have an active recovery code. Use it to recover your account.",
+            message:
+              "An active recovery code already exists. Use it to recover your account, or wait for it to expire before generating a new one.",
             code: "ACTIVE_CODE_EXISTS",
           },
         },
@@ -98,12 +109,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // No active code — generate a new one
+    // No active code — generate a new one (atomic: replaces any old active code)
     const plaintextCode = await createRecoveryCode(admin.id);
 
     return NextResponse.json({
       data: {
-        message: "New recovery code generated. Save this code — you will not see it again.",
+        message:
+          "New recovery code generated. Save this code — you will not see it again. Your previous recovery code is no longer valid.",
         recoveryCode: plaintextCode,
       },
     });

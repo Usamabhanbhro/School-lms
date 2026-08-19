@@ -4,7 +4,7 @@ A web-based Learning Management System for schools — attendance, marks/tests, 
 
 Full web app (no desktop client). Built to be usable from a phone browser, since class teachers need to mark attendance on the go.
 
-**Status: Phases 0–6 implemented. Admin provisioning, school settings, and admin self-recovery added.** SRS finalized at v5 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
+**Status: Phases 0–6 implemented. Admin provisioning, school settings, and hardened admin self-recovery added.** SRS finalized at v5 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
 
 `SCHEMA.md` and `API.md` are current with SRS v5. Every route through Fee Challans is built and functional. Print layouts for Certificates, Fee Challans (three-copy), and Report Cards are implemented with database-backed school identity configuration.
 
@@ -155,15 +155,29 @@ Multi-tenant SaaS deployment is a planned future enhancement — not yet impleme
 
 ## Admin Self-Recovery
 
-The single Admin account uses a one-time recovery code for password reset:
+The single Admin account uses a one-time recovery code for password reset. **There is NO email recovery** — this is a completely offline, self-contained system.
 
-1. **Initial code**: Generated at admin signup, displayed once, never stored in plaintext
-2. **Expiration**: Codes expire after 24 hours (configurable in `src/lib/admin-recovery.ts`)
-3. **Single-use**: Consumed atomically on successful recovery — cannot be reused
-4. **Replacement**: Expired/consumed codes can be replaced via `POST /api/admin/recover/code` (public) or `POST /api/admin/recovery-code/regenerate` (authenticated)
-5. **One active code**: Only one recovery code is valid at a time; generating a new one invalidates the previous
-6. **History**: All codes are tracked in `AdminRecoveryCode` for audit trail
-7. **JWT limitation**: Existing sessions are not invalidated after password change (JWT-based auth limitation — the old password can no longer authenticate, but existing sessions remain valid until expiry)
+### Recovery Lifecycle
+
+1. **Signup**: Admin account created → recovery code generated → plaintext displayed **once** → only bcrypt hash stored → code expires in 24 hours
+2. **Replacement**: If code expires/is consumed → Admin requests new code via the UI → previous code invalidated → new code displayed once
+3. **Password Reset**: Admin submits recovery code + new password → old code consumed, password changed, and new recovery code generated — all **atomically** in one database transaction → new code displayed once
+4. **Manual Rotation**: Admin can rotate their recovery code at any time from within the admin panel
+
+### Key Properties
+
+- **Single active code**: At most one recovery code is valid per Admin at any time (enforced by Prisma transaction + database partial unique index)
+- **24-hour expiration**: Codes expire 24 hours after generation (configurable in `src/lib/admin-recovery.ts`)
+- **Single-use**: Consumed atomically on successful password reset
+- **Only hashes stored**: Plaintext codes exist only during generation, in the API response, and in the browser UI until the user leaves
+- **Cryptographically secure**: 64 hex characters (256 bits of entropy) via `crypto.randomBytes()`
+- **Atomic operations**: All lifecycle operations run in Prisma transactions
+- **Rate limited**: Public endpoints rate-limited (5 attempts / 15 min for recovery, 3 attempts / 15 min for code generation, per IP)
+
+### Known Limitations
+
+- **JWT session persistence**: Existing JWT sessions are not invalidated after a password change. The old password can no longer authenticate, but pre-existing session tokens remain valid until they expire (default 30 days). This is inherent to JWT-based auth without a token blocklist.
+- **In-memory rate limiting**: Rate limits are per serverless function instance on Vercel. Concurrent function invocations have separate counters. This is documented transparently rather than pretending it provides distributed protection.
 
 Not in scope at all under SRS v5: Assignments/Submissions, Timetables, Announcements, Notifications/messaging, OAuth/email-based password reset, Library module.
 

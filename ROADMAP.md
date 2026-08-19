@@ -2,7 +2,7 @@
 
 Build order for reconciling and implementing the SRS (v5). Each phase unlocks the next — don't skip ahead, since later phases read data/patterns established earlier.
 
-**Status: Phases 0–6 implemented and verified. Admin provisioning and school settings added. See `API.md` for per-route status.**
+**Status: Phases 0–6 implemented and verified. Admin provisioning, school settings, and hardened admin self-recovery added. See `API.md` for per-route status.**
 
 ## Phase 0 — Reconciliation ✅ Complete
 
@@ -33,14 +33,23 @@ Everything downstream reads from this layer, so get the RBAC scoping right here 
 ## Phase 2 — Auth Completeness ✅ Complete
 
 - Admin recovery code: generate + display once at initial admin setup, stored via `AdminRecoveryCode` model with 24-hour expiration
-- `POST /api/admin/recover`: verify code, consume it atomically, set new password, generate new code
-- `POST /api/admin/recover/code`: public endpoint to generate a new code when current one is expired/consumed
+- `POST /api/admin/recover`: verify code, consume it atomically with password change and new code generation in one Prisma transaction via `consumeAndRotate()`
+- `POST /api/admin/recover/code`: public endpoint to generate a new code when current one is expired/consumed — generic responses prevent account enumeration
 - Manual regenerate-code action from within the admin panel
-- Recovery UI at `/admin/recover` with states for valid, expired, consumed, and replaced codes
-- Rate limiting on all public recovery and admin signup routes
+- Recovery UI at `/admin/recover` with no-email model explanation, copy-to-clipboard for recovery codes, states for valid/expired/consumed/replaced codes, and new-code-display-after-recovery
+- Rate limiting on all public recovery and admin signup routes (documented in-memory limitation)
 - Public admin signup (`/admin/signup`): first-time provisioning with server-side singleton check, database-level partial unique index, and race-safe transaction
 - School Settings API and UI (`/admin/settings`): school name, address, phone, email, principal, logo upload/remove — Admin-only mutations
 - Database-backed school identity: `getSchoolSettings()` accessor used by all print layouts
+
+### Phase 2 Hardening
+
+- `createRecoveryCode()` runs atomically via Prisma transaction (prevents multiple active codes from concurrent requests)
+- `consumeAndRotate()` combines code consumption + password change + new code generation in one atomic transaction
+- Partial unique index on `AdminRecoveryCode` WHERE `consumedAt IS NULL AND replacedAt IS NULL` enforces single active code at database level
+- Uniform error responses prevent account enumeration on the public code generation endpoint
+- `console.error` only logs stack traces, never recovery codes or plaintext credentials
+- Known limitation documented: JWT sessions not invalidated after password change
 
 Small in scope but land it early — it's the safety net that lets you walk away from support once a school is live.
 

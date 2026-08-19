@@ -104,18 +104,49 @@ A single fee component on a challan — base fee, arrears, late fee, or any admi
 
 ## Admin Password Recovery
 
-Implemented via the `AdminRecoveryCode` model plus a `recoveryCodeHash` field on `User` (kept in sync for quick lookup).
+**No email delivery.** Recovery is entirely self-service via offline recovery codes. The application does NOT send recovery codes by email, SMS, or any other channel. The Admin must store the code securely themselves.
+
+### Recovery Lifecycle
+
+1. **Signup:** Admin account is created → recovery code generated → plaintext displayed once → only bcrypt hash stored in DB → code expires in 24 hours
+2. **Replacement:** If code expires/is consumed → Admin requests new code via `POST /api/admin/recover/code` (public) → previous code invalidated → new code displayed once
+3. **Password Reset:** Admin submits recovery code + new password → old code consumed atomically → password changed → fresh recovery code generated and displayed once
+4. **Manual Rotation:** Admin can rotate their recovery code at any time via `POST /api/admin/recovery-code/regenerate` (authenticated)
+
+### Key Properties
+
+- **Single active code:** At most one recovery code is valid per Admin at any time. Enforced at both application level (transactional `createRecoveryCode()`) and database level (partial unique index on `AdminRecoveryCode` WHERE `consumedAt IS NULL AND replacedAt IS NULL`)
+- **24-hour expiration:** Codes expire 24 hours after generation (configurable via `RECOVERY_CODE_TTL_MS` in `src/lib/admin-recovery.ts`). Expired codes are never accepted.
+- **Single-use:** Consumed atomically on successful password reset. Cannot be reused.
+- **Only hashes stored:** Plaintext recovery codes exist only briefly during generation, in the API response, and in the browser UI until the user leaves. Never persisted in DB, logs, cookies, localStorage, sessionStorage, or URL parameters.
+- **Cryptographically secure:** Codes are 64 hex characters (256 bits of entropy) generated via `crypto.randomBytes()`.
+- **Atomic operations:** All code lifecycle operations (create, consume, replace) run in Prisma transactions to prevent race conditions.
+- **Rate limited:** Public endpoints (`/api/admin/recover`, `/api/admin/recover/code`) are rate limited (see Rate Limits below).
+
+### Rate Limits
+
+| Endpoint | Limit | Window | Scope |
+|---|---|---|---|
+| `POST /api/admin/recover` | 5 attempts | 15 minutes | Per IP |
+| `POST /api/admin/recover/code` | 3 attempts | 15 minutes | Per IP |
+| `POST /api/admin/signup` | 3 attempts | 15 minutes | Per IP |
+
+**Limitation:** Rate limiting is in-memory (per serverless function instance). On Vercel, each serverless function invocation has its own memory, so rate limits apply within a single function but not across multiple concurrent instances. This is documented transparently rather than pretending it provides distributed protection.
+
+### JWT Session Limitation
+
+Existing JWT-based sessions are **not** invalidated after a password change or recovery code use. The old password can no longer authenticate, but any session token that was issued before the password change remains valid until it expires (NextAuth JWT default: 30 days). This is a known limitation of JWT-based auth without a token blocklist. Implementing session revocation would require a significant authentication rewrite (e.g., adding a token blocklist or switching to database sessions) and is not justified for a single-admin MVP.
 
 ### AdminRecoveryCode
 
 One-time recovery codes for Admin self-service password recovery. Many historical records per Admin; only one active code at a time.
 - Fields: `userId`, `codeHash` (bcrypt), `expiresAt` (24 hours), `consumedAt` (nullable), `replacedAt` (nullable)
 - A code is active only if: `consumedAt IS NULL AND replacedAt IS NULL AND expiresAt > now`
-- Generating a new code sets `replacedAt` on the prior active code
-- Consuming a code sets `consumedAt`
+- Database constraint: partial unique index on `userId` WHERE `consumedAt IS NULL AND replacedAt IS NULL` prevents multiple active codes
+- Generating a new code sets `replacedAt` on the prior active code (within a transaction)
+- Consuming a code sets `consumedAt` (within the same transaction as the password change)
 - `User.recoveryCodeHash` is kept in sync for quick lookup during verification
 - Plaintext codes are never stored, logged, or returned after generation
-- Recovery code lifetime: 24 hours (configurable via `RECOVERY_CODE_TTL_MS` in `src/lib/admin-recovery.ts`)
 
 ### SchoolSettings
 

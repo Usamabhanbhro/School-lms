@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -11,6 +12,9 @@ import { Input } from "@/components/ui/input";
  * Admin Signup Form — client component.
  * Creates the first administrator account for the school.
  * Only rendered when no Admin exists (checked by the parent server component).
+ *
+ * On success, displays the one-time recovery code with a copy button
+ * and a strong warning to save it securely.
  */
 export function AdminSignupForm() {
   const router = useRouter();
@@ -23,6 +27,7 @@ export function AdminSignupForm() {
   const [success, setSuccess] = useState(false);
   const [recoveryCode, setRecoveryCode] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,22 +86,59 @@ export function AdminSignupForm() {
     }
   }
 
+  async function copyToClipboard(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback: select the text so the user can Ctrl+C
+    }
+  }
+
   // Show recovery code after successful signup
   if (success && recoveryCode) {
     return (
       <div className="border border-border bg-bg p-8">
         <h1 className="text-xl font-bold">Admin Account Created</h1>
+
+        <div className="mt-4 border border-border bg-surface p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-text/50">
+            About this recovery system
+          </p>
+          <p className="mt-1 text-sm text-text/70">
+            This system does not send recovery codes by email. Your recovery code is
+            your offline recovery credential — keep it somewhere secure.
+          </p>
+        </div>
+
         <div className="mt-4 border border-success/30 bg-success/5 p-4">
           <p className="text-sm font-semibold text-success">
             Save your recovery code — you will not see it again.
           </p>
-          <p className="mt-2 font-mono text-lg font-bold break-all">
-            {recoveryCode}
-          </p>
+          <div className="mt-3 flex items-center gap-2">
+            <p className="flex-1 font-mono text-lg font-bold break-all select-all">
+              {recoveryCode}
+            </p>
+            <button
+              type="button"
+              onClick={() => copyToClipboard(recoveryCode)}
+              className="shrink-0 border border-border bg-surface p-2 text-text/60 transition-colors hover:bg-border hover:text-text"
+              title="Copy recovery code"
+            >
+              <Copy className="size-4" aria-hidden="true" />
+            </button>
+          </div>
+          {copied && (
+            <p className="mt-1 text-xs text-success">Copied to clipboard.</p>
+          )}
           <p className="mt-2 text-xs text-text/60">
-            This code can be used to recover your account if you forget your password.
+            This code can be used to recover your account if you forget your
+            password. It expires in 24 hours. Write it down or save it in a
+            password manager — you will only see it once.
           </p>
         </div>
+
         <div className="mt-4 flex gap-2">
           <Button onClick={handleSignIn} disabled={signingIn} className="flex-1">
             {signingIn ? "Signing in…" : "Go to Dashboard"}
@@ -118,6 +160,17 @@ export function AdminSignupForm() {
       <p className="mt-1 text-sm text-text/60">
         Create the first administrator account for your school.
       </p>
+
+      <div className="mt-4 border border-border bg-surface p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-text/50">
+          About recovery
+        </p>
+        <p className="mt-1 text-sm text-text/70">
+          After creating your account, you will receive a one-time recovery code.
+          This system does not send recovery codes by email — save your code
+          somewhere secure.
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <div className="space-y-2">
@@ -178,7 +231,10 @@ export function AdminSignupForm() {
         </div>
 
         {error && (
-          <p className="border border-danger/30 bg-danger/5 px-4 py-2 text-sm text-danger" role="alert">
+          <p
+            className="border border-danger/30 bg-danger/5 px-4 py-2 text-sm text-danger"
+            role="alert"
+          >
             {error}
           </p>
         )}
@@ -190,7 +246,10 @@ export function AdminSignupForm() {
 
       <p className="mt-6 text-center text-sm text-text/50">
         Already have an account?{" "}
-        <Link href="/login" className="font-medium text-primary underline underline-offset-2">
+        <Link
+          href="/login"
+          className="font-medium text-primary underline underline-offset-2"
+        >
           Sign in
         </Link>
       </p>

@@ -22,27 +22,32 @@ NextAuth handler — login/logout/session. Credentials provider only.
 **Role required:** none (public route — first admin provisioning)
 **Purpose:** Create the first and only Admin account. Only works when no Admin exists.
 **Request body:** `{ name, email, password, confirmPassword }`
-**Notes:** Rate limited (3 attempts / 15 min / IP). Race-safe via database partial unique index. Returns a one-time recovery code on success. Server-side Zod validation.
+**Response (201):** `{ data: { message, userId, recoveryCode } }` — recoveryCode is the one-time plaintext code, shown once
+**Notes:** Rate limited (3 attempts / 15 min / IP). Race-safe via database partial unique index. Server-side Zod validation. Recovery code is generated after user creation and its hash is stored in `AdminRecoveryCode`.
 **Status:** implemented
 
 ### POST /api/admin/recover
 **Role required:** none (public route — this is the recovery path for a locked-out Admin)
 **Purpose:** Verify username/email + recovery code, then allow setting a new password
 **Request body:** `{ usernameOrEmail, recoveryCode, newPassword }`
-**Notes:** Atomically consumes the recovery code, changes the password, and generates a new recovery code. Returns the new code once. Rate limited (5 attempts / 15 min / IP). Uses the `AdminRecoveryCode` model with expiration tracking.
+**Response (200):** `{ data: { message, newRecoveryCode } }` — newRecoveryCode is the fresh one-time code, shown once
+**Notes:** All operations are atomic: old code consumed, password changed, new recovery code generated — all in one Prisma transaction. Rate limited (5 attempts / 15 min / IP). Generic error messages prevent account enumeration.
 **Status:** implemented
 
 ### POST /api/admin/recover/code
 **Role required:** none (public route — generate a new recovery code for a locked-out Admin)
 **Purpose:** Generate a new recovery code when the current one has expired, been consumed, or been replaced
 **Request body:** `{ usernameOrEmail }`
-**Notes:** Rejects if an active (non-expired, non-consumed, non-replaced) code already exists. Rate limited (3 attempts / 15 min / IP). Returns the new plaintext code once.
+**Response (200):** `{ data: { message, recoveryCode } }` — recoveryCode is the one-time plaintext code
+**Notes:** Returns the same generic response shape whether or not the admin exists (prevents enumeration). Rejects if an active code already exists (409). Rate limited (3 attempts / 15 min / IP). `createRecoveryCode()` runs atomically via Prisma transaction.
 **Status:** implemented
 
 ### POST /api/admin/recovery-code/regenerate
 **Role required:** Admin (authenticated)
 **Purpose:** Manually rotate the admin's recovery code. Invalidates any prior active code, generates a new one, and returns the plaintext code once.
-**Notes:** Uses the `AdminRecoveryCode` model. Only the Admin can trigger this.
+**Request body:** none
+**Response (200):** `{ data: { message, recoveryCode } }` — recoveryCode is the one-time plaintext code
+**Notes:** Uses `createRecoveryCode()` which runs atomically via Prisma transaction. Only the Admin can trigger this. No rate limiting (authenticated endpoint, admin-only).
 **Status:** implemented
 
 ---

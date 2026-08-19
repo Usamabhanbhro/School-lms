@@ -5,8 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientIp, PUBLIC_ENDPOINT_LIMITS } from "@/lib/rate-limit";
 import {
   verifyRecoveryCode,
-  createRecoveryCode,
   findActiveRecoveryCode,
+  consumeAndRotate,
 } from "@/lib/admin-recovery";
 
 /**
@@ -21,22 +21,29 @@ import {
  *   1. Find the User with role = ADMIN matching username or email
  *   2. Find an active recovery code (not consumed, not replaced, not expired)
  *   3. Verify the provided code against the stored hash
- *   4. If valid: consume the code, hash the new password, generate a NEW recovery code,
- *      and update the Admin record
- *   5. Return success — the new recovery code is NOT returned from this endpoint
- *      (the Admin should already have a valid code or use the code-generation endpoint)
+ *   4. Atomically: consume the code, change password, generate NEW recovery code
+ *   5. Return success with the new recovery code (shown once)
  *
  * Security notes:
  *   - bcrypt.compare handles timing-safe comparison
  *   - Codes are single-use: consumedAt is set atomically
  *   - Rate limiting prevents brute force attempts
  *   - Generic error messages prevent enumeration
+ *   - The new recovery code is generated atomically with password change
  */
 const recoverSchema = z.object({
   usernameOrEmail: z.string().min(1),
   recoveryCode: z.string().min(1),
   newPassword: z.string().min(8).max(100),
 });
+
+/** Unified error response — prevents account enumeration. */
+const GENERIC_ERROR = {
+  error: {
+    message: "Invalid username/email or recovery code.",
+    code: "INVALID_CREDENTIALS",
+  },
+};
 
 export async function POST(request: Request) {
   try {
@@ -67,7 +74,7 @@ export async function POST(request: Request) {
 
     const body = recoverSchema.parse(await request.json());
 
-    // Find the Admin user
+    // Find the Admin user (same query regardless of existence to prevent timing leak)
     const admin = await prisma.user.findFirst({
       where: {
         role: "ADMIN",
@@ -76,18 +83,12 @@ export async function POST(request: Request) {
           { email: body.usernameOrEmail },
         ],
       },
+      select: { id: true },
     });
 
-    // Generic error — do not reveal whether the username exists
-    const genericError = {
-      error: {
-        message: "Invalid username/email or recovery code.",
-        code: "INVALID_CREDENTIALS",
-      },
-    };
-
     if (!admin) {
-      return NextResponse.json(genericError, { status: 401 });
+      // Always use the same generic error — do not reveal whether the username exists
+      return NextResponse.json(GENERIC_ERROR, { status: 401 });
     }
 
     // Find an active recovery code for this Admin
@@ -95,51 +96,32 @@ export async function POST(request: Request) {
 
     if (!activeCode) {
       // No active code — could be expired, consumed, or never generated
-      return NextResponse.json(genericError, { status: 401 });
+      return NextResponse.json(GENERIC_ERROR, { status: 401 });
     }
 
     // Verify the recovery code against the stored hash
     const codeValid = await verifyRecoveryCode(body.recoveryCode, activeCode.codeHash);
     if (!codeValid) {
-      return NextResponse.json(genericError, { status: 401 });
+      return NextResponse.json(GENERIC_ERROR, { status: 401 });
     }
 
-    // Code is valid — atomically consume the code, change password, and generate new code
+    // Code is valid — atomically consume code, change password, and generate new code
     const newPasswordHash = await bcrypt.hash(body.newPassword, 12);
 
-    await prisma.$transaction(async (tx) => {
-      // Mark the recovery code as consumed
-      await tx.adminRecoveryCode.update({
-        where: { id: activeCode.id },
-        data: { consumedAt: new Date() },
-      });
-
-      // Update the Admin's password
-      await tx.user.update({
-        where: { id: admin.id },
-        data: { passwordHash: newPasswordHash },
-      });
-
-      // Invalidate any other active codes (shouldn't exist, but safety net)
-      await tx.adminRecoveryCode.updateMany({
-        where: {
-          userId: admin.id,
-          consumedAt: null,
-          replacedAt: null,
-          id: { not: activeCode.id },
-        },
-        data: { replacedAt: new Date() },
-      });
-    });
-
-    // Generate a new recovery code for future use
-    const newPlaintextCode = await createRecoveryCode(admin.id);
+    // All 5 operations happen atomically in one transaction:
+    // consume old code, update password, mark other codes replaced,
+    // create new recovery code record, update User.recoveryCodeHash
+    const newRecoveryCode = await consumeAndRotate(
+      admin.id,
+      activeCode.id,
+      newPasswordHash,
+    );
 
     // Return success with the new recovery code (shown once)
     return NextResponse.json({
       data: {
         message: "Password reset successful.",
-        newRecoveryCode: newPlaintextCode,
+        newRecoveryCode,
       },
     });
   } catch (error) {
