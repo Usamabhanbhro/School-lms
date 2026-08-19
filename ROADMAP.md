@@ -2,7 +2,9 @@
 
 Build order for reconciling and implementing the SRS (v5). Each phase unlocks the next — don't skip ahead, since later phases read data/patterns established earlier.
 
-## Phase 0 — Reconciliation
+**Status: Phases 0–5 implemented and verified (see `API.md` for per-route status). Phase 6 (print layouts) is the only remaining functional work, plus rate limiting on `/api/admin/recover` — see `README.md` Remaining Work.**
+
+## Phase 0 — Reconciliation ✅ Complete
 
 The existing skeleton was built against an earlier four-role assumption (Admin/Teacher/Student/Parent). Before any new feature work:
 
@@ -14,7 +16,7 @@ The existing skeleton was built against an earlier four-role assumption (Admin/T
 
 This is cleanup, not new functionality. Nothing in later phases should be built on top of the stale model.
 
-## Phase 1 — Core Entities (no workflows yet)
+## Phase 1 — Core Entities (no workflows yet) ✅ Complete
 
 Admin-only CRUD, no attendance/marks/challans yet:
 
@@ -28,7 +30,7 @@ Admin-only CRUD, no attendance/marks/challans yet:
 
 Everything downstream reads from this layer, so get the RBAC scoping right here first — Teacher views should already correctly filter to "my assigned classes only" even before there's attendance/marks data to show.
 
-## Phase 2 — Auth Completeness
+## Phase 2 — Auth Completeness ✅ Complete
 
 - Admin recovery code: generate + display once at initial admin setup, hash-only storage
 - `POST /api/admin/recover`: verify code, set new password, rotate to a new code
@@ -37,7 +39,7 @@ Everything downstream reads from this layer, so get the RBAC scoping right here 
 
 Small in scope but land it early — it's the safety net that lets you walk away from support once a school is live.
 
-## Phase 3 — Attendance
+## Phase 3 — Attendance ✅ Complete
 
 Can be built in either order internally:
 
@@ -46,7 +48,7 @@ Can be built in either order internally:
 
 Both depend only on Phase 1 entities. No dependency between the two attendance types.
 
-## Phase 4 — Tests, Marks, Report Cards
+## Phase 4 — Tests, Marks, Report Cards ✅ Complete
 
 Sequential — each step depends on the last:
 
@@ -55,7 +57,7 @@ Sequential — each step depends on the last:
 3. Subject teacher creates a Term on the fly (name only, no dates)
 4. Subject teacher selects which tests count and generates a ReportCard aggregating them
 
-## Phase 5 — Fee Challan
+## Phase 5 — Fee Challan ✅ Complete
 
 - BankSettings: admin edits bank name/account number (singleton, "Fees" tab — Admin only; Academics can read but not edit)
 - Certificate generation: Admin and Academics can both generate Leaving/Character certificates
@@ -64,7 +66,7 @@ Sequential — each step depends on the last:
 
 Depends only on Phase 1 (Student records) — can run in parallel with Phase 4 if bandwidth allows.
 
-## Phase 6 — Print / Visual Design Pass
+## Phase 6 — Print / Visual Design Pass 🔲 Not started
 
 Deliberately last — these three are functionally specified but visually undesigned, and designing print stylesheets before the underlying data flows exist means designing blind:
 
