@@ -3,7 +3,7 @@
 Living document. Every API route must be added here when created — see `CONVENTIONS.md` and `AGENTS.md`.
 
 **Status: reconciled with SRS.md v5.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
-Phase 1–5 routes are implemented. Phase 6 (print layouts) is frontend-only.
+Phase 1–6 routes are implemented. Admin provisioning and school settings added.
 
 ## Conventions Recap
 
@@ -18,17 +18,24 @@ Phase 1–5 routes are implemented. Phase 6 (print layouts) is frontend-only.
 ### POST /api/auth/[...nextauth]
 NextAuth handler — login/logout/session. Credentials provider only.
 
-### GET /api/admin/recovery-code (regenerate)
-Wording TBD at implementation — likely `POST /api/admin/recovery-code/regenerate`.
-**Role required:** Admin (authenticated)
-**Purpose:** Manually rotate the admin's recovery code. Returns the new plaintext code once; only its hash is persisted.
+### POST /api/admin/signup
+**Role required:** none (public route — first admin provisioning)
+**Purpose:** Create the first and only Admin account. Only works when no Admin exists.
+**Request body:** `{ name, email, password, confirmPassword }`
+**Notes:** Rate limited (3 attempts / 15 min / IP). Race-safe via database partial unique index. Returns a one-time recovery code on success. Server-side Zod validation.
 **Status:** implemented
 
 ### POST /api/admin/recover
 **Role required:** none (public route — this is the recovery path for a locked-out Admin)
 **Purpose:** Verify username/email + recovery code, then allow setting a new password
 **Request body:** `{ usernameOrEmail, recoveryCode, newPassword }`
-**Notes:** on success, invalidates the used code and generates+returns a new one. Rate-limit this route — it's a public endpoint accepting a secret.
+**Notes:** on success, invalidates the used code and generates+returns a new one. Rate limited (5 attempts / 15 min / IP).
+**Status:** implemented
+
+### GET /api/admin/recovery-code (regenerate)
+Wording TBD at implementation — likely `POST /api/admin/recovery-code/regenerate`.
+**Role required:** Admin (authenticated)
+**Purpose:** Manually rotate the admin's recovery code. Returns the new plaintext code once; only its hash is persisted.
 **Status:** implemented
 
 ---
@@ -312,6 +319,34 @@ Wording TBD at implementation — likely `POST /api/admin/recovery-code/regenera
 
 ---
 
+## School Settings
+
+### GET /api/settings/school
+**Role required:** Admin, Academics (read-only)
+**Purpose:** Fetch the singleton SchoolSettings record (school identity configuration)
+**Notes:** Creates default settings if none exist
+**Status:** implemented
+
+### PATCH /api/settings/school
+**Role required:** Admin only
+**Purpose:** Update school settings (name, address, phone, email, principal name)
+**Request body:** partial `{ schoolName, address, phone, email, principalName }`
+**Status:** implemented
+
+### POST /api/settings/school/logo
+**Role required:** Admin only
+**Purpose:** Upload a school logo (PNG, JPEG, SVG, or WebP; max 2MB)
+**Request body:** FormData with `logo` file
+**Notes:** Saves to public/uploads/logos/ with random filename; updates SchoolSettings.logoPath
+**Status:** implemented
+
+### DELETE /api/settings/school/logo
+**Role required:** Admin only
+**Purpose:** Remove the school logo
+**Status:** implemented
+
+---
+
 ## Not Yet Scoped
 
-- Rate limiting on `/api/admin/recover` — needs a concrete policy before going to production, since it's the one public, secret-accepting endpoint in the system
+- No remaining API-level gaps — rate limiting is implemented on both public endpoints

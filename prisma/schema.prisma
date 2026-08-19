@@ -34,7 +34,8 @@ enum CertificateType {
 // ─── Auth / Identity ─────────────────────────────────────────────────
 
 /// Login identity. Exactly one row with role = ADMIN should ever exist
-/// (enforced at application level). Multiple rows with role = TEACHER or ACADEMICS.
+/// (enforced by a partial unique index in the database — see migration 20260819000001).
+/// Multiple rows with role = TEACHER or ACADEMICS.
 model User {
   id           String  @id @default(cuid())
   username     String  @unique

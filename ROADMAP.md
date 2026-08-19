@@ -2,7 +2,7 @@
 
 Build order for reconciling and implementing the SRS (v5). Each phase unlocks the next — don't skip ahead, since later phases read data/patterns established earlier.
 
-**Status: Phases 0–6 implemented and verified (see `API.md` for per-route status). Remaining work: rate limiting on `/api/admin/recover` — see `README.md` Remaining Work.**
+**Status: Phases 0–6 implemented and verified. Admin provisioning and school settings added. See `API.md` for per-route status.**
 
 ## Phase 0 — Reconciliation ✅ Complete
 
@@ -35,7 +35,10 @@ Everything downstream reads from this layer, so get the RBAC scoping right here 
 - Admin recovery code: generate + display once at initial admin setup, hash-only storage
 - `POST /api/admin/recover`: verify code, set new password, rotate to a new code
 - Manual regenerate-code action from within the admin panel
-- Rate limiting on the public recovery route (see `API.md` Not Yet Scoped)
+- Rate limiting on both public recovery and admin signup routes
+- Public admin signup (`/admin/signup`): first-time provisioning with server-side singleton check, database-level partial unique index, and race-safe transaction
+- School Settings API and UI (`/admin/settings`): school name, address, phone, email, principal, logo upload/remove — Admin-only mutations
+- Database-backed school identity: `getSchoolSettings()` accessor used by all print layouts
 
 Small in scope but land it early — it's the safety net that lets you walk away from support once a school is live.
 
@@ -76,7 +79,7 @@ Print layouts for all three document types:
 - **Fee Challan three-copy layout**: Server-rendered at `/print/fee-challans/[id]`. Renders exactly three copies (Bank Copy / Student Copy / School Copy) from a single `FeeChallan` record. Reusable `ChallanCopy` component receives `copyLabel` and `challan` props.
 - **Report Card layout**: Server-rendered at `/print/report-cards/[id]`. Subject-grouped test tables with marks, aggregates, percentage, and grade. Uses actual backend data and calculation.
 
-**School identity centralization:** All print layouts import from `src/lib/school-config.ts`. Changing the school name, address, phone, or other identity fields in that single file propagates to all documents automatically.
+**School identity centralization:** All print layouts use `getSchoolSettings()` from `src/lib/school-settings.ts`, which reads school identity from the database `SchoolSettings` model. Configuration is managed through the Admin Settings UI at `/admin/settings`.
 
 **Print isolation:** Dedicated `(print)` route group with its own minimal layout — no sidebar, no navigation, no dashboard chrome. Screen-only toolbar hidden via `print:hidden`.
 

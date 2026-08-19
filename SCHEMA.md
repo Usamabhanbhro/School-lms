@@ -108,6 +108,13 @@ Not a separate model — implemented as fields on `User` (Admin row only):
 - `recoveryCodeHash` — hash of the current valid one-time recovery code
 - On successful use via `/admin/recover`, the code is invalidated and a new one generated and shown once (never stored in plaintext, never logged)
 
+### SchoolSettings
+
+School-wide singleton for identity configuration. Admin edits these through the Settings UI at `/admin/settings`. Only one row should exist — enforced at application level, not a DB constraint.
+- Fields: `schoolName`, `address`, `phone`, `email`, `principalName`, `logoPath` (nullable — relative path to uploaded logo)
+- Read by `getSchoolSettings()` in `src/lib/school-settings.ts` — used by all print layouts and the print preview header
+- On a fresh deployment, default placeholder values are used until the Admin configures them
+
 ## Not Yet Modeled
 
 - Certificate and Report Card print templates, and the Fee Challan three-copy print layout (functional data models exist; visual layouts do not)

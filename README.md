@@ -4,9 +4,9 @@ A web-based Learning Management System for schools — attendance, marks/tests, 
 
 Full web app (no desktop client). Built to be usable from a phone browser, since class teachers need to mark attendance on the go.
 
-**Status: Phases 0–6 implemented.** SRS finalized at v5 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
+**Status: Phases 0–6 implemented. Admin provisioning and school settings added.** SRS finalized at v5 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
 
-`SCHEMA.md` and `API.md` are current with SRS v5. Every route through Fee Challans is built and functional. Print layouts for Certificates, Fee Challans (three-copy), and Report Cards are implemented with centralized school identity configuration.
+`SCHEMA.md` and `API.md` are current with SRS v5. Every route through Fee Challans is built and functional. Print layouts for Certificates, Fee Challans (three-copy), and Report Cards are implemented with database-backed school identity configuration.
 
 ## Stack
 
@@ -99,8 +99,10 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/` | Public | Landing page |
 | `/login` | Public | Sign in (NextAuth Credentials) |
 | `/register` | Public | Explains accounts are created by the school |
+| `/admin/signup` | Public | First admin provisioning (only when no Admin exists) |
 | `/admin/recover` | Public | Self-service admin password recovery — implemented |
 | `/dashboard` | Authenticated | Redirects to the signed-in user's role home |
+| `/admin/settings` | ADMIN | School identity settings (name, address, phone, email, logo) |
 | `/admin` | ADMIN | Role home |
 | `/teacher` | TEACHER | Role home |
 | `/academics` | ACADEMICS | Role home |
@@ -108,8 +110,11 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/print/fee-challans/[id]` | ADMIN, ACADEMICS | Fee Challan print view (3 copies: Bank/Student/School) |
 | `/print/report-cards/[id]` | ADMIN, ACADEMICS | Report Card print view |
 | `/api/auth/[...nextauth]` | — | NextAuth handler |
-| `/api/admin/recover` | Public | Recovery code verification + password reset |
+| `/api/admin/signup` | Public | Create first admin account (only when no Admin exists) |
+| `/api/admin/recover` | Public | Recovery code verification + password reset — rate limited |
 | `/api/admin/recovery-code` | ADMIN | Manually rotate recovery code |
+| `/api/settings/school` | ADMIN (write), ACADEMICS (read) | School identity settings |
+| `/api/settings/school/logo` | ADMIN | Upload/remove school logo |
 | `/api/teachers` | ADMIN | Teacher CRUD |
 | `/api/teachers/:id/reset-password` | ADMIN | Reset a teacher's password |
 | `/api/academics` | ADMIN | Academics staff CRUD |
@@ -135,17 +140,25 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 
 Full request/response shapes for every route above are in `API.md`.
 
+## Deployment Architecture
+
+**One deployment = one school.** Each school gets its own application instance and database. There is no multi-tenant SaaS architecture — School B receives its own deployment with a fresh database, starts with the Admin Onboarding screen, and creates its own Admin account.
+
+A PostgreSQL partial unique index enforces that exactly one Admin account can exist per database, preventing concurrent signup race conditions at the database level.
+
+Multi-tenant SaaS deployment is a planned future enhancement — not yet implemented.
+
 ## Remaining Work
 
-Per `ROADMAP.md`, all phases (0–6) are implemented. What remains:
-
-- **Rate limiting on `/api/admin/recover`** — noted in `API.md` as not yet scoped. This is the one public, secret-accepting endpoint in the system and needs a concrete policy before production use.
+- **Visual design for print documents** — Report Card, Leaving Certificate, Character Certificate, and Fee Challan layouts are structural placeholders. Final designs will be supplied later. The data/configuration layer is complete and flexible.
 
 Not in scope at all under SRS v5: Assignments/Submissions, Timetables, Announcements, Notifications/messaging, OAuth/email-based password reset, Library module.
 
 ## School Identity Configuration
 
-School identity (name, address, phone, principal name) is centralized in `src/lib/school-config.ts`. Changing the placeholder values in that single file propagates to all printable documents:
+School identity (name, address, phone, email, principal name, logo) is stored in the database via the `SchoolSettings` model and managed through the Admin Settings UI at `/admin/settings`.
+
+The `getSchoolSettings()` accessor in `src/lib/school-settings.ts` provides server-side access. All print layouts and the print preview header read from this database-backed configuration:
 
 - Leaving Certificate
 - Character Certificate
@@ -153,7 +166,7 @@ School identity (name, address, phone, principal name) is centralized in `src/li
 - Report Card
 - Print preview header
 
-To configure for a specific school, update the `schoolConfig` object in `src/lib/school-config.ts`.
+On a fresh deployment, default placeholder values are used until the Admin configures school identity through the Settings page.
 
 ## Deployment
 
