@@ -115,101 +115,156 @@ Academics accounts are managed exclusively by Admin:
 
 Admin retains full authority to perform every action an Academics user can — Academics is a delegation, not a separate permission layer.
 
----
+# School LMS
 
-## 2. Teacher
+A web-based Learning Management System for schools — attendance, marks/tests, report cards, certificates, and fee challans, managed by a school's Admin (Principal), Academics staff, and Teachers.
 
-### 2.1 Visibility
+Full web app (no desktop client). Built to be usable from a phone browser, since class teachers need to mark attendance on the go.
 
-Teacher sees only the classes/subjects they've been allotted (as class teacher and/or subject teacher), and only the students within those classes.
+**Status: Phases 0–5 implemented. Only Phase 6 (print layouts) and recovery-route rate limiting remain.** SRS finalized at v5 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
 
-### 2.2 Student Attendance — Class Teacher Only
+`SCHEMA.md` and `API.md` are current with SRS v5. Every route below through Fee Challans is built and functional. What's left: the visual/print design for Certificates, the Fee Challan three-copy layout, and Report Cards (see `ROADMAP.md` Phase 6) — the data and API layers for all three already exist, only the print stylesheets don't.
 
-**Only the designated class teacher for a given class+section can mark attendance for that class.** Subject teachers without a class-teacher assignment cannot mark attendance anywhere.
+## Stack
 
-Attendance is per **class+section+date** (one record per student per day — not per subject/period).
+| Layer | Choice |
+|---|---|
+| Framework | Next.js (App Router), TypeScript, React |
+| ORM | Prisma (client generated to `src/generated/prisma`, gitignored) |
+| Database | PostgreSQL (Neon, free tier) |
+| Auth | NextAuth v4 (Credentials provider, JWT sessions) |
+| Styling | Tailwind CSS v4 (CSS-first tokens via `@theme` in `src/app/globals.css` — no `tailwind.config.ts`) |
+| Icons | Lucide |
+| Package manager | Bun (`bun.lock` is the single lockfile) |
+| Hosting | Vercel (free tier) |
 
-**Two-step lock flow:**
-1. Class teacher marks each student Present/Absent/Leave → saved as **draft** (editable)
-2. Class teacher clicks **Confirm** → attendance locks; class teacher can no longer edit it
-3. Only Admin can edit after this point (per §1.5 — Academics have read-only access, not override)
+See `ARCHITECTURE.md` for the full stack rationale and system diagram.
 
-Class teacher can retrieve any past attendance sheet (read-only once confirmed) and download it as CSV.
+## Documentation Index
 
-### 2.3 Tests & Marks — Subject Teacher
+Read these in order before making changes:
 
-For each subject they're assigned, a subject teacher can:
-1. **Create a test** — title, date, total/max marks, scoped to one class+section+subject
-2. After the test happens, **enter marks per student** against that test, saved to the database
+| File | Purpose |
+|---|---|
+| `ARCHITECTURE.md` | System design, stack decisions, data layer overview |
+| `DESIGN.md` | Visual design system — colors, type, spacing, motion, components |
+| `SRS.md` | Feature scope — **finalized (v5)**, Admin/Academics/Teacher |
+| `SCHEMA.md` | Database entities, fields, relationships — current with SRS v5 |
+| `API.md` | API route list — current with SRS v5, Phases 0–5 marked implemented |
+| `ROADMAP.md` | Phased implementation build order |
+| `CONVENTIONS.md` | Coding standards — naming, folder structure, styling, tooling |
+| `AGENTS.md` | Instructions for AI coding tools working in this repo |
 
-### 2.4 Report Card Generation — Subject Teacher
+## Local Setup
 
-Flow (confirmed):
-1. Teacher opens the report-card generation view for a class+subject (or student)
-2. A tab/list shows **all tests undertaken** for that scope
-3. Teacher selects **which of those tests count** toward the aggregate
-4. Teacher generates the **aggregate report card** from the selected tests
+```bash
+# 1. Install dependencies (postinstall runs `prisma generate`)
+bun install
 
-**Terms are flexible, not fixed calendar periods** — a Term is a lightweight label that can be created whenever needed (e.g. "Mid Term", "Term 1"), not tied to fixed school-wide date ranges. **Confirmed: the teacher names/creates the Term on the fly** at the point of generating a report card (or selects an existing one) — Admin does not pre-define terms.
+# 2. Environment variables
+cp example.env .env
+#   DATABASE_URL     Neon Postgres connection string (required for auth + data routes)
+#   NEXTAUTH_SECRET  generate with `openssl rand -base64 32`
+#   NEXTAUTH_URL     http://localhost:3000 in local dev
 
-Report card print layout/design not yet decided — same deferred status as Certificates and Fee Challan; the generation *logic* above is confirmed, only the visual output format is open.
+# 3. Database — applies migrations (requires DATABASE_URL)
+bun run db:migrate
 
-### 2.5 Boundaries
+# 4. Run the dev server
+bun run dev
+```
 
-- Cannot manage teacher accounts
-- Cannot mark attendance unless designated class teacher for that class
-- Cannot edit attendance once confirmed/locked
-- Only acts within allotted class/subject scope
+## Commands
 
----
+| Command | Purpose |
+|---|---|
+| `bun run dev` | Dev server on `0.0.0.0:${PORT:-3000}` |
+| `bun run build` | `prisma generate` + production build |
+| `bun run start` | Serve the production build |
+| `bun run typecheck` | `tsc --noEmit` |
+| `bun run db:generate` | Regenerate the Prisma client |
+| `bun run db:migrate` | Apply/create migrations in dev |
+| `bun run db:deploy` | Apply migrations in production |
+| `bun run db:studio` | Prisma Studio |
 
-## 3. Entities Implied (for SCHEMA.md reconciliation)
+## Environment Variables
 
-- **User** — role enum `ADMIN` (single account), `TEACHER` (multiple), or `ACADEMICS` (multiple); Admin additionally has `recoveryCodeHash` for self-service password recovery (see §1.7)
-- **TeacherProfile** — name, father/spouse name, CNIC, phone, email, isActive
-- **AcademicsProfile** — name, CNIC, phone, email (mirrors TeacherProfile pattern for the Academics role)
-- **ClassSection** — e.g. "Grade 5 - A"
-- **Subject**
-- **ClassTeacherAssignment** — one teacher per ClassSection, attendance rights
-- **SubjectTeacherAssignment** — teacher per ClassSection+Subject, marks/tests rights
-- **Student** — name, father/guardian name, father/guardian CNIC, DOB, admission date, enrolled ClassSection
-- **StudentAttendance** — classSection, date, per-student status, draft/confirmed state, markedBy (class teacher), lastEditedBy (admin, if edited post-lock)
-- **TeacherAttendance** — teacher, date, status, markedBy (admin), directly editable
-- **Test** — classSection, subject, teacher, title, date, maxMarks
-- **Mark** — test, student, marksObtained
-- **Term** — name, created flexibly (no fixed dates)
-- **ReportCard** — student, classSection, term, list of included tests, aggregated result, generated by teacher
-- **Certificate** — student, type (Leaving/Character), generated by admin or Academics, design TBD
-- **BankSettings** — school-wide singleton: bankName, bankAccountNumber, editable by Admin only
-- **FeeChallan** — student (snapshot), classSection/section (snapshot), bank details (snapshot), generatedByUserId (Admin or Academics), issuedDate, total
-- **FeeChallanLineItem** — challanId, description, amount
+| Variable | Required | Purpose |
+|---|---|---|
+| `DATABASE_URL` | Yes (for auth + data routes) | Neon Postgres connection string |
+| `NEXTAUTH_SECRET` | Yes (production) | NextAuth JWT signing secret |
+| `NEXTAUTH_URL` | Yes (production) | Canonical app URL for auth callbacks |
 
-Still out of scope: Assignment/Submission, Timetable, Announcement, general Enrollment history, Library. Not part of this SRS unless added later.
+No email/SMS/OAuth provider variables are required — Admin password recovery is self-service via a one-time recovery code (see `SRS.md`), not email-based. Do not add third-party service variables without a documented need.
 
----
+## Roles
 
-## 4. Resolved Decisions (from clarification rounds)
+Three login roles (per SRS v5):
 
-1. Revoke = disable login, historical records preserved.
-2. Admin creates Classes, Sections, Subjects.
-3. Teacher attendance has no draft/confirm lock — admin edits directly.
-4. Attendance is per class+date, not per subject — and restricted to the designated class teacher only.
-5. Terms are flexible/ad hoc, not fixed periods.
-6. Single Admin account only. Academics accounts are multiple, managed by Admin.
-7. Student has no CNIC of their own; father/guardian CNIC is captured instead.
-8. Admin creates students and allots class/section; teachers see only their own students.
-9. Certificate design deferred to a later pass.
-10. Fee Challan structure confirmed: editable bank settings (Admin only, school-wide), student+bank details snapshotted per challan, free-form fee line items (base fee + arrears/late fee/etc.), print action saves then prints, three identical copies per page (Bank/Student/School, prominently labeled). Visual layout of those three copies still deferred. Admin and Academics can both generate challans.
-11. Admin password recovery is self-service via a one-time recovery code (2FA-backup-code pattern), generated at admin account setup and rotated on each use — no vendor/developer involvement required.
-12. Term creation is teacher-driven, on the fly, at report-card-generation time — not pre-defined by Admin.
+- **Admin** — the Principal, single account. Manages teachers, academics staff, classes/sections/subjects, students, teacher attendance; oversees all student attendance, marks, and report cards; overrides locked attendance; generates certificates and fee challans; edits bank settings; self-service password recovery via recovery code.
+- **Academics** — multiple accounts, delegated staff. Generates certificates and fee challans (line items + print). Read-only oversight of student lists, attendance records, tests, marks, and report cards for context. Cannot manage users, create/edit classes/subjects, assign teachers, or edit bank settings.
+- **Teacher** — multiple accounts, scoped to assignments:
+  - **Class Teacher** (one active per class+section) — the only role that can mark/confirm student attendance for that class
+  - **Subject Teacher** (per class+section+subject) — creates tests, enters marks; the active Class Teacher generates the report card, pulling from tests across any subject in the class
 
-## 5. Remaining Open Items
+Students are **not** logins — they're records Admin creates and allots to a class/section. No Parent access in this version.
 
-- **Print/visual design** for Certificates, the three-copy Fee Challan layout, and Report Card — all now functionally defined but visually undesigned. Treat as a dedicated design pass once core flows are built.
-- **Audit trail for admin post-lock attendance edits** — assumption is a simple `lastEditedBy` field; confirm if a fuller history/audit log is wanted for compliance reasons (attendance edits after lock could be sensitive).
+## Current Routes
 
----
+| Route | Access | Status |
+|---|---|---|
+| `/` | Public | Landing page |
+| `/login` | Public | Sign in (NextAuth Credentials) |
+| `/register` | Public | Explains accounts are created by the school |
+| `/admin/recover` | Public | Self-service admin password recovery — implemented |
+| `/dashboard` | Authenticated | Redirects to the signed-in user's role home |
+| `/admin` | ADMIN | Role home |
+| `/teacher` | TEACHER | Role home |
+| `/academics` | ACADEMICS | Role home — **confirm this exists**; not explicitly verified in the docs reviewed for this update, flagging rather than assuming |
+| `/print/certificates/[id]` | ADMIN, ACADEMICS | Certificate print view — referenced in `API.md`; layout is Phase 6 |
+| `/api/auth/[...nextauth]` | — | NextAuth handler |
+| `/api/admin/recover` | Public | Recovery code verification + password reset |
+| `/api/admin/recovery-code` | ADMIN | Manually rotate recovery code |
+| `/api/teachers` | ADMIN | Teacher CRUD |
+| `/api/teachers/:id/reset-password` | ADMIN | Reset a teacher's password |
+| `/api/academics` | ADMIN | Academics staff CRUD |
+| `/api/academics/:id/reset-password` | ADMIN | Reset an academics user's password |
+| `/api/class-sections` | ADMIN (write), TEACHER (scoped read), ACADEMICS (read) | Class section management |
+| `/api/class-sections/:id/class-teacher` | ADMIN | Assign/reassign Class Teacher |
+| `/api/class-sections/:id/subject-teachers` | ADMIN | Assign Subject Teacher |
+| `/api/subjects` | ADMIN (write), TEACHER + ACADEMICS (read) | Subject management |
+| `/api/students` | ADMIN (write), TEACHER (scoped read), ACADEMICS (read) | Student CRUD |
+| `/api/teacher-attendance` | ADMIN | Mark/edit teacher attendance directly |
+| `/api/attendance` | TEACHER (Class Teacher only, write), ADMIN + ACADEMICS (read) | Student attendance draft |
+| `/api/attendance/:classSectionId/:date/confirm` | TEACHER (Class Teacher) | Lock a draft attendance sheet |
+| `/api/attendance/:id` | ADMIN | Override a locked record |
+| `/api/attendance/export` | ADMIN, ACADEMICS, TEACHER (own class) | CSV export |
+| `/api/tests` | TEACHER (Subject Teacher, write), ADMIN + ACADEMICS (read) | Test creation |
+| `/api/tests/:id/marks` | TEACHER (Subject Teacher) | Enter/update marks |
+| `/api/terms` | TEACHER | Create a Term label on the fly |
+| `/api/report-cards` | TEACHER (Class Teacher, write), ADMIN + ACADEMICS (read) | Report card generation |
+| `/api/certificates` | ADMIN, ACADEMICS | Certificate generation |
+| `/api/settings/bank` | ADMIN (write), ACADEMICS (read) | Bank settings for challans |
+| `/api/students/:id/fee-challans` | ADMIN, ACADEMICS | Generate/list fee challans for a student |
+| `/api/fee-challans/:id` | ADMIN, ACADEMICS | Retrieve a saved challan |
 
-## Next Step
+Full request/response shapes for every route above are in `API.md`.
 
-This SRS is functionally complete for all core flows (Admin/Academics/Teacher management, Attendance, Marks, Report Cards, Fee Challan, Admin recovery). `SCHEMA.md`, `API.md`, and `README.md` have been updated to match. Remaining work is implementation, plus the deferred visual-design pass for Certificates/Fee Challan/Report Card printing.
+## Remaining Work
+
+Per `ROADMAP.md`, everything through Phase 5 is implemented. What's left:
+
+- **Phase 6 — Print/visual design**: Certificate layouts (Leaving, Character), Fee Challan's three-copy layout (Bank/Student/School, one page), Report Card layout. Data models and API routes already exist for all three — this is stylesheet/rendering work only.
+- **Rate limiting on `/api/admin/recover`** — noted in `API.md` as not yet scoped. This is the one public, secret-accepting endpoint in the system and needs a concrete policy before production use.
+
+Not in scope at all under SRS v5: Assignments/Submissions, Timetables, Announcements, Notifications/messaging, OAuth/email-based password reset, Library module.
+
+## Deployment
+
+Deployed via Vercel, git-push deploy from `main`. Database hosted on Neon. See `ARCHITECTURE.md` for free-tier constraints (Neon cold-start, Vercel function time limits). Set `DATABASE_URL`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL` in production, and run `bun run db:deploy` after deploying.
+
+Core functionality (Phases 0–5) is implemented and testable end to end. Certificate/challan/report-card *printing* is not yet designed — the underlying records generate and save correctly, but the printed output isn't styled.
+
+## Credits
+
+Developed by Usama Bhanbhro.
