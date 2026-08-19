@@ -11,10 +11,10 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-bg">
       <Sidebar role={session.user.role} name={session.user.name ?? ""} />
       <main className="md:pl-64">
-        <div className="mx-auto max-w-5xl px-4 py-8 md:px-8">{children}</div>
+        <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-8">{children}</div>
       </main>
     </div>
   );

@@ -14,8 +14,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -25,6 +27,7 @@ import {
   TH,
   TD,
 } from "@/components/ui/table";
+import { ToastContainer, useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { cnicRegex, phoneRegex } from "@/lib/validations";
 
@@ -50,12 +53,6 @@ interface UserProfile {
 
 type Tab = "teachers" | "academics";
 type View = "list" | "create" | "edit";
-
-interface Toast {
-  id: number;
-  type: "success" | "error";
-  message: string;
-}
 
 // ─── Validation helpers ─────────────────────────────────────────────
 
@@ -135,14 +132,7 @@ export function UserManagement() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
   // Toasts
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const toastId = useCallback(() => Date.now(), []);
-
-  const addToast = useCallback((type: "success" | "error", message: string) => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, type, message }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
-  }, []);
+  const { toasts, addToast, dismissToast } = useToast();
 
   // ─── Data Fetching ──────────────────────────────────────────────
 
@@ -448,43 +438,20 @@ export function UserManagement() {
 
   return (
     <>
-      {/* Toasts */}
-      <div className="fixed right-4 top-4 z-50 flex flex-col gap-2" aria-live="polite">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={cn(
-              "flex items-center gap-2 border px-4 py-3 text-sm font-medium",
-              t.type === "success"
-                ? "border-success/30 bg-success/10 text-success"
-                : "border-danger/30 bg-danger/10 text-danger",
-            )}
-          >
-            {t.type === "success" ? (
-              <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
-            ) : (
-              <XCircle className="size-4 shrink-0" aria-hidden="true" />
-            )}
-            {t.message}
-          </div>
-        ))}
-      </div>
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
-      {/* Page header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">User Management</h1>
-          <p className="mt-1 text-sm text-text/60">
-            Manage Teacher and Academics accounts.
-          </p>
-        </div>
-        {view === "list" && (
-          <Button onClick={openCreate}>
-            <UserPlus className="size-4" aria-hidden="true" />
-            Add {userLabel}
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="User Management"
+        description="Manage Teacher and Academics accounts."
+        actions={
+          view === "list" ? (
+            <Button onClick={openCreate}>
+              <UserPlus className="size-4" aria-hidden="true" />
+              Add {userLabel}
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* Tab bar */}
       <div className="mb-6 flex border-b border-border">

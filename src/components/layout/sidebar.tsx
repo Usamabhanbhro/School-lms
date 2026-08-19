@@ -1,4 +1,9 @@
+"use client";
+
+import { useState, useCallback } from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import {
   BookOpen,
   CalendarDays,
@@ -6,36 +11,47 @@ import {
   FileText,
   GraduationCap,
   LayoutDashboard,
-  Megaphone,
+  LogOut,
+  Menu,
   Settings,
   Users,
+  UserCheck,
+  X,
+  School,
+  BookMarked,
+  Award,
+  Banknote,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { Role } from "@/generated/prisma/enums";
-import { roleHomes } from "@/lib/rbac";
+import { cn } from "@/lib/utils";
 
-/**
- * Per-role navigation modules.
- * Active modules are wired to routes; planned modules are visually disabled.
- */
-const adminNav = [
-  { label: "Users", href: "/admin", icon: Users },
+// ─── Navigation structure ─────────────────────────────────────────
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+}
+
+const adminNav: NavItem[] = [
+  { label: "Students", href: "/admin/students", icon: Users },
+  { label: "Teachers", href: "/admin/teachers", icon: UserCheck },
+  { label: "Academics", href: "/admin/academics", icon: Users },
+  { label: "Classes", href: "/admin/classes", icon: School },
+  { label: "Subjects", href: "/admin/subjects", icon: BookMarked },
   { label: "Attendance", href: "/admin/attendance", icon: ClipboardCheck },
-  { label: "Teacher Attendance", href: "/admin/teacher-attendance", icon: ClipboardCheck },
+  { label: "Report Cards", href: "/admin/report-cards", icon: Award },
+  { label: "Certificates", href: "/admin/certificates", icon: FileText },
+  { label: "Fees", href: "/admin/fees", icon: Banknote },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
-const teacherNav = [
+const teacherNav: NavItem[] = [
   { label: "Attendance", href: "/teacher/attendance", icon: ClipboardCheck },
 ];
 
-const plannedModules = [
-  { label: "Gradebook", icon: BookOpen },
-  { label: "Assignments", icon: FileText },
-  { label: "Timetable", icon: CalendarDays },
-  { label: "Announcements", icon: Megaphone },
-];
-
-function getNavForRole(role: Role) {
+function getNavForRole(role: Role): NavItem[] {
   switch (role) {
     case "ADMIN":
       return adminNav;
@@ -46,72 +62,185 @@ function getNavForRole(role: Role) {
   }
 }
 
-export function Sidebar({ role, name }: { role: Role; name: string }) {
-  const home = roleHomes[role];
+// ─── Helper: check if nav item is active ─────────────────────────
+
+function isActive(href: string, pathname: string): boolean {
+  // Exact match for top-level routes like /admin/teachers
+  // Also match sub-routes like /admin/teachers/123
+  if (href === "/admin" || href === "/teacher" || href === "/academics") {
+    return pathname === href;
+  }
+  return pathname === href || pathname.startsWith(href + "/");
+}
+
+// ─── Sidebar Component ──────────────────────────────────────────
+
+export function Sidebar({
+  role,
+  name,
+}: {
+  role: Role;
+  name: string;
+}) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const home = role === "ADMIN" ? "/admin/dashboard" : role === "TEACHER" ? "/teacher" : "/academics";
   const navItems = getNavForRole(role);
+
+  const handleSignOut = useCallback(async () => {
+    await signOut({ redirect: false });
+    router.push("/login");
+  }, [router]);
+
+  // ─── Nav content (shared between mobile and desktop) ──────────
+
+  const navContent = (
+    <>
+      {/* Masthead */}
+      <Link
+        href={home}
+        className="flex items-center gap-2 border-b border-border px-4 py-4"
+        onClick={() => setMobileOpen(false)}
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center border border-border bg-surface">
+          <GraduationCap className="size-4" aria-hidden="true" />
+        </span>
+        <span className="text-sm font-semibold leading-tight">
+          School LMS
+        </span>
+      </Link>
+
+      {/* Navigation */}
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3" aria-label="Main navigation">
+        {/* Dashboard link */}
+        <Link
+          href={home}
+          onClick={() => setMobileOpen(false)}
+          className={cn(
+            "flex items-center gap-3 border-l-2 px-3 py-2 text-sm transition-colors duration-150",
+            pathname === home
+              ? "border-primary bg-surface font-medium text-text"
+              : "border-transparent text-text/70 hover:border-text/20 hover:bg-surface hover:text-text",
+          )}
+          aria-current={pathname === home ? "page" : undefined}
+        >
+          <LayoutDashboard className="size-4" aria-hidden="true" />
+          Dashboard
+        </Link>
+
+        {/* Role-specific nav items */}
+        {navItems.map(({ label, href, icon: Icon }) => {
+          const active = isActive(href, pathname);
+          return (
+            <Link
+              key={href}
+              href={href}
+              onClick={() => setMobileOpen(false)}
+              className={cn(
+                "flex items-center gap-3 border-l-2 px-3 py-2 text-sm transition-colors duration-150",
+                active
+                  ? "border-primary bg-surface font-medium text-text"
+                  : "border-transparent text-text/70 hover:border-text/20 hover:bg-surface hover:text-text",
+              )}
+              aria-current={active ? "page" : undefined}
+            >
+              <Icon className="size-4" aria-hidden="true" />
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Footer: credit + user menu */}
+      <div className="border-t border-border">
+        {/* User menu */}
+        <div className="relative px-2 pt-2">
+          <button
+            type="button"
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-text/70 hover:bg-surface"
+            aria-expanded={userMenuOpen}
+            aria-haspopup="true"
+          >
+            <span className="flex size-6 shrink-0 items-center justify-center border border-border bg-surface text-xs font-semibold uppercase text-text/50">
+              {name?.charAt(0) ?? "A"}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-left">{name || "Admin"}</span>
+            <span className="text-xs uppercase text-text/40">{role}</span>
+          </button>
+
+          {userMenuOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setUserMenuOpen(false)}
+              />
+              <div className="absolute bottom-full left-2 right-2 z-50 mb-1 border border-border bg-bg shadow-sm">
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text/70 hover:bg-surface hover:text-text"
+                >
+                  <LogOut className="size-4" aria-hidden="true" />
+                  Sign out
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Credit — keep intact per AGENTS.md */}
+        <div className="px-4 py-3 text-xs text-text/40">
+          Developed by Usama Bhanbhro
+        </div>
+      </div>
+    </>
+  );
 
   return (
     <>
-      {/* Mobile top bar */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-bg px-4 py-4 md:hidden">
+      {/* ─── Mobile header ─────────────────────────────────────── */}
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-bg px-4 py-3 md:hidden">
         <Link href={home} className="flex items-center gap-2 text-sm font-semibold">
           <span className="flex size-8 items-center justify-center border border-border bg-surface">
             <GraduationCap className="size-4" aria-hidden="true" />
           </span>
           School LMS
         </Link>
-        <span className="text-xs font-medium uppercase tracking-wide text-text/50">{role}</span>
+        <button
+          type="button"
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="inline-flex size-8 items-center justify-center border border-transparent text-text/60 hover:bg-surface"
+          aria-label={mobileOpen ? "Close menu" : "Open menu"}
+          aria-expanded={mobileOpen}
+        >
+          {mobileOpen ? (
+            <X className="size-5" aria-hidden="true" />
+          ) : (
+            <Menu className="size-5" aria-hidden="true" />
+          )}
+        </button>
       </header>
 
-      {/* Desktop sidebar */}
+      {/* ─── Mobile drawer ─────────────────────────────────────── */}
+      {mobileOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-30 bg-black/40 md:hidden"
+            onClick={() => setMobileOpen(false)}
+          />
+          <aside className="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border bg-bg md:hidden">
+            {navContent}
+          </aside>
+        </>
+      )}
+
+      {/* ─── Desktop sidebar ───────────────────────────────────── */}
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r border-border bg-bg md:flex">
-        {/* Masthead */}
-        <Link href={home} className="flex items-center gap-2 border-b border-border px-4 py-4">
-          <span className="flex size-8 shrink-0 items-center justify-center border border-border bg-surface">
-            <GraduationCap className="size-4" aria-hidden="true" />
-          </span>
-          <span className="text-sm font-semibold leading-tight">
-            School LMS
-            <span className="block text-xs font-normal text-text/50">{name}</span>
-          </span>
-        </Link>
-
-        {/* Nav — binder-tab dividers per DESIGN.md */}
-        <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-4" aria-label="Main navigation">
-          <Link
-            href={home}
-            className="flex items-center gap-2 border-l-2 border-primary bg-surface px-4 py-2 text-sm font-medium text-text"
-          >
-            <LayoutDashboard className="size-4" aria-hidden="true" />
-            Dashboard
-          </Link>
-
-          {navItems.map(({ label, href, icon: Icon }) => (
-            <Link
-              key={label}
-              href={href}
-              className="flex items-center gap-2 border-l-2 border-transparent px-4 py-2 text-sm text-text/70 hover:border-text/20 hover:bg-surface hover:text-text"
-            >
-              <Icon className="size-4" aria-hidden="true" />
-              {label}
-            </Link>
-          ))}
-
-          {plannedModules.map(({ label, icon: Icon }) => (
-            <span
-              key={label}
-              className="flex items-center gap-2 border-l-2 border-transparent px-4 py-2 text-sm text-text/50"
-              aria-disabled="true"
-            >
-              <Icon className="size-4" aria-hidden="true" />
-              {label}
-              <span className="ml-auto text-xs font-medium uppercase tracking-wide text-text/30">planned</span>
-            </span>
-          ))}
-        </nav>
-
-        {/* Footer credit — keep intact per AGENTS.md */}
-        <div className="border-t border-border px-4 py-4 text-xs text-text/40">Developed by Usama Bhanbhro</div>
+        {navContent}
       </aside>
     </>
   );

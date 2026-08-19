@@ -13,7 +13,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToastContainer, useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -30,12 +32,6 @@ interface SchoolSettingsData {
   updatedAt: string;
 }
 
-interface Toast {
-  id: number;
-  type: "success" | "error";
-  message: string;
-}
-
 // ─── Component ──────────────────────────────────────────────────────
 
 export function SchoolSettings() {
@@ -44,7 +40,7 @@ export function SchoolSettings() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toasts, setToasts] = useState<Toast[]>([]);
+  const { toasts, addToast, dismissToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
@@ -53,12 +49,6 @@ export function SchoolSettings() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [principalName, setPrincipalName] = useState("");
-
-  const addToast = useCallback((type: "success" | "error", message: string) => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, type, message }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
-  }, []);
 
   // ─── Load settings ──────────────────────────────────────────────
 
@@ -186,35 +176,12 @@ export function SchoolSettings() {
 
   return (
     <>
-      {/* Toasts */}
-      <div className="fixed right-4 top-4 z-50 flex flex-col gap-2" aria-live="polite">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={cn(
-              "flex items-center gap-2 border px-4 py-3 text-sm font-medium",
-              t.type === "success"
-                ? "border-success/30 bg-success/10 text-success"
-                : "border-danger/30 bg-danger/10 text-danger",
-            )}
-          >
-            {t.type === "success" ? (
-              <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
-            ) : (
-              <XCircle className="size-4 shrink-0" aria-hidden="true" />
-            )}
-            {t.message}
-          </div>
-        ))}
-      </div>
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">School Settings</h1>
-        <p className="mt-1 text-sm text-text/60">
-          Configure your school identity and contact information.
-        </p>
-      </div>
+      <PageHeader
+        title="School Settings"
+        description="Configure your school identity and contact information."
+      />
 
       {loading ? (
         <div className="space-y-4">

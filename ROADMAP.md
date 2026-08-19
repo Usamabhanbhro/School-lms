@@ -94,6 +94,20 @@ Print layouts for all three document types:
 
 **Print isolation:** Dedicated `(print)` route group with its own minimal layout — no sidebar, no navigation, no dashboard chrome. Screen-only toolbar hidden via `print:hidden`.
 
+## Phase 7 — Internal UI Foundation ✅ Complete
+
+Application shell, admin dashboard, and reusable UI primitives:
+
+- **UI primitives**: Extracted shared `Toast` (`useToast` hook + `ToastContainer`), `ConfirmDialog`, `PageHeader`, `Badge`, and `ErrorState` components under `src/components/ui/`. Replaced duplicated inline toast/dialog patterns across all existing feature components.
+- **Application shell**: Rebuilt sidebar with active-route highlighting (based on `usePathname`), mobile drawer with hamburger toggle, user account menu with sign-out, and consistent `aria-current` for accessibility.
+- **Admin navigation**: Complete role-aware navigation with Dashboard, Students, Teachers, Academics, Classes, Subjects, Attendance, Report Cards, Certificates, Fees, and Settings — all wired to existing routes.
+- **Admin dashboard**: Server-side rendered at `/admin/dashboard` with real database counts (students, teachers, academics, class sections, subjects) and quick-action links.
+- **Page structure**: Standardized all authenticated pages with consistent `PageHeader` (title, description, actions), loading skeletons, empty states, and error states.
+- **Responsive behavior**: Sidebar collapses to mobile drawer on `< md`. Content area uses responsive grid (`sm:grid-cols-2 lg:grid-cols-3`). Tables overflow horizontally on mobile. Forms stack vertically.
+- **Accessibility**: All interactive elements have visible focus states (per DESIGN.md). Dialogs use `aria-modal`, `aria-labelledby`. Navigation uses `aria-current="page"`. Icons use `aria-hidden="true"`.
+- **Consistent design language**: All components follow DESIGN.md tokens (square corners, 1px borders, no shadows, Inter font, 8px spacing scale, Lucide icons only).
+- **Regression**: All existing pages (login, signup, recovery, settings, attendance, user management) preserved without functional changes.
+
 ## Not in Any Phase (explicitly out of scope for SRS v5)
 
 Assignments/Submissions, Timetables, Announcements, Notifications/messaging, OAuth or email-based password reset, Library module. Do not add these without a new SRS discussion first.

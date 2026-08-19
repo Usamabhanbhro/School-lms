@@ -14,8 +14,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
+import { ToastContainer, useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -50,12 +52,6 @@ interface AttendanceRecord {
 
 type StatusOption = "PRESENT" | "ABSENT" | "LEAVE";
 
-interface Toast {
-  id: number;
-  type: "success" | "error";
-  message: string;
-}
-
 // ─── Helpers ────────────────────────────────────────────────────────
 
 function todayStr(): string {
@@ -85,13 +81,7 @@ export function TeacherAttendance() {
   const [confirming, setConfirming] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const addToast = useCallback((type: "success" | "error", message: string) => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, type, message }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
-  }, []);
+  const { toasts, addToast, dismissToast } = useToast();
 
   // Local attendance state: studentId → status
   const [localStatus, setLocalStatus] = useState<Record<string, StatusOption>>({});
@@ -298,35 +288,12 @@ export function TeacherAttendance() {
 
   return (
     <>
-      {/* Toasts */}
-      <div className="fixed right-4 top-4 z-50 flex flex-col gap-2" aria-live="polite">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={cn(
-              "flex items-center gap-2 border px-4 py-3 text-sm font-medium",
-              t.type === "success"
-                ? "border-success/30 bg-success/10 text-success"
-                : "border-danger/30 bg-danger/10 text-danger",
-            )}
-          >
-            {t.type === "success" ? (
-              <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
-            ) : (
-              <XCircle className="size-4 shrink-0" aria-hidden="true" />
-            )}
-            {t.message}
-          </div>
-        ))}
-      </div>
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Student Attendance</h1>
-        <p className="mt-1 text-sm text-text/60">
-          Mark attendance for your assigned classes.
-        </p>
-      </div>
+      <PageHeader
+        title="Student Attendance"
+        description="Mark attendance for your assigned classes."
+      />
 
       {/* Selection bar */}
       <Card className="mb-6 p-4">
