@@ -4,7 +4,7 @@ A web-based Learning Management System for schools — attendance, marks/tests, 
 
 Full web app (no desktop client). Built to be usable from a phone browser, since class teachers need to mark attendance on the go.
 
-**Status: Phases 0–6 implemented. Admin provisioning and school settings added.** SRS finalized at v5 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
+**Status: Phases 0–6 implemented. Admin provisioning, school settings, and admin self-recovery added.** SRS finalized at v5 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
 
 `SCHEMA.md` and `API.md` are current with SRS v5. Every route through Fee Challans is built and functional. Print layouts for Certificates, Fee Challans (three-copy), and Report Cards are implemented with database-backed school identity configuration.
 
@@ -112,6 +112,7 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/api/auth/[...nextauth]` | — | NextAuth handler |
 | `/api/admin/signup` | Public | Create first admin account (only when no Admin exists) |
 | `/api/admin/recover` | Public | Recovery code verification + password reset — rate limited |
+| `/api/admin/recover/code` | Public | Generate new recovery code (for expired/consumed codes) |
 | `/api/admin/recovery-code` | ADMIN | Manually rotate recovery code |
 | `/api/settings/school` | ADMIN (write), ACADEMICS (read) | School identity settings |
 | `/api/settings/school/logo` | ADMIN | Upload/remove school logo |
@@ -151,6 +152,18 @@ Multi-tenant SaaS deployment is a planned future enhancement — not yet impleme
 ## Remaining Work
 
 - **Visual design for print documents** — Report Card, Leaving Certificate, Character Certificate, and Fee Challan layouts are structural placeholders. Final designs will be supplied later. The data/configuration layer is complete and flexible.
+
+## Admin Self-Recovery
+
+The single Admin account uses a one-time recovery code for password reset:
+
+1. **Initial code**: Generated at admin signup, displayed once, never stored in plaintext
+2. **Expiration**: Codes expire after 24 hours (configurable in `src/lib/admin-recovery.ts`)
+3. **Single-use**: Consumed atomically on successful recovery — cannot be reused
+4. **Replacement**: Expired/consumed codes can be replaced via `POST /api/admin/recover/code` (public) or `POST /api/admin/recovery-code/regenerate` (authenticated)
+5. **One active code**: Only one recovery code is valid at a time; generating a new one invalidates the previous
+6. **History**: All codes are tracked in `AdminRecoveryCode` for audit trail
+7. **JWT limitation**: Existing sessions are not invalidated after password change (JWT-based auth limitation — the old password can no longer authenticate, but existing sessions remain valid until expiry)
 
 Not in scope at all under SRS v5: Assignments/Submissions, Timetables, Announcements, Notifications/messaging, OAuth/email-based password reset, Library module.
 

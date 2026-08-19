@@ -1,32 +1,36 @@
-import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientIp, PUBLIC_ENDPOINT_LIMITS } from "@/lib/rate-limit";
+import {
+  verifyRecoveryCode,
+  createRecoveryCode,
+  findActiveRecoveryCode,
+} from "@/lib/admin-recovery";
 
 /**
  * POST /api/admin/recover
  *
- * Public route — the recovery path for a locked-out Admin (SRS §1.7).
+ * Public route — the recovery path for a locked-out Admin.
  * No session required.
  *
  * Rate limited: 5 attempts per 15 minutes per IP.
  *
  * Flow:
  *   1. Find the User with role = ADMIN matching username or email
- *   2. Verify the provided recovery code against the stored hash
- *   3. If valid: hash the new password, generate a brand new recovery code,
- *      hash it, and update the Admin record with both
- *   4. Return success + the new plaintext recovery code (the old one is
- *      now invalid — single-use by design)
+ *   2. Find an active recovery code (not consumed, not replaced, not expired)
+ *   3. Verify the provided code against the stored hash
+ *   4. If valid: consume the code, hash the new password, generate a NEW recovery code,
+ *      and update the Admin record
+ *   5. Return success — the new recovery code is NOT returned from this endpoint
+ *      (the Admin should already have a valid code or use the code-generation endpoint)
  *
  * Security notes:
- *   - The plaintext code is returned exactly once, never logged
  *   - bcrypt.compare handles timing-safe comparison
- *   - A new code is generated on every successful recovery, so a
- *     leaked-but-unused code cannot be reused
+ *   - Codes are single-use: consumedAt is set atomically
  *   - Rate limiting prevents brute force attempts
+ *   - Generic error messages prevent enumeration
  */
 const recoverSchema = z.object({
   usernameOrEmail: z.string().min(1),
@@ -74,7 +78,7 @@ export async function POST(request: Request) {
       },
     });
 
-    // Generic error message — do not reveal whether the username exists
+    // Generic error — do not reveal whether the username exists
     const genericError = {
       error: {
         message: "Invalid username/email or recovery code.",
@@ -82,35 +86,60 @@ export async function POST(request: Request) {
       },
     };
 
-    if (!admin || !admin.recoveryCodeHash) {
+    if (!admin) {
+      return NextResponse.json(genericError, { status: 401 });
+    }
+
+    // Find an active recovery code for this Admin
+    const activeCode = await findActiveRecoveryCode(admin.id);
+
+    if (!activeCode) {
+      // No active code — could be expired, consumed, or never generated
       return NextResponse.json(genericError, { status: 401 });
     }
 
     // Verify the recovery code against the stored hash
-    const codeValid = await bcrypt.compare(body.recoveryCode, admin.recoveryCodeHash);
+    const codeValid = await verifyRecoveryCode(body.recoveryCode, activeCode.codeHash);
     if (!codeValid) {
       return NextResponse.json(genericError, { status: 401 });
     }
 
-    // Code is valid — generate new password hash and new recovery code
+    // Code is valid — atomically consume the code, change password, and generate new code
     const newPasswordHash = await bcrypt.hash(body.newPassword, 12);
-    const newRecoveryCode = crypto.randomBytes(32).toString("hex");
-    const newRecoveryCodeHash = await bcrypt.hash(newRecoveryCode, 12);
 
-    // Update Admin record: new password + new recovery code (invalidates old code)
-    await prisma.user.update({
-      where: { id: admin.id },
-      data: {
-        passwordHash: newPasswordHash,
-        recoveryCodeHash: newRecoveryCodeHash,
-      },
+    await prisma.$transaction(async (tx) => {
+      // Mark the recovery code as consumed
+      await tx.adminRecoveryCode.update({
+        where: { id: activeCode.id },
+        data: { consumedAt: new Date() },
+      });
+
+      // Update the Admin's password
+      await tx.user.update({
+        where: { id: admin.id },
+        data: { passwordHash: newPasswordHash },
+      });
+
+      // Invalidate any other active codes (shouldn't exist, but safety net)
+      await tx.adminRecoveryCode.updateMany({
+        where: {
+          userId: admin.id,
+          consumedAt: null,
+          replacedAt: null,
+          id: { not: activeCode.id },
+        },
+        data: { replacedAt: new Date() },
+      });
     });
 
-    // Return success with the new recovery code
+    // Generate a new recovery code for future use
+    const newPlaintextCode = await createRecoveryCode(admin.id);
+
+    // Return success with the new recovery code (shown once)
     return NextResponse.json({
       data: {
         message: "Password reset successful.",
-        newRecoveryCode,
+        newRecoveryCode: newPlaintextCode,
       },
     });
   } catch (error) {

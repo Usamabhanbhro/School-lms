@@ -1,9 +1,9 @@
-import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientIp, PUBLIC_ENDPOINT_LIMITS } from "@/lib/rate-limit";
+import { createRecoveryCode } from "@/lib/admin-recovery";
 
 /**
  * POST /api/admin/signup
@@ -105,10 +105,6 @@ export async function POST(request: Request) {
     // Hash password
     const passwordHash = await bcrypt.hash(body.password, 12);
 
-    // Generate recovery code
-    const recoveryCode = crypto.randomBytes(24).toString("hex");
-    const recoveryCodeHash = await bcrypt.hash(recoveryCode, 12);
-
     // Create admin user with recovery code
     // Use a transaction to ensure atomicity
     const user = await prisma.$transaction(async (tx) => {
@@ -128,10 +124,12 @@ export async function POST(request: Request) {
           name: body.name,
           passwordHash,
           role: "ADMIN",
-          recoveryCodeHash,
         },
       });
     });
+
+    // Generate initial recovery code using the new model
+    const recoveryCode = await createRecoveryCode(user.id);
 
     // Return success with plaintext recovery code (shown once)
     return NextResponse.json(

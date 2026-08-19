@@ -1,17 +1,15 @@
-import crypto from "crypto";
-import bcrypt from "bcryptjs";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
+import { createRecoveryCode } from "@/lib/admin-recovery";
 
 /**
  * POST /api/admin/recovery-code/regenerate
  *
- * Admin only. Generates a new one-time recovery code, hashes it,
- * stores the hash on the Admin's User record, and returns the
- * plaintext code exactly once.
+ * Admin only (authenticated). Generates a new one-time recovery code using the
+ * AdminRecoveryCode model, invalidating any prior active code.
  *
  * This is the manual rotation action (SRS §1.7 step 4) — the admin
  * can trigger this at any time if they suspect the current code
@@ -22,21 +20,12 @@ export async function POST() {
     const session = await getServerSession(authOptions);
     const authedSession = requireRole(session, ["ADMIN"]);
 
-    // Generate a secure random recovery code (32 bytes = 64 hex chars)
-    const recoveryCode = crypto.randomBytes(32).toString("hex");
-
-    // Hash the recovery code (bcrypt, cost 12 — same as passwords)
-    const recoveryCodeHash = await bcrypt.hash(recoveryCode, 12);
-
-    // Update the Admin's User record
-    await prisma.user.update({
-      where: { id: authedSession.user.id },
-      data: { recoveryCodeHash },
-    });
+    // Use the shared helper to generate a new code (invalidates any prior active code)
+    const plaintextCode = await createRecoveryCode(authedSession.user.id);
 
     // Return the plaintext code exactly once — it is never stored in plaintext
     return NextResponse.json({
-      data: { recoveryCode },
+      data: { recoveryCode: plaintextCode },
     });
   } catch (error) {
     if (error instanceof ApiError) {

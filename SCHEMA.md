@@ -104,9 +104,18 @@ A single fee component on a challan — base fee, arrears, late fee, or any admi
 
 ## Admin Password Recovery
 
-Not a separate model — implemented as fields on `User` (Admin row only):
-- `recoveryCodeHash` — hash of the current valid one-time recovery code
-- On successful use via `/admin/recover`, the code is invalidated and a new one generated and shown once (never stored in plaintext, never logged)
+Implemented via the `AdminRecoveryCode` model plus a `recoveryCodeHash` field on `User` (kept in sync for quick lookup).
+
+### AdminRecoveryCode
+
+One-time recovery codes for Admin self-service password recovery. Many historical records per Admin; only one active code at a time.
+- Fields: `userId`, `codeHash` (bcrypt), `expiresAt` (24 hours), `consumedAt` (nullable), `replacedAt` (nullable)
+- A code is active only if: `consumedAt IS NULL AND replacedAt IS NULL AND expiresAt > now`
+- Generating a new code sets `replacedAt` on the prior active code
+- Consuming a code sets `consumedAt`
+- `User.recoveryCodeHash` is kept in sync for quick lookup during verification
+- Plaintext codes are never stored, logged, or returned after generation
+- Recovery code lifetime: 24 hours (configurable via `RECOVERY_CODE_TTL_MS` in `src/lib/admin-recovery.ts`)
 
 ### SchoolSettings
 

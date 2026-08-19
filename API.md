@@ -3,7 +3,7 @@
 Living document. Every API route must be added here when created — see `CONVENTIONS.md` and `AGENTS.md`.
 
 **Status: reconciled with SRS.md v5.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
-Phase 1–6 routes are implemented. Admin provisioning and school settings added.
+Phase 1–6 routes are implemented. Admin provisioning, school settings, and admin self-recovery added.
 
 ## Conventions Recap
 
@@ -29,13 +29,20 @@ NextAuth handler — login/logout/session. Credentials provider only.
 **Role required:** none (public route — this is the recovery path for a locked-out Admin)
 **Purpose:** Verify username/email + recovery code, then allow setting a new password
 **Request body:** `{ usernameOrEmail, recoveryCode, newPassword }`
-**Notes:** on success, invalidates the used code and generates+returns a new one. Rate limited (5 attempts / 15 min / IP).
+**Notes:** Atomically consumes the recovery code, changes the password, and generates a new recovery code. Returns the new code once. Rate limited (5 attempts / 15 min / IP). Uses the `AdminRecoveryCode` model with expiration tracking.
 **Status:** implemented
 
-### GET /api/admin/recovery-code (regenerate)
-Wording TBD at implementation — likely `POST /api/admin/recovery-code/regenerate`.
+### POST /api/admin/recover/code
+**Role required:** none (public route — generate a new recovery code for a locked-out Admin)
+**Purpose:** Generate a new recovery code when the current one has expired, been consumed, or been replaced
+**Request body:** `{ usernameOrEmail }`
+**Notes:** Rejects if an active (non-expired, non-consumed, non-replaced) code already exists. Rate limited (3 attempts / 15 min / IP). Returns the new plaintext code once.
+**Status:** implemented
+
+### POST /api/admin/recovery-code/regenerate
 **Role required:** Admin (authenticated)
-**Purpose:** Manually rotate the admin's recovery code. Returns the new plaintext code once; only its hash is persisted.
+**Purpose:** Manually rotate the admin's recovery code. Invalidates any prior active code, generates a new one, and returns the plaintext code once.
+**Notes:** Uses the `AdminRecoveryCode` model. Only the Admin can trigger this.
 **Status:** implemented
 
 ---
@@ -349,4 +356,4 @@ Wording TBD at implementation — likely `POST /api/admin/recovery-code/regenera
 
 ## Not Yet Scoped
 
-- No remaining API-level gaps — rate limiting is implemented on both public endpoints
+- No remaining API-level gaps — rate limiting and recovery code lifecycle are fully implemented

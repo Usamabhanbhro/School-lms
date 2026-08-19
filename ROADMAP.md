@@ -32,10 +32,12 @@ Everything downstream reads from this layer, so get the RBAC scoping right here 
 
 ## Phase 2 — Auth Completeness ✅ Complete
 
-- Admin recovery code: generate + display once at initial admin setup, hash-only storage
-- `POST /api/admin/recover`: verify code, set new password, rotate to a new code
+- Admin recovery code: generate + display once at initial admin setup, stored via `AdminRecoveryCode` model with 24-hour expiration
+- `POST /api/admin/recover`: verify code, consume it atomically, set new password, generate new code
+- `POST /api/admin/recover/code`: public endpoint to generate a new code when current one is expired/consumed
 - Manual regenerate-code action from within the admin panel
-- Rate limiting on both public recovery and admin signup routes
+- Recovery UI at `/admin/recover` with states for valid, expired, consumed, and replaced codes
+- Rate limiting on all public recovery and admin signup routes
 - Public admin signup (`/admin/signup`): first-time provisioning with server-side singleton check, database-level partial unique index, and race-safe transaction
 - School Settings API and UI (`/admin/settings`): school name, address, phone, email, principal, logo upload/remove — Admin-only mutations
 - Database-backed school identity: `getSchoolSettings()` accessor used by all print layouts

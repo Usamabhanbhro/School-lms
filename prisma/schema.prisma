@@ -48,6 +48,8 @@ model User {
   /// Admin-only: hash of the current one-time recovery code. Null for Teacher/Academics.
   recoveryCodeHash String?
 
+  recoveryCodes AdminRecoveryCode[]
+
   teacherProfile   TeacherProfile?
   academicsProfile AcademicsProfile?
 
@@ -71,6 +73,22 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// One-time recovery code for Admin self-service password recovery.
+/// Many historical records per Admin; only one active code at a time.
+/// A code is active only if consumedAt IS NULL AND replacedAt IS NULL AND expiresAt > now.
+model AdminRecoveryCode {
+  id           String @id @default(cuid())
+  userId       String
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash     String // bcrypt hash of the plaintext recovery code
+  expiresAt    DateTime
+  consumedAt   DateTime?
+  replacedAt   DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([userId, consumedAt, replacedAt])
 }
 
 /// Academics-specific fields, kept separate from User (mirrors TeacherProfile pattern).
