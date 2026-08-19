@@ -8,7 +8,8 @@ Instructions for any AI coding tool (Claude Code, Cursor, Copilot, etc.) working
 2. Read `ARCHITECTURE.md` — do not deviate from the chosen stack (Next.js App Router, Prisma, Neon Postgres, NextAuth, Tailwind, Vercel) without it being an explicit, discussed decision.
 3. Read `DESIGN.md` before writing or editing any UI — colors, type, spacing, motion, and component patterns are specified there and are not up for reinterpretation per-component.
 4. Read `CONVENTIONS.md` before writing any code — folder structure, naming, API shape, and styling rules are defined there.
-5. Check `SCHEMA.md` and `API.md` before adding a new database model or API route — check whether it already exists or is planned, to avoid duplicate/conflicting entities or endpoints.
+5. Check `SCHEMA.md` and `API.md` before adding a new database model or API route — these are **ground truth for what's already implemented**, not scaffolds. Check whether it already exists before adding anything.
+6. Check `ROADMAP.md` for phase status before starting work — confirm which phase is actually next rather than assuming.
 
 ## Hard Rules
 
@@ -28,8 +29,9 @@ Instructions for any AI coding tool (Claude Code, Cursor, Copilot, etc.) working
 ## Current Project State
 
 - Architecture and design system: locked (`ARCHITECTURE.md`, `DESIGN.md`).
-- SRS (feature scope): in progress — check `SRS.md` for current status before assuming a feature is in scope.
-- Schema and API: scaffolded, not final — treat `SCHEMA.md` and `API.md` as living documents, not ground truth, until SRS is complete.
+- SRS: **finalized (v5)** — three login roles (Admin, Academics, Teacher). Treat `SRS.md` as complete for all core flows; only print/visual design for Certificates, Fee Challan, and Report Card remains open (see `ROADMAP.md` Phase 6).
+- Schema and API: **implemented, not scaffolds.** Phases 0–5 in `ROADMAP.md` are complete — `SCHEMA.md` and `API.md` describe real, working models and routes, marked `Status: implemented` per route in `API.md`. Do not redesign or re-scaffold anything documented there without a specific reason; extend it.
+- Remaining work: Phase 6 (print stylesheets for Certificates/Fee Challan/Report Card) and rate limiting on `/api/admin/recover` — see `README.md` Remaining Work.
 
 ## If Something Is Ambiguous
 
