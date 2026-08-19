@@ -81,4 +81,4 @@ Report cards and attendance sheets require print-optimized output — plan a ded
 - Fee Challan three-copy print layout (structure confirmed, visual design deferred)
 - Multi-school / multi-tenancy — currently assumed single school per deployment; revisit if that changes
 
-> **Note:** This document's stack rationale and deployment constraints are still accurate. The role list and entity list above have been updated to match SRS v4; other sections (Electron rationale, Neon/Vercel tradeoffs, system diagram) remain as-is.
+> **Note:** This document is current with SRS v5 — stack rationale, role list, entity list, and deployment constraints all reflect the implemented state (Phases 0–5 complete per `ROADMAP.md`).

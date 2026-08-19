@@ -10,6 +10,7 @@ src/
     (auth)/            # login, register — public routes
     (dashboard)/
       admin/           # admin-only pages
+      academics/       # academics-only pages
       teacher/         # teacher-only pages
     api/
       <resource>/      # route handlers, grouped by resource (e.g. api/attendance/)
@@ -25,7 +26,7 @@ prisma/
   migrations/
 ```
 
-> **Note:** Two login roles only (Admin, Teacher) per SRS v4. Students are data records, not logins — no `/student` or `/parent` route groups.
+> **Note:** Three login roles (Admin, Teacher, Academics) per SRS v5. Students are data records, not logins — no `/student` or `/parent` route groups.
 
 ## Naming
 
