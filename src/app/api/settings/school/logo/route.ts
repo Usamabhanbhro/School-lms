@@ -3,11 +3,9 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
-import { writeFile, unlink, mkdir } from "fs/promises";
-import { join } from "path";
+import { put, del } from "@vercel/blob";
 import { randomBytes } from "crypto";
 
-const UPLOAD_DIR = join(process.cwd(), "public", "uploads", "logos");
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ALLOWED_MIMES = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"];
 
@@ -15,13 +13,25 @@ const ALLOWED_MIMES = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"]
  * POST /api/settings/school/logo
  *
  * Upload a school logo. Admin only.
- * Saves to public/uploads/logos/ with a random filename.
- * Updates the SchoolSettings.logoPath record.
+ * Saves to Vercel Blob storage (persistent across serverless invocations).
+ * Updates the SchoolSettings.logoPath record with the blob URL.
  */
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     requireRole(session, ["ADMIN"]);
+
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      return NextResponse.json(
+        {
+          error: {
+            message: "File storage is not configured. Please add BLOB_READ_WRITE_TOKEN to your environment variables.",
+            code: "STORAGE_NOT_CONFIGURED",
+          },
+        },
+        { status: 500 },
+      );
+    }
 
     const formData = await request.formData();
     const file = formData.get("logo") as File | null;
@@ -59,39 +69,34 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generate safe filename
-    const ext = file.name.split(".").pop() ?? "png";
-    const safeFilename = `${randomBytes(16).toString("hex")}.${ext}`;
-
-    // Ensure upload directory exists
-    await mkdir(UPLOAD_DIR, { recursive: true });
-
-    // Write file
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(join(UPLOAD_DIR, safeFilename), buffer);
-
-    // Delete old logo if exists
+    // Delete old blob if exists
     const settings = await prisma.schoolSettings.findFirst();
-    if (settings?.logoPath) {
-      const oldPath = join(process.cwd(), "public", settings.logoPath);
-      await unlink(oldPath).catch(() => {}); // ignore if file doesn't exist
+    if (settings?.logoPath && settings.logoPath.startsWith("https://")) {
+      await del(settings.logoPath).catch(() => {});
     }
 
-    // Update settings with new logo path
-    const logoPath = `/uploads/logos/${safeFilename}`;
+    // Generate safe filename
+    const ext = file.name.split(".").pop() ?? "png";
+    const safeFilename = `school-logo/${randomBytes(16).toString("hex")}.${ext}`;
 
+    // Upload to Vercel Blob (public access for rendering in <img>)
+    const blob = await put(safeFilename, file, {
+      access: "public",
+    });
+
+    // Update settings with blob URL
     if (settings) {
       await prisma.schoolSettings.update({
         where: { id: settings.id },
-        data: { logoPath },
+        data: { logoPath: blob.url },
       });
     } else {
       await prisma.schoolSettings.create({
-        data: { logoPath },
+        data: { logoPath: blob.url },
       });
     }
 
-    return NextResponse.json({ data: { logoPath } });
+    return NextResponse.json({ data: { logoPath: blob.url } });
   } catch (error) {
     if (error instanceof ApiError) {
       return NextResponse.json(
@@ -111,6 +116,7 @@ export async function POST(request: Request) {
  * DELETE /api/settings/school/logo
  *
  * Remove the school logo. Admin only.
+ * Deletes the blob from Vercel Blob storage and clears the path in settings.
  */
 export async function DELETE() {
   try {
@@ -125,9 +131,10 @@ export async function DELETE() {
       );
     }
 
-    // Delete the file
-    const filePath = join(process.cwd(), "public", settings.logoPath);
-    await unlink(filePath).catch(() => {});
+    // Delete blob from Vercel Blob storage
+    if (settings.logoPath.startsWith("https://")) {
+      await del(settings.logoPath).catch(() => {});
+    }
 
     // Clear the path in settings
     await prisma.schoolSettings.update({

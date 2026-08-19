@@ -16,17 +16,17 @@ The existing skeleton was built against an earlier four-role assumption (Admin/T
 
 This is cleanup, not new functionality. Nothing in later phases should be built on top of the stale model.
 
-## Phase 1 — Core Entities (no workflows yet) ✅ Complete
+## Phase 1 — Core Entities ✅ Complete
 
-Admin-only CRUD, no attendance/marks/challans yet:
+Admin-only CRUD with full management UIs:
 
-- Teacher: create (with CNIC/phone format validation), edit, delete, revoke, admin-driven password reset
-- Academics: create (with CNIC/phone format validation), edit, delete, revoke, admin-driven password reset (same CRUD pattern as Teacher)
-- ClassSection: create/edit
-- Subject: create/edit
-- ClassTeacherAssignment: assign/reassign the one class teacher per class (deactivate old on reassignment, never two active)
-- SubjectTeacherAssignment: assign teachers to class+subject combinations
-- Student: create/edit, allot to class+section (name, guardian name, guardian CNIC, DOB, admission date)
+- Teacher: create (with CNIC/phone format validation), edit, delete, revoke, admin-driven password reset — **UI: `/admin/teachers` via `UserManagement` component**
+- Academics: create (with CNIC/phone format validation), edit, delete, revoke, admin-driven password reset (same CRUD pattern as Teacher) — **UI: `/admin/academics` via `UserManagement` component**
+- ClassSection: create/edit — **UI: `/admin/classes` via `ClassSectionManagement` component with class teacher and subject teacher assignment dialogs**
+- Subject: create/edit — **UI: `/admin/subjects` via `SubjectManagement` component**
+- ClassTeacherAssignment: assign/reassign the one class teacher per class (deactivate old on reassignment, never two active) — **UI: inline in ClassSection table**
+- SubjectTeacherAssignment: assign teachers to class+subject combinations — **UI: inline in ClassSection table**
+- Student: create/edit, allot to class+section (name, guardian name, guardian CNIC, DOB, admission date) — **UI: `/admin/students` via `StudentManagement` component with client-side CNIC validation**
 
 Everything downstream reads from this layer, so get the RBAC scoping right here first — Teacher views should already correctly filter to "my assigned classes only" even before there's attendance/marks data to show.
 

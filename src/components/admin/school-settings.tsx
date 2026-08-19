@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  Copy,
+  KeyRound,
   Loader2,
   Save,
   Upload,
@@ -42,6 +44,11 @@ export function SchoolSettings() {
   const [error, setError] = useState<string | null>(null);
   const { toasts, addToast, dismissToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Recovery code state
+  const [regeneratingCode, setRegeneratingCode] = useState(false);
+  const [newRecoveryCode, setNewRecoveryCode] = useState<string | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   // Form state
   const [schoolName, setSchoolName] = useState("");
@@ -174,6 +181,43 @@ export function SchoolSettings() {
 
   // ─── Render ────────────────────────────────────────────────────
 
+  // ─── Recovery code regeneration ─────────────────────────
+
+  const handleRegenerateCode = useCallback(async () => {
+    setRegeneratingCode(true);
+    setNewRecoveryCode(null);
+
+    try {
+      const res = await fetch("/api/admin/recovery-code/regenerate", {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        addToast("error", data.error?.message ?? "Failed to generate recovery code.");
+        return;
+      }
+
+      setNewRecoveryCode(data.data.recoveryCode);
+      addToast("success", "New recovery code generated. Save it now — you will not see it again.");
+    } catch {
+      addToast("error", "Network error. Please try again.");
+    } finally {
+      setRegeneratingCode(false);
+    }
+  }, [addToast]);
+
+  const handleCopyCode = useCallback(async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    } catch {
+      // Fallback: select text
+    }
+  }, []);
+
   return (
     <>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
@@ -275,6 +319,58 @@ export function SchoolSettings() {
                 Save Settings
               </Button>
             </div>
+          </Card>
+
+          {/* Recovery Code Section */}
+          <Card className="p-6">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-text/70">
+              Admin Recovery Code
+            </h2>
+
+            <p className="mb-4 text-sm text-text/60">
+              Your one-time recovery code is used to reset your password if you forget it.
+              Regenerating invalidates the previous code.
+            </p>
+
+            {newRecoveryCode ? (
+              <div className="border border-success/30 bg-success/5 p-4">
+                <p className="text-sm font-semibold text-success">
+                  Save this code — you will not see it again.
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <p className="flex-1 font-mono text-lg font-bold break-all select-all">
+                    {newRecoveryCode}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyCode(newRecoveryCode)}
+                    className="shrink-0 border border-border bg-surface p-2 text-text/60 transition-colors hover:bg-border hover:text-text"
+                    title="Copy recovery code"
+                  >
+                    <Copy className="size-4" aria-hidden="true" />
+                  </button>
+                </div>
+                {codeCopied && (
+                  <p className="mt-1 text-xs text-success">Copied to clipboard.</p>
+                )}
+                <p className="mt-2 text-xs text-text/60">
+                  Your previous recovery code is no longer valid. This code expires in 24 hours.
+                </p>
+              </div>
+            ) : (
+              <Button
+                variant="secondary"
+                onClick={handleRegenerateCode}
+                disabled={regeneratingCode}
+              >
+                {regeneratingCode ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <KeyRound className="size-4" aria-hidden="true" />
+                )}
+                Regenerate Recovery Code
+              </Button>
+            )}
           </Card>
 
           {/* Logo Section */}

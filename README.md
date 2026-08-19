@@ -77,8 +77,9 @@ bun run dev
 | `DATABASE_URL` | Yes (for auth + data routes) | Neon Postgres connection string |
 | `NEXTAUTH_SECRET` | Yes (production) | NextAuth JWT signing secret |
 | `NEXTAUTH_URL` | Yes (production) | Canonical app URL for auth callbacks |
+| `BLOB_READ_WRITE_TOKEN` | Yes (for logo upload) | Vercel Blob storage token — see [Vercel Blob docs](https://vercel.com/docs/storage/vercel-blob) |
 
-No email/SMS/OAuth provider variables are required — Admin password recovery is self-service via a one-time recovery code (see `SRS.md`), not email-based. Do not add third-party service variables without a documented need.
+No email/SMS/OAuth provider variables are required — Admin password recovery is self-service via a one-time recovery code (see `SRS.md`), not email-based. The `BLOB_READ_WRITE_TOKEN` is required only for school logo upload — see `ARCHITECTURE.md` for setup.
 
 ## Roles
 
@@ -103,9 +104,18 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/admin/recover` | Public | Self-service admin password recovery — implemented |
 | `/dashboard` | Authenticated | Redirects to the signed-in user's role home |
 | `/admin/settings` | ADMIN | School identity settings (name, address, phone, email, logo) |
-| `/admin` | ADMIN | Role home |
-| `/teacher` | TEACHER | Role home |
-| `/academics` | ACADEMICS | Role home |
+| `/admin/dashboard` | ADMIN | Admin dashboard with stats |
+| `/admin/teachers` | ADMIN | Teacher management |
+| `/admin/academics` | ADMIN, ACADEMICS | Academics staff management (Admin CRUD, Academics read) |
+| `/admin/classes` | ADMIN | Class/section management with teacher assignments |
+| `/admin/subjects` | ADMIN | Subject management |
+| `/admin/students` | ADMIN | Student management |
+| `/admin/attendance` | ADMIN | Attendance overview and overrides |
+| `/admin/teacher-attendance` | ADMIN | Teacher attendance management |
+| `/admin/report-cards` | ADMIN, ACADEMICS | Report cards list |
+| `/admin/certificates` | ADMIN, ACADEMICS | Certificate generation |
+| `/admin/fees` | ADMIN, ACADEMICS | Fee challan generation |
+| `/teacher` | TEACHER | Teacher dashboard and role home |
 | `/print/certificates/[id]` | ADMIN, ACADEMICS | Certificate print view (Leaving + Character) |
 | `/print/fee-challans/[id]` | ADMIN, ACADEMICS | Fee Challan print view (3 copies: Bank/Student/School) |
 | `/print/report-cards/[id]` | ADMIN, ACADEMICS | Report Card print view |
@@ -197,7 +207,7 @@ On a fresh deployment, default placeholder values are used until the Admin confi
 
 ## Deployment
 
-Deployed via Vercel, git-push deploy from `main`. Database hosted on Neon. See `ARCHITECTURE.md` for free-tier constraints (Neon cold-start, Vercel function time limits). Set `DATABASE_URL`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL` in production, and run `bun run db:deploy` after deploying.
+Deployed via Vercel, git-push deploy from `main`. Database hosted on Neon. File uploads (school logo) use Vercel Blob storage. See `ARCHITECTURE.md` for free-tier constraints (Neon cold-start, Vercel function time limits). Set `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, and `BLOB_READ_WRITE_TOKEN` in production, and run `bun run db:deploy` after deploying.
 
 ## Credits
 

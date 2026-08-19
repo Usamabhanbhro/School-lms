@@ -18,7 +18,7 @@ Full web application (no Electron, no desktop client). Single Next.js codebase s
 | Styling | Tailwind CSS | Config tokens should map 1:1 to DESIGN.md |
 | Icons | Lucide | Single icon library, per DESIGN.md |
 | Hosting | Vercel (free tier) | Git-push deploy, automatic SSL, serverless functions |
-| File storage | TBD — Cloudflare R2 (S3-compatible, free tier) suggested | For assignment uploads, profile photos |
+| File storage | Vercel Blob (persistent, serverless-native) | School logo upload. Requires `BLOB_READ_WRITE_TOKEN` env var. |
 
 ## Why this stack (decisions made and rationale)
 
@@ -75,7 +75,6 @@ Report cards and attendance sheets require print-optimized output — plan a ded
 
 ## Open / Not Yet Decided
 
-- File storage provider (leaning Cloudflare R2, not finalized)
 - Background job strategy for anything exceeding Vercel's serverless time limits (e.g. bulk report generation)
 - Certificate and Report Card print layouts (functional data exists, visual design deferred — see SRS §1.8, ROADMAP Phase 6)
 - Fee Challan three-copy print layout (structure confirmed, visual design deferred)

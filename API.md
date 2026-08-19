@@ -349,12 +349,13 @@ NextAuth handler — login/logout/session. Credentials provider only.
 **Role required:** Admin only
 **Purpose:** Upload a school logo (PNG, JPEG, SVG, or WebP; max 2MB)
 **Request body:** FormData with `logo` file
-**Notes:** Saves to public/uploads/logos/ with random filename; updates SchoolSettings.logoPath
+**Response (200):** `{ data: { logoPath } }` — logoPath is the persistent Vercel Blob URL
+**Notes:** Saves to Vercel Blob storage (persistent across serverless invocations). Requires `BLOB_READ_WRITE_TOKEN` env var. Deletes previous blob if one existed. Updates SchoolSettings.logoPath.
 **Status:** implemented
 
 ### DELETE /api/settings/school/logo
 **Role required:** Admin only
-**Purpose:** Remove the school logo
+**Purpose:** Remove the school logo from Vercel Blob storage and clear the path in settings
 **Status:** implemented
 
 ---
