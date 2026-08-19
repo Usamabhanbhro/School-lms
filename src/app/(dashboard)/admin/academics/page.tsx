@@ -11,7 +11,8 @@ export const metadata: Metadata = {
 export default async function AdminAcademicsPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect("/login");
+  if (session.user.role !== "ADMIN" && session.user.role !== "ACADEMICS")
+    redirect("/login");
 
   // Reuse UserManagement which has tabs for teachers/academics
   return <UserManagement />;

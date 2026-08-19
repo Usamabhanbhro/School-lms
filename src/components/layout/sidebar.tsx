@@ -51,12 +51,24 @@ const teacherNav: NavItem[] = [
   { label: "Attendance", href: "/teacher/attendance", icon: ClipboardCheck },
 ];
 
+/**
+ * Academics staff — delegated certificate & fee challan generation;
+ * read-only oversight of students, attendance, marks, report cards.
+ * Based on SRS v5 ACADEMICS permissions.
+ */
+const academicsNav: NavItem[] = [
+  { label: "Certificates", href: "/admin/certificates", icon: FileText },
+  { label: "Fees", href: "/admin/fees", icon: Banknote },
+];
+
 function getNavForRole(role: Role): NavItem[] {
   switch (role) {
     case "ADMIN":
       return adminNav;
     case "TEACHER":
       return teacherNav;
+    case "ACADEMICS":
+      return academicsNav;
     default:
       return [];
   }
@@ -67,7 +79,7 @@ function getNavForRole(role: Role): NavItem[] {
 function isActive(href: string, pathname: string): boolean {
   // Exact match for top-level routes like /admin/teachers
   // Also match sub-routes like /admin/teachers/123
-  if (href === "/admin" || href === "/teacher" || href === "/academics") {
+  if (href === "/admin" || href === "/teacher" || href === "/admin/academics") {
     return pathname === href;
   }
   return pathname === href || pathname.startsWith(href + "/");
@@ -87,7 +99,12 @@ export function Sidebar({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const home = role === "ADMIN" ? "/admin/dashboard" : role === "TEACHER" ? "/teacher" : "/academics";
+  const home =
+    role === "ADMIN"
+      ? "/admin/dashboard"
+      : role === "TEACHER"
+        ? "/teacher"
+        : "/admin/academics";
   const navItems = getNavForRole(role);
 
   const handleSignOut = useCallback(async () => {
