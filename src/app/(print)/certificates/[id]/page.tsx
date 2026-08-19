@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { schoolConfig } from "@/lib/school-config";
+import { getSchoolSettings } from "@/lib/school-settings";
 
 /**
  * /print/certificates/:id
@@ -18,35 +18,36 @@ export default async function PrintCertificatePage({
 }) {
   const { id } = await params;
 
-  const certificate = await prisma.certificate.findUnique({
-    where: { id },
-    include: {
-      student: {
-        select: {
-          id: true,
-          name: true,
-          guardianName: true,
-          dateOfBirth: true,
-          admissionDate: true,
-          classSection: {
-            select: { className: true, sectionName: true },
+  const [certificate, school] = await Promise.all([
+    prisma.certificate.findUnique({
+      where: { id },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            guardianName: true,
+            dateOfBirth: true,
+            admissionDate: true,
+            classSection: {
+              select: { className: true, sectionName: true },
+            },
           },
         },
+        generatedByUser: {
+          select: { id: true, name: true },
+        },
       },
-      generatedByUser: {
-        select: { id: true, name: true },
-      },
-    },
-  });
+    }),
+    getSchoolSettings(),
+  ]);
 
   if (!certificate) {
     notFound();
   }
 
   const isLeaving = certificate.type === "LEAVING";
-  const title = isLeaving
-    ? schoolConfig.documents.leavingCertificate.heading
-    : schoolConfig.documents.characterCertificate.heading;
+  const title = isLeaving ? "Certificate of School Leaving" : "Certificate of Character";
   const dateStr = certificate.issuedDate.toLocaleDateString("en-PK", {
     year: "numeric",
     month: "long",
@@ -71,12 +72,21 @@ export default async function PrintCertificatePage({
     <div className="certificate-document mx-auto max-w-[700px]">
       {/* Document header */}
       <div className="mb-8 border-b-2 border-text pb-4 text-center">
+        {school.logoPath && (
+          <img
+            src={school.logoPath}
+            alt="School logo"
+            className="mx-auto mb-2 h-16 object-contain"
+          />
+        )}
         <h1 className="text-lg font-bold uppercase tracking-wide">
-          {schoolConfig.name}
+          {school.schoolName}
         </h1>
-        <p className="mt-1 text-xs text-text/60">
-          {schoolConfig.address}
-        </p>
+        {school.address && (
+          <p className="mt-1 text-xs text-text/60">
+            {school.address}
+          </p>
+        )}
       </div>
 
       {/* Certificate title */}
@@ -127,7 +137,7 @@ export default async function PrintCertificatePage({
       <div className="mt-12 flex items-end justify-between text-sm">
         <div>
           <div className="mb-1 border-t border-text/40 pt-1 text-xs text-text/50">
-            {schoolConfig.signatures.principal}&apos;s Signature
+            {school.principalName ? `${school.principalName}` : "Principal"}&apos;s Signature
           </div>
         </div>
         <div className="text-center">
@@ -140,7 +150,7 @@ export default async function PrintCertificatePage({
         </div>
         <div className="text-right">
           <div className="mb-1 border-t border-text/40 pt-1 text-xs text-text/50">
-            {schoolConfig.signatures.schoolStamp}
+            School Stamp
           </div>
         </div>
       </div>

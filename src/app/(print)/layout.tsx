@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { schoolConfig } from "@/lib/school-config";
+import { getSchoolSettings } from "@/lib/school-settings";
 
 /**
  * Print layout — minimal wrapper for printable documents.
@@ -20,12 +20,14 @@ export default async function PrintLayout({ children }: { children: ReactNode })
     redirect("/login");
   }
 
+  const school = await getSchoolSettings();
+
   return (
     <div className="min-h-screen bg-bg text-text">
       {/* Screen-only toolbar — hidden during printing */}
       <header className="print:hidden border-b border-border">
         <div className="mx-auto flex h-12 max-w-5xl items-center justify-between px-4 text-xs text-text/50 md:px-8">
-          <span className="font-medium">{schoolConfig.name} — Print Preview</span>
+          <span className="font-medium">{school.schoolName} — Print Preview</span>
           <button
             type="button"
             onClick={() => window.print()}

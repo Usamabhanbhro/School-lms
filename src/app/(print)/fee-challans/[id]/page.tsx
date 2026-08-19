@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { schoolConfig } from "@/lib/school-config";
+import { getSchoolSettings } from "@/lib/school-settings";
 
 /**
  * /print/fee-challans/:id
@@ -25,18 +25,21 @@ export default async function PrintFeeChallanPage({
 }) {
   const { id } = await params;
 
-  const challan = await prisma.feeChallan.findUnique({
-    where: { id },
-    include: {
-      lineItems: true,
-      student: {
-        select: { id: true, name: true },
+  const [challan, school] = await Promise.all([
+    prisma.feeChallan.findUnique({
+      where: { id },
+      include: {
+        lineItems: true,
+        student: {
+          select: { id: true, name: true },
+        },
+        generatedByUser: {
+          select: { id: true, name: true },
+        },
       },
-      generatedByUser: {
-        select: { id: true, name: true },
-      },
-    },
-  });
+    }),
+    getSchoolSettings(),
+  ]);
 
   if (!challan) {
     notFound();
@@ -56,6 +59,7 @@ export default async function PrintFeeChallanPage({
           copyLabel={label}
           challan={challan}
           issuedDateStr={issuedDateStr}
+          school={school}
         />
       ))}
     </div>
@@ -71,6 +75,7 @@ function ChallanCopy({
   copyLabel,
   challan,
   issuedDateStr,
+  school,
 }: {
   copyLabel: string;
   challan: {
@@ -86,6 +91,11 @@ function ChallanCopy({
     generatedByUser: { name: string | null } | null;
   };
   issuedDateStr: string;
+  school: {
+    schoolName: string;
+    address: string;
+    logoPath: string | null;
+  };
 }) {
   return (
     <div className="challan-copy border border-border p-6">
@@ -94,8 +104,15 @@ function ChallanCopy({
         <h2 className="text-xs font-bold uppercase tracking-widest text-text/50">
           {copyLabel}
         </h2>
-        <h1 className="mt-2 text-lg font-bold uppercase tracking-wide">
-          {schoolConfig.name} — {schoolConfig.documents.feeChallan.heading}
+        {school.logoPath && (
+          <img
+            src={school.logoPath}
+            alt="School logo"
+            className="mx-auto my-2 h-10 object-contain"
+          />
+        )}
+        <h1 className="text-lg font-bold uppercase tracking-wide">
+          {school.schoolName} — Fee Challan
         </h1>
       </div>
 

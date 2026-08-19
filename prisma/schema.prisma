@@ -401,3 +401,21 @@ model FeeChallanLineItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// ─── School Settings ─────────────────────────────────────────────────
+
+/// Singleton model for school identity configuration.
+/// Only one row should exist — enforced at application level, not a DB constraint.
+/// Stores school name, address, contact info, and logo path.
+model SchoolSettings {
+  id             String  @id @default(cuid())
+  schoolName     String  @default("[SCHOOL NAME]")
+  address        String  @default("")
+  phone          String  @default("")
+  email          String  @default("")
+  principalName  String  @default("")
+  logoPath       String? // relative path to uploaded logo file
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

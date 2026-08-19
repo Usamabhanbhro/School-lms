@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { schoolConfig } from "@/lib/school-config";
+import { getSchoolSettings } from "@/lib/school-settings";
 
 /**
  * /print/report-cards/:id
@@ -21,40 +21,43 @@ export default async function PrintReportCardPage({
 }) {
   const { id } = await params;
 
-  const reportCard = await prisma.reportCard.findUnique({
-    where: { id },
-    include: {
-      student: {
-        select: {
-          id: true,
-          name: true,
-          guardianName: true,
+  const [reportCard, school] = await Promise.all([
+    prisma.reportCard.findUnique({
+      where: { id },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            guardianName: true,
+          },
         },
-      },
-      classSection: {
-        select: { className: true, sectionName: true },
-      },
-      term: {
-        select: { name: true },
-      },
-      generatedByTeacher: {
-        select: { name: true },
-      },
-      reportCardTests: {
-        include: {
-          test: {
-            select: {
-              id: true,
-              title: true,
-              date: true,
-              maxMarks: true,
-              subject: { select: { name: true } },
+        classSection: {
+          select: { className: true, sectionName: true },
+        },
+        term: {
+          select: { name: true },
+        },
+        generatedByTeacher: {
+          select: { name: true },
+        },
+        reportCardTests: {
+          include: {
+            test: {
+              select: {
+                id: true,
+                title: true,
+                date: true,
+                maxMarks: true,
+                subject: { select: { name: true } },
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+    getSchoolSettings(),
+  ]);
 
   if (!reportCard) {
     notFound();
@@ -154,11 +157,18 @@ export default async function PrintReportCardPage({
     <div className="report-card-document mx-auto max-w-[700px]">
       {/* Document header */}
       <div className="mb-6 border-b-2 border-text pb-4 text-center">
+        {school.logoPath && (
+          <img
+            src={school.logoPath}
+            alt="School logo"
+            className="mx-auto mb-2 h-16 object-contain"
+          />
+        )}
         <h1 className="text-lg font-bold uppercase tracking-wide">
-          {schoolConfig.name}
+          {school.schoolName}
         </h1>
         <h2 className="mt-1 text-xl font-bold uppercase tracking-wider">
-          {schoolConfig.documents.reportCard.heading}
+          Report Card
         </h2>
       </div>
 
@@ -259,7 +269,7 @@ export default async function PrintReportCardPage({
       <div className="mt-10 flex items-end justify-between text-xs text-text/50">
         <div>
           <div className="mb-1 border-t border-text/40 pt-1">
-            {schoolConfig.signatures.classTeacher}&apos;s Signature
+            Class Teacher&apos;s Signature
           </div>
         </div>
         <div className="text-center">
@@ -268,7 +278,7 @@ export default async function PrintReportCardPage({
         </div>
         <div className="text-right">
           <div className="mb-1 border-t border-text/40 pt-1">
-            {schoolConfig.signatures.principal}&apos;s Signature
+            {school.principalName ? school.principalName : "Principal"}&apos;s Signature
           </div>
         </div>
       </div>

@@ -3,12 +3,15 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, getClientIp, PUBLIC_ENDPOINT_LIMITS } from "@/lib/rate-limit";
 
 /**
  * POST /api/admin/recover
  *
  * Public route — the recovery path for a locked-out Admin (SRS §1.7).
  * No session required.
+ *
+ * Rate limited: 5 attempts per 15 minutes per IP.
  *
  * Flow:
  *   1. Find the User with role = ADMIN matching username or email
@@ -23,6 +26,7 @@ import { prisma } from "@/lib/prisma";
  *   - bcrypt.compare handles timing-safe comparison
  *   - A new code is generated on every successful recovery, so a
  *     leaked-but-unused code cannot be reused
+ *   - Rate limiting prevents brute force attempts
  */
 const recoverSchema = z.object({
   usernameOrEmail: z.string().min(1),
@@ -32,6 +36,31 @@ const recoverSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    // Rate limiting
+    const clientIp = getClientIp(request);
+    const rateLimit = checkRateLimit(
+      `admin-recover:${clientIp}`,
+      PUBLIC_ENDPOINT_LIMITS.adminRecover.limit,
+      PUBLIC_ENDPOINT_LIMITS.adminRecover.windowMs,
+    );
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: {
+            message: "Too many attempts. Please try again later.",
+            code: "RATE_LIMITED",
+          },
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+          },
+        },
+      );
+    }
+
     const body = recoverSchema.parse(await request.json());
 
     // Find the Admin user

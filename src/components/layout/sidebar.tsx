@@ -7,25 +7,48 @@ import {
   GraduationCap,
   LayoutDashboard,
   Megaphone,
+  Settings,
+  Users,
 } from "lucide-react";
 import type { Role } from "@/generated/prisma/enums";
 import { roleHomes } from "@/lib/rbac";
 
 /**
- * Nav modules are placeholders for now — only Dashboard is wired to a route.
- * The per-role lists (Admin/Teacher/Student/Parent differ) land with the
- * modules themselves.
+ * Per-role navigation modules.
+ * Active modules are wired to routes; planned modules are visually disabled.
  */
+const adminNav = [
+  { label: "Users", href: "/admin", icon: Users },
+  { label: "Attendance", href: "/admin/attendance", icon: ClipboardCheck },
+  { label: "Teacher Attendance", href: "/admin/teacher-attendance", icon: ClipboardCheck },
+  { label: "Settings", href: "/admin/settings", icon: Settings },
+];
+
+const teacherNav = [
+  { label: "Attendance", href: "/teacher/attendance", icon: ClipboardCheck },
+];
+
 const plannedModules = [
-  { label: "Attendance", icon: ClipboardCheck },
   { label: "Gradebook", icon: BookOpen },
   { label: "Assignments", icon: FileText },
   { label: "Timetable", icon: CalendarDays },
   { label: "Announcements", icon: Megaphone },
 ];
 
+function getNavForRole(role: Role) {
+  switch (role) {
+    case "ADMIN":
+      return adminNav;
+    case "TEACHER":
+      return teacherNav;
+    default:
+      return [];
+  }
+}
+
 export function Sidebar({ role, name }: { role: Role; name: string }) {
   const home = roleHomes[role];
+  const navItems = getNavForRole(role);
 
   return (
     <>
@@ -62,6 +85,18 @@ export function Sidebar({ role, name }: { role: Role; name: string }) {
             <LayoutDashboard className="size-4" aria-hidden="true" />
             Dashboard
           </Link>
+
+          {navItems.map(({ label, href, icon: Icon }) => (
+            <Link
+              key={label}
+              href={href}
+              className="flex items-center gap-2 border-l-2 border-transparent px-4 py-2 text-sm text-text/70 hover:border-text/20 hover:bg-surface hover:text-text"
+            >
+              <Icon className="size-4" aria-hidden="true" />
+              {label}
+            </Link>
+          ))}
+
           {plannedModules.map(({ label, icon: Icon }) => (
             <span
               key={label}
