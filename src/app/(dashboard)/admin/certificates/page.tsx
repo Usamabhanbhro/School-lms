@@ -13,7 +13,8 @@ export const metadata: Metadata = {
 export default async function AdminCertificatesPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect("/login");
+  if (session.user.role !== "ADMIN" && session.user.role !== "ACADEMICS")
+    redirect("/login");
 
   return (
     <>
