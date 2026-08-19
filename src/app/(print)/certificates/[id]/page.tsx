@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { schoolConfig } from "@/lib/school-config";
 
 /**
  * /print/certificates/:id
@@ -43,7 +44,9 @@ export default async function PrintCertificatePage({
   }
 
   const isLeaving = certificate.type === "LEAVING";
-  const title = isLeaving ? "Leaving Certificate" : "Character Certificate";
+  const title = isLeaving
+    ? schoolConfig.documents.leavingCertificate.heading
+    : schoolConfig.documents.characterCertificate.heading;
   const dateStr = certificate.issuedDate.toLocaleDateString("en-PK", {
     year: "numeric",
     month: "long",
@@ -69,10 +72,10 @@ export default async function PrintCertificatePage({
       {/* Document header */}
       <div className="mb-8 border-b-2 border-text pb-4 text-center">
         <h1 className="text-lg font-bold uppercase tracking-wide">
-          School LMS
+          {schoolConfig.name}
         </h1>
         <p className="mt-1 text-xs text-text/60">
-          {classSection}
+          {schoolConfig.address}
         </p>
       </div>
 
@@ -124,7 +127,7 @@ export default async function PrintCertificatePage({
       <div className="mt-12 flex items-end justify-between text-sm">
         <div>
           <div className="mb-1 border-t border-text/40 pt-1 text-xs text-text/50">
-            Principal&apos;s Signature
+            {schoolConfig.signatures.principal}&apos;s Signature
           </div>
         </div>
         <div className="text-center">
@@ -137,7 +140,7 @@ export default async function PrintCertificatePage({
         </div>
         <div className="text-right">
           <div className="mb-1 border-t border-text/40 pt-1 text-xs text-text/50">
-            School Stamp
+            {schoolConfig.signatures.schoolStamp}
           </div>
         </div>
       </div>

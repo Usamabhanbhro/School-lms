@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { schoolConfig } from "@/lib/school-config";
 
 /**
  * /print/fee-challans/:id
@@ -94,7 +95,7 @@ function ChallanCopy({
           {copyLabel}
         </h2>
         <h1 className="mt-2 text-lg font-bold uppercase tracking-wide">
-          School LMS — Fee Challan
+          {schoolConfig.name} — {schoolConfig.documents.feeChallan.heading}
         </h1>
       </div>
 

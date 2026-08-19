@@ -2,7 +2,7 @@
 
 Build order for reconciling and implementing the SRS (v5). Each phase unlocks the next — don't skip ahead, since later phases read data/patterns established earlier.
 
-**Status: Phases 0–5 implemented and verified (see `API.md` for per-route status). Phase 6 (print layouts) is the only remaining functional work, plus rate limiting on `/api/admin/recover` — see `README.md` Remaining Work.**
+**Status: Phases 0–6 implemented and verified (see `API.md` for per-route status). Remaining work: rate limiting on `/api/admin/recover` — see `README.md` Remaining Work.**
 
 ## Phase 0 — Reconciliation ✅ Complete
 
@@ -48,6 +48,8 @@ Can be built in either order internally:
 
 Both depend only on Phase 1 entities. No dependency between the two attendance types.
 
+**Post-implementation integrity fix:** Added server-side validation in `POST /api/attendance` to verify that all submitted `studentId`s belong to the specified `classSectionId`. Previously, a crafted request could submit attendance for students from a different class section.
+
 ## Phase 4 — Tests, Marks, Report Cards ✅ Complete
 
 Sequential — each step depends on the last:
@@ -66,15 +68,17 @@ Sequential — each step depends on the last:
 
 Depends only on Phase 1 (Student records) — can run in parallel with Phase 4 if bandwidth allows.
 
-## Phase 6 — Print / Visual Design Pass 🔲 Not started
+## Phase 6 — Print / Visual Design Pass ✅ Complete
 
-Deliberately last — these three are functionally specified but visually undesigned, and designing print stylesheets before the underlying data flows exist means designing blind:
+Print layouts for all three document types:
 
-- Certificate layouts (Leaving, Character)
-- Fee Challan three-copy layout (Bank Copy / Student Copy / School Copy, prominently labeled, one page)
-- Report Card layout
+- **Certificate layouts** (Leaving, Character): Server-rendered printable pages at `/print/certificates/[id]`. Uses actual database data. Type-driven (LEAVING vs CHARACTER) from the `Certificate.type` field.
+- **Fee Challan three-copy layout**: Server-rendered at `/print/fee-challans/[id]`. Renders exactly three copies (Bank Copy / Student Copy / School Copy) from a single `FeeChallan` record. Reusable `ChallanCopy` component receives `copyLabel` and `challan` props.
+- **Report Card layout**: Server-rendered at `/print/report-cards/[id]`. Subject-grouped test tables with marks, aggregates, percentage, and grade. Uses actual backend data and calculation.
 
-Use `DESIGN.md`'s print stylesheet guidance as the starting point for all three.
+**School identity centralization:** All print layouts import from `src/lib/school-config.ts`. Changing the school name, address, phone, or other identity fields in that single file propagates to all documents automatically.
+
+**Print isolation:** Dedicated `(print)` route group with its own minimal layout — no sidebar, no navigation, no dashboard chrome. Screen-only toolbar hidden via `print:hidden`.
 
 ## Not in Any Phase (explicitly out of scope for SRS v5)
 

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { schoolConfig } from "@/lib/school-config";
 
 /**
  * /print/report-cards/:id
@@ -154,10 +155,10 @@ export default async function PrintReportCardPage({
       {/* Document header */}
       <div className="mb-6 border-b-2 border-text pb-4 text-center">
         <h1 className="text-lg font-bold uppercase tracking-wide">
-          School LMS
+          {schoolConfig.name}
         </h1>
         <h2 className="mt-1 text-xl font-bold uppercase tracking-wider">
-          Report Card
+          {schoolConfig.documents.reportCard.heading}
         </h2>
       </div>
 
@@ -258,7 +259,7 @@ export default async function PrintReportCardPage({
       <div className="mt-10 flex items-end justify-between text-xs text-text/50">
         <div>
           <div className="mb-1 border-t border-text/40 pt-1">
-            Class Teacher&apos;s Signature
+            {schoolConfig.signatures.classTeacher}&apos;s Signature
           </div>
         </div>
         <div className="text-center">
@@ -267,7 +268,7 @@ export default async function PrintReportCardPage({
         </div>
         <div className="text-right">
           <div className="mb-1 border-t border-text/40 pt-1">
-            Principal&apos;s Signature
+            {schoolConfig.signatures.principal}&apos;s Signature
           </div>
         </div>
       </div>

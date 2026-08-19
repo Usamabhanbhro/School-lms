@@ -4,9 +4,9 @@ A web-based Learning Management System for schools — attendance, marks/tests, 
 
 Full web app (no desktop client). Built to be usable from a phone browser, since class teachers need to mark attendance on the go.
 
-**Status: Phases 0–5 implemented. Only Phase 6 (print layouts) and recovery-route rate limiting remain.** SRS finalized at v5 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
+**Status: Phases 0–6 implemented.** SRS finalized at v5 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
 
-`SCHEMA.md` and `API.md` are current with SRS v5. Every route below through Fee Challans is built and functional. What's left: the visual/print design for Certificates, the Fee Challan three-copy layout, and Report Cards (see `ROADMAP.md` Phase 6) — the data and API layers for all three already exist, only the print stylesheets don't.
+`SCHEMA.md` and `API.md` are current with SRS v5. Every route through Fee Challans is built and functional. Print layouts for Certificates, Fee Challans (three-copy), and Report Cards are implemented with centralized school identity configuration.
 
 ## Stack
 
@@ -33,7 +33,7 @@ Read these in order before making changes:
 | `DESIGN.md` | Visual design system — colors, type, spacing, motion, components |
 | `SRS.md` | Feature scope — **finalized (v5)**, Admin/Academics/Teacher |
 | `SCHEMA.md` | Database entities, fields, relationships — current with SRS v5 |
-| `API.md` | API route list — current with SRS v5, Phases 0–5 marked implemented |
+| `API.md` | API route list — current with SRS v5, Phases 0–6 marked implemented |
 | `ROADMAP.md` | Phased implementation build order |
 | `CONVENTIONS.md` | Coding standards — naming, folder structure, styling, tooling |
 | `AGENTS.md` | Instructions for AI coding tools working in this repo |
@@ -103,8 +103,10 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/dashboard` | Authenticated | Redirects to the signed-in user's role home |
 | `/admin` | ADMIN | Role home |
 | `/teacher` | TEACHER | Role home |
-| `/academics` | ACADEMICS | Role home — **confirm this exists**; not explicitly verified in the docs reviewed for this update, flagging rather than assuming |
-| `/print/certificates/[id]` | ADMIN, ACADEMICS | Certificate print view — referenced in `API.md`; layout is Phase 6 |
+| `/academics` | ACADEMICS | Role home |
+| `/print/certificates/[id]` | ADMIN, ACADEMICS | Certificate print view (Leaving + Character) |
+| `/print/fee-challans/[id]` | ADMIN, ACADEMICS | Fee Challan print view (3 copies: Bank/Student/School) |
+| `/print/report-cards/[id]` | ADMIN, ACADEMICS | Report Card print view |
 | `/api/auth/[...nextauth]` | — | NextAuth handler |
 | `/api/admin/recover` | Public | Recovery code verification + password reset |
 | `/api/admin/recovery-code` | ADMIN | Manually rotate recovery code |
@@ -135,18 +137,27 @@ Full request/response shapes for every route above are in `API.md`.
 
 ## Remaining Work
 
-Per `ROADMAP.md`, everything through Phase 5 is implemented. What's left:
+Per `ROADMAP.md`, all phases (0–6) are implemented. What remains:
 
-- **Phase 6 — Print/visual design**: Certificate layouts (Leaving, Character), Fee Challan's three-copy layout (Bank/Student/School, one page), Report Card layout. Data models and API routes already exist for all three — this is stylesheet/rendering work only.
 - **Rate limiting on `/api/admin/recover`** — noted in `API.md` as not yet scoped. This is the one public, secret-accepting endpoint in the system and needs a concrete policy before production use.
 
 Not in scope at all under SRS v5: Assignments/Submissions, Timetables, Announcements, Notifications/messaging, OAuth/email-based password reset, Library module.
 
+## School Identity Configuration
+
+School identity (name, address, phone, principal name) is centralized in `src/lib/school-config.ts`. Changing the placeholder values in that single file propagates to all printable documents:
+
+- Leaving Certificate
+- Character Certificate
+- Fee Challan (3 copies)
+- Report Card
+- Print preview header
+
+To configure for a specific school, update the `schoolConfig` object in `src/lib/school-config.ts`.
+
 ## Deployment
 
 Deployed via Vercel, git-push deploy from `main`. Database hosted on Neon. See `ARCHITECTURE.md` for free-tier constraints (Neon cold-start, Vercel function time limits). Set `DATABASE_URL`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL` in production, and run `bun run db:deploy` after deploying.
-
-Core functionality (Phases 0–5) is implemented and testable end to end. Certificate/challan/report-card *printing* is not yet designed — the underlying records generate and save correctly, but the printed output isn't styled.
 
 ## Credits
 
