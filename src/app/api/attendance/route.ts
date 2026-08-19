@@ -106,6 +106,7 @@ export async function GET(request: Request) {
  *   - Creates or updates records as isConfirmed: false (Draft)
  *   - If any record for this class+date is already isConfirmed: true,
  *     returns 403 — cannot overwrite locked records
+ *   - Validates that all submitted studentIds belong to the specified classSectionId
  *   - Uses a transaction to ensure atomicity
  */
 const attendanceRecordSchema = z.object({
@@ -131,6 +132,27 @@ export async function POST(request: Request) {
 
     // Verify this teacher is the active Class Teacher for this section
     await requireActiveClassTeacher(profile.id, body.classSectionId);
+
+    // Validate that all submitted student IDs actually belong to this class section
+    const submittedStudentIds = body.records.map((r) => r.studentId);
+    const validStudentCount = await prisma.student.count({
+      where: {
+        id: { in: submittedStudentIds },
+        classSectionId: body.classSectionId,
+      },
+    });
+
+    if (validStudentCount !== submittedStudentIds.length) {
+      return NextResponse.json(
+        {
+          error: {
+            message: "One or more students do not belong to the specified class section.",
+            code: "INVALID_STUDENT_CLASS",
+          },
+        },
+        { status: 400 },
+      );
+    }
 
     const date = new Date(body.date);
 
