@@ -1,13 +1,14 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSchoolSettings } from "@/lib/school-settings";
+import { TemplateRenderer, NoTemplateFallback } from "@/components/templates/template-renderer";
 
 /**
  * /print/certificates/:id
  *
- * Printable certificate page. Renders either a Leaving Certificate
- * or a Character Certificate based on the `type` field from the
- * database. Both share the same layout structure per DESIGN.md.
+ * Printable certificate page. Uses template-based rendering if a template
+ * is available (either snapshot on the certificate or active for the type).
+ * Falls back to coded layout if no template exists.
  *
  * Server component — fetches data directly from Prisma.
  */
@@ -46,6 +47,24 @@ export default async function PrintCertificatePage({
     notFound();
   }
 
+  // Try to load template: first from snapshot, then active for this type
+  let template = null;
+  if (certificate.templateId) {
+    template = await prisma.documentTemplate.findUnique({
+      where: { id: certificate.templateId },
+      include: { fields: true, tableRegions: true },
+    });
+  }
+  if (!template) {
+    const templateType = certificate.type === "LEAVING"
+      ? "LEAVING_CERTIFICATE"
+      : "CHARACTER_CERTIFICATE";
+    template = await prisma.documentTemplate.findFirst({
+      where: { type: templateType as any, isActive: true },
+      include: { fields: true, tableRegions: true },
+    });
+  }
+
   const isLeaving = certificate.type === "LEAVING";
   const title = isLeaving ? "Certificate of School Leaving" : "Certificate of Character";
   const dateStr = certificate.issuedDate.toLocaleDateString("en-PK", {
@@ -68,6 +87,45 @@ export default async function PrintCertificatePage({
 
   const classSection = `${certificate.student.classSection.className} - ${certificate.student.classSection.sectionName}`;
 
+  // If template exists, use template-based rendering
+  if (template) {
+    const fieldValues: Record<string, string> = {
+      studentName: certificate.student.name,
+      guardianName: certificate.student.guardianName,
+      classSection,
+      admissionDate: admissionStr,
+      dateOfLeaving: dateStr,
+      dob: dobStr,
+      issueDate: dateStr,
+      conductRemark: isLeaving ? "" : "exemplary conduct, good character, and a disciplined attitude",
+    };
+
+    return (
+      <TemplateRenderer
+        template={{
+          backgroundImageUrl: template.backgroundImageUrl,
+          fields: template.fields.map((f) => ({
+            id: f.id,
+            fieldKey: f.fieldKey,
+            xPercent: f.xPercent,
+            yPercent: f.yPercent,
+            fontSize: f.fontSize,
+            textAlign: f.textAlign,
+          })),
+          tableRegions: template.tableRegions.map((tr) => ({
+            id: tr.id,
+            anchorXPercent: tr.anchorXPercent,
+            anchorYPercent: tr.anchorYPercent,
+            rowHeightPercent: tr.rowHeightPercent,
+            columns: tr.columns as any,
+          })),
+        }}
+        fieldValues={fieldValues}
+      />
+    );
+  }
+
+  // Fallback: coded layout (no template configured)
   return (
     <div className="certificate-document mx-auto max-w-[700px]">
       {/* Document header */}

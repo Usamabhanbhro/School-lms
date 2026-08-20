@@ -110,6 +110,22 @@ Application shell, admin dashboard, and reusable UI primitives:
 - **Consistent design language**: All components follow DESIGN.md tokens (square corners, 1px borders, no shadows, Inter font, 8px spacing scale, Lucide icons only).
 - **Regression**: All existing pages (login, signup, recovery, settings, attendance, user management) preserved without functional changes.
 
+## Phase 8 — Document Template System ✅ Complete
+
+Template-based document generation replacing hardcoded print layouts:
+
+- **Prisma schema**: `DocumentTemplate`, `TemplateField`, `TemplateTableRegion` models. `templateId` snapshot on `Certificate`, `ReportCard`, `FeeChallan`.
+- **API routes**: List, upload, activate, delete templates; save/load field positions and table regions (Admin-only). Atomic field save via Prisma transaction.
+- **Template management UI** (`/admin/templates`): Upload images (PNG/JPG) or PDFs (client-side conversion via pdfjs-dist), activate/deactivate per type, delete with in-use guard. Admin-only.
+- **Visual editor**: Full-screen modal with background image canvas, drag-to-place single fields at percentage coordinates, add/edit/delete table regions with anchor/row-height/column-x definitions. Supports duplicate fieldKey placements (e.g. Fee Challan three copies).
+- **Template renderer**: Shared `TemplateRenderer` component with render-time defensive validation of table region columns (Json field). Graceful fallback: `NoTemplateFallback` when no template exists.
+- **Print view integration**: All three print views (`/print/certificates/[id]`, `/print/report-cards/[id]`, `/print/fee-challans/[id]`) check for snapshot template → active template → coded layout fallback.
+- **pdfjs-dist**: Dynamic import, code-split (client-only, async chunk). PDF converted to PNG client-side before upload.
+- **SRS v6**: §1.8, §1.9 rewritten for template-based generation. New §2 (Teachers) with Report Card template info. New §3 (Document Templates) covering lifecycle, field placement, table regions, three-copy challan layout.
+- **Sidebar**: Templates link added to admin navigation.
+
+**Requires:** `BLOB_READ_WRITE_TOKEN` env var for Vercel Blob storage (template image uploads).
+
 ## Not in Any Phase (explicitly out of scope for SRS v5)
 
 Assignments/Submissions, Timetables, Announcements, Notifications/messaging, OAuth or email-based password reset, Library module. Do not add these without a new SRS discussion first.

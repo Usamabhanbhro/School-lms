@@ -1,18 +1,14 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSchoolSettings } from "@/lib/school-settings";
+import { TemplateRenderer, NoTemplateFallback } from "@/components/templates/template-renderer";
 
 /**
  * /print/fee-challans/:id
  *
- * Printable Fee Challan — renders EXACTLY THREE copies on one page:
- *   1. Bank Copy
- *   2. Student Copy
- *   3. School Copy
- *
- * All three copies use the same underlying FeeChallan data.
- * The reusable ChallanCopy component receives `copyLabel` and `challan`
- * and is rendered exactly three times by the parent.
+ * Printable Fee Challan — uses template-based rendering if available.
+ * The template is the FULL page with all three copies (Bank/Student/School)
+ * manually laid out by Admin. Falls back to coded three-copy layout.
  *
  * Server component — fetches data directly from Prisma.
  */
@@ -51,6 +47,67 @@ export default async function PrintFeeChallanPage({
     day: "numeric",
   });
 
+  // Try to load template
+  let template = null;
+  if (challan.templateId) {
+    template = await prisma.documentTemplate.findUnique({
+      where: { id: challan.templateId },
+      include: { fields: true, tableRegions: true },
+    });
+  }
+  if (!template) {
+    template = await prisma.documentTemplate.findFirst({
+      where: { type: "FEE_CHALLAN" as any, isActive: true },
+      include: { fields: true, tableRegions: true },
+    });
+  }
+
+  // If template exists, use template-based rendering
+  if (template) {
+    const fieldValues: Record<string, string> = {
+      studentName: challan.studentNameSnapshot,
+      guardianName: challan.guardianNameSnapshot,
+      guardianCnic: challan.guardianCnicSnapshot,
+      classSection: challan.classSectionSnapshot,
+      bankName: challan.bankNameSnapshot,
+      bankAccountNumber: challan.bankAccountNumberSnapshot,
+      issueDate: issuedDateStr,
+      total: challan.total.toLocaleString("en-PK"),
+    };
+
+    // Build line item rows for the table region
+    const lineItemRows: Array<Record<string, string>> = challan.lineItems.map((item) => ({
+      description: item.description,
+      amount: item.amount.toLocaleString("en-PK"),
+    }));
+
+    return (
+      <TemplateRenderer
+        template={{
+          backgroundImageUrl: template.backgroundImageUrl,
+          fields: template.fields.map((f) => ({
+            id: f.id,
+            fieldKey: f.fieldKey,
+            xPercent: f.xPercent,
+            yPercent: f.yPercent,
+            fontSize: f.fontSize,
+            textAlign: f.textAlign,
+          })),
+          tableRegions: template.tableRegions.map((tr) => ({
+            id: tr.id,
+            anchorXPercent: tr.anchorXPercent,
+            anchorYPercent: tr.anchorYPercent,
+            rowHeightPercent: tr.rowHeightPercent,
+            columns: tr.columns as any,
+          })),
+        }}
+        fieldValues={fieldValues}
+        tableData={{ 0: lineItemRows }}
+      />
+    );
+  }
+
+  // Fallback: coded three-copy layout
   return (
     <div className="mx-auto max-w-[700px]">
       {COPY_LABELS.map((label) => (
@@ -68,8 +125,6 @@ export default async function PrintFeeChallanPage({
 
 /**
  * Reusable challan copy component.
- * Receives the copy label and the full challan data.
- * Rendered exactly three times by the parent page.
  */
 function ChallanCopy({
   copyLabel,
@@ -99,7 +154,7 @@ function ChallanCopy({
 }) {
   return (
     <div className="challan-copy border border-border p-6">
-      {/* Copy label — prominently displayed */}
+      {/* Copy label */}
       <div className="mb-4 border-b-2 border-text pb-3 text-center">
         <h2 className="text-xs font-bold uppercase tracking-widest text-text/50">
           {copyLabel}

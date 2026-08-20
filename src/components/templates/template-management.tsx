@@ -598,6 +598,24 @@ function TemplateEditor({
     );
   }
 
+  function addDuplicateField(index: number) {
+    const original = fields[index];
+    setFields((prev) => [
+      ...prev,
+      {
+        fieldKey: original.fieldKey,
+        xPercent: Math.min(100, original.xPercent + 5),
+        yPercent: Math.min(100, original.yPercent + 5),
+        fontSize: original.fontSize,
+        textAlign: original.textAlign,
+      },
+    ]);
+  }
+
+  function removeField(index: number) {
+    setFields((prev) => prev.filter((_, i) => i !== index));
+  }
+
   function updateTableRegion(
     index: number,
     key: string,
@@ -707,23 +725,36 @@ function TemplateEditor({
                 draggable={false}
               />
 
-              {/* Field markers */}
-              {fields.map((field, i) => (
-                <div
-                  key={field.fieldKey}
-                  className="absolute cursor-move select-none"
-                  style={{
-                    left: `${field.xPercent}%`,
-                    top: `${field.yPercent}%`,
-                    transform: "translate(-50%, -50%)",
-                  }}
-                  onMouseDown={(e) => handleFieldMouseDown(e, i)}
-                >
-                  <div className="border border-blue-500 bg-blue-500/10 px-1 py-0.5 text-[10px] font-mono text-blue-700 whitespace-nowrap">
-                    {field.fieldKey}
-                  </div>
-                </div>
-              ))}
+              {/* Field markers — disambiguate duplicates */}
+              {(() => {
+                const keyCounts: Record<string, number> = {};
+                fields.forEach((f) => {
+                  keyCounts[f.fieldKey] = (keyCounts[f.fieldKey] ?? 0) + 1;
+                });
+                const keyIndices: Record<string, number> = {};
+                return fields.map((field, i) => {
+                  const count = keyCounts[field.fieldKey];
+                  const idx = (keyIndices[field.fieldKey] ?? 0);
+                  keyIndices[field.fieldKey] = idx + 1;
+                  const label = count > 1 ? `${field.fieldKey} (${idx + 1})` : field.fieldKey;
+                  return (
+                    <div
+                      key={`${field.fieldKey}-${i}`}
+                      className="absolute cursor-move select-none"
+                      style={{
+                        left: `${field.xPercent}%`,
+                        top: `${field.yPercent}%`,
+                        transform: "translate(-50%, -50%)",
+                      }}
+                      onMouseDown={(e) => handleFieldMouseDown(e, i)}
+                    >
+                      <div className="border border-blue-500 bg-blue-500/10 px-1 py-0.5 text-[10px] font-mono text-blue-700 whitespace-nowrap">
+                        {label}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
 
               {/* Table region markers */}
               {tableRegions.map((region, i) => (
@@ -755,11 +786,42 @@ function TemplateEditor({
               Single Fields
             </h3>
             <div className="space-y-2">
-              {fields.map((field, i) => (
-                <div key={field.fieldKey} className="border border-zinc-200 p-2">
-                  <div className="mb-1 text-[11px] font-medium text-zinc-700">
-                    {field.fieldKey}
-                  </div>
+              {(() => {
+                const keyCounts: Record<string, number> = {};
+                fields.forEach((f) => {
+                  keyCounts[f.fieldKey] = (keyCounts[f.fieldKey] ?? 0) + 1;
+                });
+                const keyIndices: Record<string, number> = {};
+                return fields.map((field, i) => {
+                  const count = keyCounts[field.fieldKey];
+                  const idx = (keyIndices[field.fieldKey] ?? 0);
+                  keyIndices[field.fieldKey] = idx + 1;
+                  const label = count > 1 ? `${field.fieldKey} (${idx + 1})` : field.fieldKey;
+                  return (
+                    <div key={`${field.fieldKey}-${i}`} className="border border-zinc-200 p-2">
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="text-[11px] font-medium text-zinc-700">
+                          {label}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => addDuplicateField(i)}
+                            className="text-[10px] text-blue-600 hover:text-blue-800"
+                            title="Add another position for this field"
+                          >
+                            + Position
+                          </button>
+                          {count > 1 && (
+                            <button
+                              onClick={() => removeField(i)}
+                              className="text-[10px] text-red-500 hover:text-red-700"
+                              title="Remove this position"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      </div>
                   <div className="grid grid-cols-2 gap-1">
                     <label className="text-[10px] text-zinc-500">
                       X%
@@ -816,7 +878,9 @@ function TemplateEditor({
                     </label>
                   </div>
                 </div>
-              ))}
+                  );
+                });
+              })()}
             </div>
 
             {tableRegions.length > 0 && (

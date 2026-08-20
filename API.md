@@ -386,23 +386,29 @@ NextAuth handler — login/logout/session. Credentials provider only.
 **Role required:** Admin
 **Purpose:** Get all field positions and table regions for a template
 **Response:** `{ data: { fields: [...], tableRegions: [...] } }`
-**Status:** implemented
-
-### PUT /api/templates/:id/fields
+**Status:** implemented### POST /api/templates/:id/fields
 **Role required:** Admin
 **Purpose:** Save all field positions and table regions for a template (replaces existing)
-**Request body:** `{ fields: [{ fieldKey, xPercent, yPercent, fontSize, textAlign }], tableRegions: [{ anchorXPercent, anchorYPercent, rowHeightPercent, columns: [{ fieldKey, xPercent }] }] }`
-**Notes:** Atomic — replaces all positions in one transaction
+**Request body:** `{ fields: [{ fieldKey, xPercent, yPercent, fontSize, textAlign }], tableRegions: [{ anchorXPercent, anchorYPercent, rowHeightPercent, columns: [{ fieldKey, xPercent, label }] }] }`
+**Notes:** Atomic — replaces all positions in one transaction. Zod validation enforces column shape (fieldKey, xPercent, label all required, non-empty).
 **Status:** implemented
 
-### GET /api/templates/active/:type
+### DELETE /api/templates/:id
+**Role required:** Admin
+**Purpose:** Delete a template and its Vercel Blob files
+**Notes:** Refuses if any documents reference the template (409 IN_USE). Cascades to TemplateField and TemplateTableRegion.
+**Status:** implemented
+
+### GET /api/templates/active?type=LEAVING_CERTIFICATE
 **Role required:** Admin, Academics, Teacher (for rendering documents)
 **Purpose:** Get the active template for a document type, with its field positions
+**Query params:** `type` (required — LEAVING_CERTIFICATE, CHARACTER_CERTIFICATE, REPORT_CARD, FEE_CHALLAN)
 **Response:** `{ data: { template, fields, tableRegions } }` or 404 if no active template
 **Status:** implemented
 
 ---
 
 ## Not Yet Scoped
+
 
 - No remaining API-level gaps — rate limiting, recovery code lifecycle, and document templates are fully implemented

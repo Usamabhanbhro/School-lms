@@ -27,7 +27,28 @@ interface TemplateTableRegion {
   anchorXPercent: number;
   anchorYPercent: number;
   rowHeightPercent: number;
-  columns: Array<{ fieldKey: string; xPercent: number; label: string }>;
+  columns: unknown;
+}
+
+/**
+ * Defensive validation for table region columns shape.
+ * Returns validated columns or null if malformed.
+ * A malformed columns shape from the database Json field would
+ * silently produce blank cells at print time without this check.
+ */
+function validateColumns(columns: unknown): Array<{ fieldKey: string; xPercent: number; label: string }> | null {
+  if (!Array.isArray(columns)) return null;
+  if (columns.length === 0) return null;
+  return columns.every(
+    (c) =>
+      typeof c === "object" &&
+      c !== null &&
+      typeof (c as any).fieldKey === "string" &&
+      typeof (c as any).xPercent === "number" &&
+      typeof (c as any).label === "string",
+  )
+    ? (columns as Array<{ fieldKey: string; xPercent: number; label: string }>)
+    : null;
 }
 
 interface TemplateData {
@@ -105,17 +126,33 @@ export function TemplateRenderer({
         const rows = tableData[regionIndex] ?? [];
         if (rows.length === 0) return null;
 
+        const validColumns = validateColumns(region.columns);
+        if (!validColumns) {
+          return (
+            <div
+              key={region.id}
+              className="absolute border border-dashed border-red-400 bg-red-50 p-2 text-[10px] text-red-600"
+              style={{
+                left: `${region.anchorXPercent}%`,
+                top: `${region.anchorYPercent}%`,
+              }}
+            >
+              ⚠ Table region has invalid column configuration — ask your Admin to re-save field positions.
+            </div>
+          );
+        }
+
         return (
           <div key={region.id} className="absolute inset-0">
             {rows.map((row, rowIndex) => (
               <div key={rowIndex} className="absolute" style={{ width: "100%", height: "100%" }}>
-                {region.columns.map((col) => {
+                {validColumns.map((col) => {
                   const value = row[col.fieldKey];
                   if (value === undefined || value === null) return null;
 
                   return (
                     <div
-                      key={col.fieldKey}
+                      key={`${region.id}-${rowIndex}-${col.fieldKey}`}
                       className="absolute"
                       style={{
                         left: `${col.xPercent}%`,

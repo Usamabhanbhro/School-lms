@@ -1,18 +1,15 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSchoolSettings } from "@/lib/school-settings";
+import { TemplateRenderer, NoTemplateFallback } from "@/components/templates/template-renderer";
 
 /**
  * /print/report-cards/:id
  *
- * Printable Report Card — aggregated term report showing all tests
- * selected during report card generation, grouped by subject.
+ * Printable Report Card — uses template-based rendering if available,
+ * with a table region for test rows. Falls back to coded layout.
  *
  * Server component — fetches data directly from Prisma.
- *
- * Layout follows DESIGN.md: industrial, minimal, functional.
- * Tables use ruled-table styling. Numerical columns use tabular figures.
- * Print CSS prevents awkward page splits.
  */
 export default async function PrintReportCardPage({
   params,
@@ -78,7 +75,6 @@ export default async function PrintReportCardPage({
     }
   >();
 
-  // Fetch marks for all tests in this report card
   const testIds = reportCard.reportCardTests.map((rct) => rct.testId);
   const allMarks = await prisma.mark.findMany({
     where: {
@@ -93,7 +89,6 @@ export default async function PrintReportCardPage({
 
   const marksMap = new Map(allMarks.map((m) => [m.testId, m.marksObtained]));
 
-  // Build subject groups with marks
   for (const rct of reportCard.reportCardTests) {
     const subjectName = rct.test.subject.name;
     if (!subjectGroups.has(subjectName)) {
@@ -129,30 +124,79 @@ export default async function PrintReportCardPage({
 
   const classSection = `${reportCard.classSection.className} - ${reportCard.classSection.sectionName}`;
 
-  // Determine grade/remark based on percentage
   const pct = parseFloat(percentage);
   let grade: string;
   let remark: string;
-  if (pct >= 80) {
-    grade = "A";
-    remark = "Excellent";
-  } else if (pct >= 70) {
-    grade = "B";
-    remark = "Very Good";
-  } else if (pct >= 60) {
-    grade = "C";
-    remark = "Good";
-  } else if (pct >= 50) {
-    grade = "D";
-    remark = "Satisfactory";
-  } else if (pct >= 40) {
-    grade = "E";
-    remark = "Needs Improvement";
-  } else {
-    grade = "F";
-    remark = "Below Requirements";
+  if (pct >= 80) { grade = "A"; remark = "Excellent"; }
+  else if (pct >= 70) { grade = "B"; remark = "Very Good"; }
+  else if (pct >= 60) { grade = "C"; remark = "Good"; }
+  else if (pct >= 50) { grade = "D"; remark = "Satisfactory"; }
+  else if (pct >= 40) { grade = "E"; remark = "Needs Improvement"; }
+  else { grade = "F"; remark = "Below Requirements"; }
+
+  // Try to load template
+  let template = null;
+  if (reportCard.templateId) {
+    template = await prisma.documentTemplate.findUnique({
+      where: { id: reportCard.templateId },
+      include: { fields: true, tableRegions: true },
+    });
+  }
+  if (!template) {
+    template = await prisma.documentTemplate.findFirst({
+      where: { type: "REPORT_CARD" as any, isActive: true },
+      include: { fields: true, tableRegions: true },
+    });
   }
 
+  // If template exists, use template-based rendering
+  if (template) {
+    // Build flat test rows for the table region
+    const testRows: Array<Record<string, string>> = [];
+    for (const group of subjectGroups.values()) {
+      for (const test of group.tests) {
+        testRows.push({
+          subject: group.subjectName,
+          testTitle: test.title,
+          marksObtained: test.marksObtained !== null ? String(test.marksObtained) : "—",
+          maxMarks: String(test.maxMarks),
+        });
+      }
+    }
+
+    const fieldValues: Record<string, string> = {
+      studentName: reportCard.student.name,
+      classSection,
+      termName: reportCard.term.name,
+    };
+
+    return (
+      <TemplateRenderer
+        template={{
+          backgroundImageUrl: template.backgroundImageUrl,
+          fields: template.fields.map((f) => ({
+            id: f.id,
+            fieldKey: f.fieldKey,
+            xPercent: f.xPercent,
+            yPercent: f.yPercent,
+            fontSize: f.fontSize,
+            textAlign: f.textAlign,
+          })),
+          tableRegions: template.tableRegions.map((tr) => ({
+            id: tr.id,
+            anchorXPercent: tr.anchorXPercent,
+            anchorYPercent: tr.anchorYPercent,
+            rowHeightPercent: tr.rowHeightPercent,
+            columns: tr.columns as any,
+          })),
+        }}
+        fieldValues={fieldValues}
+        tableData={{ 0: testRows }}
+      />
+    );
+  }
+
+  // Fallback: coded layout
   return (
     <div className="report-card-document mx-auto max-w-[700px]">
       {/* Document header */}

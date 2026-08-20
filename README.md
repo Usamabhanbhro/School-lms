@@ -116,6 +116,7 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/admin/report-cards` | ADMIN, ACADEMICS | Report cards list (read-only) |
 | `/admin/certificates` | ADMIN, ACADEMICS | Certificate generation |
 | `/admin/fees` | ADMIN, ACADEMICS | Fee challan generation |
+| `/admin/templates` | ADMIN | Document template management (upload, visual editor, activate) |
 | `/teacher` | TEACHER | Teacher dashboard and quick actions |
 | `/teacher/attendance` | TEACHER | Student attendance marking (draft → lock) |
 | `/teacher/tests` | TEACHER | Tests & marks entry |

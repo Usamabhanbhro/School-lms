@@ -14,9 +14,9 @@ const fieldSchema = z.object({
 });
 
 const columnSchema = z.object({
-  fieldKey: z.string(),
+  fieldKey: z.string().min(1).max(100),
   xPercent: z.number().min(0).max(100),
-  label: z.string(),
+  label: z.string().min(1).max(200),
 });
 
 const tableRegionSchema = z.object({
