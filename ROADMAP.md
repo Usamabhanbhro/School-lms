@@ -32,7 +32,7 @@ Everything downstream reads from this layer, so get the RBAC scoping right here 
 
 ## Phase 2 — Auth Completeness ✅ Complete
 
-- Admin recovery code: generate + display once at initial admin setup, stored via `AdminRecoveryCode` model with 24-hour expiration
+- Admin recovery code: generate + display once at initial admin setup, stored via `AdminRecoveryCode` model — no time-based expiry, valid until used or manually regenerated
 - `POST /api/admin/recover`: verify code, consume it atomically with password change and new code generation in one Prisma transaction via `consumeAndRotate()`
 - `POST /api/admin/recover/code`: public endpoint to generate a new code when current one is expired/consumed — generic responses prevent account enumeration
 - Manual regenerate-code action from within the admin panel

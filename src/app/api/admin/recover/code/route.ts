@@ -90,18 +90,18 @@ export async function POST(request: Request) {
     // Find the most recent recovery code
     const mostRecent = await findMostRecentRecoveryCode(admin.id);
 
-    // Check if there's still an active code
+    // Check if there's still an active code (consumedAt and replacedAt both null)
+    // Codes have no time-based expiry — they remain valid until used or regenerated.
     if (
       mostRecent &&
       !mostRecent.consumedAt &&
-      !mostRecent.replacedAt &&
-      mostRecent.expiresAt > new Date()
+      !mostRecent.replacedAt
     ) {
       return NextResponse.json(
         {
           error: {
             message:
-              "An active recovery code already exists. Use it to recover your account, or wait for it to expire before generating a new one.",
+              "An active recovery code already exists. Use it to recover your account, or regenerate from the admin panel to rotate it.",
             code: "ACTIVE_CODE_EXISTS",
           },
         },

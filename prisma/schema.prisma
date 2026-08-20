@@ -83,7 +83,7 @@ model AdminRecoveryCode {
   userId       String
   user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   codeHash     String // bcrypt hash of the plaintext recovery code
-  expiresAt    DateTime
+  expiresAt    DateTime? // deprecated: no longer enforced — codes are valid until used or manually regenerated
   consumedAt   DateTime?
   replacedAt   DateTime?
   createdAt    DateTime @default(now())

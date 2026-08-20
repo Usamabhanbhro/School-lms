@@ -3,12 +3,6 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import type { PrismaClient } from "@/generated/prisma/client";
 
-/**
- * Recovery-code configuration.
- * Codes expire after RECOVERY_CODE_TTL_MS from generation.
- */
-export const RECOVERY_CODE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-
 /** Number of hex characters in the plaintext recovery code. */
 const CODE_BYTE_LENGTH = 32; // 64 hex characters = 256 bits of entropy
 
@@ -65,8 +59,6 @@ export async function createRecoveryCode(
   userId: string,
   tx?: TxClient,
 ): Promise<string> {
-  const expiresAt = new Date(Date.now() + RECOVERY_CODE_TTL_MS);
-
   // Generate and hash BEFORE the transaction (bcrypt is slow)
   const plaintext = generateRecoveryCode();
   const codeHash = await hashRecoveryCode(plaintext);
@@ -82,12 +74,11 @@ export async function createRecoveryCode(
       data: { replacedAt: new Date() },
     });
 
-    // 2. Create the new recovery code record
+    // 2. Create the new recovery code record (no expiry — valid until used or regenerated)
     await client.adminRecoveryCode.create({
       data: {
         userId,
         codeHash,
-        expiresAt,
       },
     });
 
@@ -134,8 +125,6 @@ export async function consumeAndRotate(
   activeCodeId: string,
   newPasswordHash: string,
 ): Promise<string> {
-  const expiresAt = new Date(Date.now() + RECOVERY_CODE_TTL_MS);
-
   // Generate and hash the new recovery code BEFORE the transaction
   const newPlaintext = generateRecoveryCode();
   const newCodeHash = await hashRecoveryCode(newPlaintext);
@@ -164,12 +153,11 @@ export async function consumeAndRotate(
       data: { replacedAt: new Date() },
     });
 
-    // 4. Create the new recovery code record
+    // 4. Create the new recovery code record (no expiry — valid until used or regenerated)
     await tx.adminRecoveryCode.create({
       data: {
         userId,
         codeHash: newCodeHash,
-        expiresAt,
       },
     });
 
@@ -189,9 +177,10 @@ export async function consumeAndRotate(
  * Active means:
  *   - consumedAt IS NULL
  *   - replacedAt IS NULL
- *   - expiresAt > now
  *
  * Returns null if no active code exists.
+ * Codes have no time-based expiry — they remain valid until
+ * used (consumed) or manually regenerated (replaced).
  */
 export async function findActiveRecoveryCode(userId: string) {
   return prisma.adminRecoveryCode.findFirst({
@@ -199,7 +188,6 @@ export async function findActiveRecoveryCode(userId: string) {
       userId,
       consumedAt: null,
       replacedAt: null,
-      expiresAt: { gt: new Date() },
     },
     orderBy: { createdAt: "desc" },
   });
