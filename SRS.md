@@ -67,7 +67,7 @@ Since there is exactly one Admin and no one above them, Admin cannot rely on "so
 
 ### 1.8 Certificates — Template-Based Generation
 
-Admin (and Academics — see §1A) generate, per student: **Leaving Certificate** or **Character Certificate**. Document layout is defined by **templates** that Admin uploads and configures.
+Admin (and Academics — see §1A) generate, per student: **Leaving Certificate** or **Character Certificate**. Document layout is defined by **templates** that Admin uploads and configures (template system details, field placement, and table regions are defined in §3).
 
 **Template workflow:**
 1. Admin uploads a template image (PNG/JPG) or PDF (converted client-side to an image) as the document background.
@@ -85,7 +85,7 @@ Admin (and Academics — see §1A) generate, per student: **Leaving Certificate*
 
 ### 1.9 Fee Challan — Template-Based Generation
 
-Admin (and Academics — see §1A) generate a fee challan by selecting a student. The generation view:
+Admin (and Academics — see §1A) generate a fee challan by selecting a student. Template system details, field placement, and table regions are defined in §3. The generation view:
 
 - **Bank details** — bank name, bank account number. Sourced from a school-wide **Bank Settings** singleton (a "Fees" tab where Admin can edit these independently of any single challan). Snapshotted onto the challan at generation time, so historical challans stay accurate even if bank details change later.
 - **Student details** (read-only, pulled from the Student record) — name, father/guardian name, guardian CNIC, class, section. Also snapshotted at generation time, for the same reason.

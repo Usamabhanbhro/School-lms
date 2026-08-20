@@ -12,6 +12,7 @@ import {
   FileText,
   GraduationCap,
   LayoutDashboard,
+  LayoutTemplate,
   LogOut,
   Menu,
   Settings,
@@ -47,6 +48,7 @@ const adminNav: NavItem[] = [
   { label: "Report Cards", href: "/admin/report-cards", icon: Award },
   { label: "Certificates", href: "/admin/certificates", icon: FileText },
   { label: "Fees", href: "/admin/fees", icon: Banknote },
+  { label: "Templates", href: "/admin/templates", icon: LayoutTemplate },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 

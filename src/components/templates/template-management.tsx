@@ -1,0 +1,946 @@
+"use client";
+
+import { useCallback, useRef, useState, useEffect } from "react";
+import { useToast } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+
+const TEMPLATE_TYPES = [
+  {
+    value: "LEAVING_CERTIFICATE",
+    label: "Leaving Certificate",
+    fieldKeys: [
+      "studentName", "guardianName", "classSection",
+      "admissionDate", "dateOfLeaving", "dob", "issueDate",
+    ],
+  },
+  {
+    value: "CHARACTER_CERTIFICATE",
+    label: "Character Certificate",
+    fieldKeys: [
+      "studentName", "guardianName", "classSection",
+      "dob", "conductRemark", "issueDate",
+    ],
+  },
+  {
+    value: "REPORT_CARD",
+    label: "Report Card",
+    fieldKeys: ["studentName", "classSection", "termName"],
+    hasTableRegion: true,
+    tableColumns: [
+      { fieldKey: "subject", label: "Subject" },
+      { fieldKey: "testTitle", label: "Test" },
+      { fieldKey: "marksObtained", label: "Marks" },
+      { fieldKey: "maxMarks", label: "Max" },
+    ],
+  },
+  {
+    value: "FEE_CHALLAN",
+    label: "Fee Challan",
+    fieldKeys: [
+      "studentName", "guardianName", "guardianCnic", "classSection",
+      "bankName", "bankAccountNumber", "issueDate", "total",
+    ],
+    hasTableRegion: true,
+    tableColumns: [
+      { fieldKey: "description", label: "Description" },
+      { fieldKey: "amount", label: "Amount" },
+    ],
+  },
+] as const;
+
+type TemplateType = (typeof TEMPLATE_TYPES)[number]["value"];
+
+interface TemplateField {
+  id: string;
+  templateId: string;
+  fieldKey: string;
+  xPercent: number;
+  yPercent: number;
+  fontSize: number;
+  textAlign: string;
+}
+
+interface TemplateTableRegion {
+  id: string;
+  templateId: string;
+  anchorXPercent: number;
+  anchorYPercent: number;
+  rowHeightPercent: number;
+  columns: Array<{ fieldKey: string; xPercent: number; label: string }>;
+}
+
+interface Template {
+  id: string;
+  type: TemplateType;
+  originalFileUrl: string;
+  backgroundImageUrl: string;
+  uploadedBy: string;
+  isActive: boolean;
+  fields: TemplateField[];
+  tableRegions: TemplateTableRegion[];
+  _count: { certificates: number; reportCards: number; feeChallans: number };
+  createdAt: string;
+}
+
+export function TemplateManagement() {
+  const { addToast } = useToast();
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadingType, setUploadingType] = useState<TemplateType | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Template | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingTypeRef = useRef<TemplateType | null>(null);
+
+  const fetchTemplates = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch("/api/templates");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Failed to load templates");
+      setTemplates(json.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load templates");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTemplates();
+  }, [fetchTemplates]);
+
+  /**
+   * Convert PDF to PNG using pdf.js canvas rendering (client-side).
+   * Falls back to direct upload if pdf.js is unavailable.
+   */
+  async function convertPdfToImage(file: File): Promise<File> {
+    try {
+      const pdfjsLib = await import("pdfjs-dist");
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const page = await pdf.getPage(1); // First page only
+
+      // Scale for reasonable quality (not too large for blob storage)
+      const scale = 2;
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      const ctx = canvas.getContext("2d")!;
+      await page.render({ canvas, canvasContext: ctx, viewport }).promise;
+
+      // Convert canvas to blob
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error("Canvas toBlob failed"))),
+          "image/png",
+        );
+      });
+
+      // Wrap as File
+      const convertedName = file.name.replace(/\.pdf$/i, ".png");
+      return new File([blob], convertedName, { type: "image/png" });
+    } catch {
+      // If pdf.js fails, still attempt upload — the server will reject if type is wrong
+      return file;
+    }
+  }
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    const type = pendingTypeRef.current;
+    if (!file || !type) return;
+
+    try {
+      setUploading(true);
+      setUploadingType(type);
+
+      // If PDF, convert to image client-side first
+      let uploadFile = file;
+      if (file.type === "application/pdf") {
+        addToast("success", "Converting PDF...");
+        uploadFile = await convertPdfToImage(file);
+      }
+
+      const formData = new FormData();
+      formData.append("file", uploadFile);
+      formData.append("type", type);
+
+      const res = await fetch("/api/templates", {
+        method: "POST",
+        body: formData,
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Upload failed");
+
+      addToast("success", "Template uploaded successfully");
+      fetchTemplates();
+    } catch (err) {
+      addToast("error", err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      setUploadingType(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  function triggerUpload(type: TemplateType) {
+    pendingTypeRef.current = type;
+    fileInputRef.current?.click();
+  }
+
+  async function handleActivate(template: Template) {
+    try {
+      const res = await fetch(`/api/templates/${template.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: true }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Failed to activate");
+      addToast("success", `${getLabel(template.type)} template activated`);
+      fetchTemplates();
+    } catch (err) {
+      addToast("error", err instanceof Error ? err.message : "Activation failed");
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/templates/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Failed to delete");
+      addToast("success", "Template deleted");
+      setDeleteTarget(null);
+      fetchTemplates();
+    } catch (err) {
+      addToast("error", err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  function getLabel(type: TemplateType): string {
+    return TEMPLATE_TYPES.find((t) => t.value === type)?.label ?? type;
+  }
+
+  if (loading) {
+    return (
+      <div>
+        <PageHeader title="Document Templates" description="Manage print templates for certificates, report cards, and fee challans" />
+        <div className="space-y-4 p-6">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <PageHeader title="Document Templates" description="Manage print templates for certificates, report cards, and fee challans" />
+        <ErrorState message={error} onRetry={fetchTemplates} />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <PageHeader
+        title="Document Templates"
+        description="Manage print templates for certificates, report cards, and fee challans"
+      />
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,application/pdf"
+        className="hidden"
+        onChange={handleUpload}
+      />
+
+      <div className="space-y-6 p-6">
+        {TEMPLATE_TYPES.map((typeInfo) => {
+          const typeTemplates = templates.filter(
+            (t) => t.type === typeInfo.value,
+          );
+          const activeTemplate = typeTemplates.find((t) => t.isActive);
+
+          return (
+            <div
+              key={typeInfo.value}
+              className="border border-zinc-200 bg-white"
+            >
+              {/* Section header */}
+              <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-zinc-900">
+                    {typeInfo.label}
+                  </h3>
+                  {activeTemplate ? (
+                    <Badge variant="success">Active</Badge>
+                  ) : (
+                    <Badge variant="danger">No active template</Badge>
+                  )}
+                </div>
+                <button
+                  onClick={() => triggerUpload(typeInfo.value)}
+                  disabled={uploading}
+                  className="inline-flex items-center gap-1.5 border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+                >
+                  {uploading && uploadingType === typeInfo.value ? (
+                    "Uploading..."
+                  ) : (
+                    <>
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                      </svg>
+                      Upload Template
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Template list */}
+              {typeTemplates.length === 0 ? (
+                <EmptyState
+                  title="No templates uploaded"
+                  description={`Upload a template image (PNG/JPG) or PDF for ${typeInfo.label}. The file will be converted to an image and used as the background for document generation.`}
+                />
+              ) : (
+                <div className="divide-y divide-zinc-200">
+                  {typeTemplates.map((template) => {
+                    const docCount =
+                      template.type === "REPORT_CARD"
+                        ? template._count.reportCards
+                        : template.type === "FEE_CHALLAN"
+                          ? template._count.feeChallans
+                          : template._count.certificates;
+
+                    return (
+                      <div
+                        key={template.id}
+                        className="flex items-center justify-between px-4 py-3"
+                      >
+                        <div className="flex items-center gap-4">
+                          {/* Thumbnail preview */}
+                          <div className="h-12 w-16 overflow-hidden border border-zinc-200 bg-zinc-100">
+                            <img
+                              src={template.backgroundImageUrl}
+                              alt={`Template for ${typeInfo.label}`}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-zinc-900">
+                                {new Date(template.createdAt).toLocaleDateString()}
+                              </span>
+                              {template.isActive && (
+                                <span className="inline-flex items-center rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-800">
+                                  ACTIVE
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-zinc-500">
+                              {template.fields.length} fields ·{" "}
+                              {template.tableRegions.length} table regions ·{" "}
+                              {docCount} document(s) generated
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setEditingTemplate(template)}
+                            className="border border-zinc-300 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                          >
+                            Edit Fields
+                          </button>
+                          {!template.isActive && (
+                            <button
+                              onClick={() => handleActivate(template)}
+                              className="border border-zinc-300 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                            >
+                              Activate
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setDeleteTarget(template)}
+                            className="border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Fallback note */}
+        <p className="text-xs text-zinc-500">
+          If no active template exists for a document type, the print view will show
+          &ldquo;No template configured — ask your Admin to upload one in Settings&rdquo;
+          instead of rendering blank.
+        </p>
+      </div>
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Template"
+        description={
+          deleteTarget
+            ? `Delete the ${getLabel(deleteTarget.type)} template from ${new Date(deleteTarget.createdAt).toLocaleDateString()}? This cannot be undone.`
+            : ""
+        }
+        confirmLabel={deleting ? "Deleting..." : "Delete"}
+        onConfirm={handleDelete}
+      />
+
+      {/* Visual editor modal */}
+      {editingTemplate && (
+        <TemplateEditor
+          template={editingTemplate}
+          templateTypeConfig={
+            TEMPLATE_TYPES.find((t) => t.value === editingTemplate.type)!
+          }
+          onClose={() => {
+            setEditingTemplate(null);
+            fetchTemplates();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ─── Visual Editor (inline modal) ─────────────────────────────── */
+
+interface TemplateTypeConfigItem {
+  value: string;
+  label: string;
+  fieldKeys: readonly string[];
+  hasTableRegion?: boolean;
+  tableColumns?: readonly { fieldKey: string; label: string }[];
+}
+
+interface TemplateEditorProps {
+  template: Template;
+  templateTypeConfig: TemplateTypeConfigItem;
+  onClose: () => void;
+}
+
+function TemplateEditor({
+  template,
+  templateTypeConfig,
+  onClose,
+}: TemplateEditorProps) {
+  const { addToast } = useToast();
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [fields, setFields] = useState<
+    Array<{
+      fieldKey: string;
+      xPercent: number;
+      yPercent: number;
+      fontSize: number;
+      textAlign: "left" | "center" | "right";
+    }>
+  >(
+    template.fields.map((f) => ({
+      fieldKey: f.fieldKey,
+      xPercent: f.xPercent,
+      yPercent: f.yPercent,
+      fontSize: f.fontSize,
+      textAlign: f.textAlign as "left" | "center" | "right",
+    })),
+  );
+  const [tableRegions, setTableRegions] = useState<
+    Array<{
+      anchorXPercent: number;
+      anchorYPercent: number;
+      rowHeightPercent: number;
+      columns: Array<{ fieldKey: string; xPercent: number; label: string }>;
+    }>
+  >(
+    template.tableRegions.map((tr) => ({
+      anchorXPercent: tr.anchorXPercent,
+      anchorYPercent: tr.anchorYPercent,
+      rowHeightPercent: tr.rowHeightPercent,
+      columns: tr.columns,
+    })),
+  );
+  const [saving, setSaving] = useState(false);
+  const [draggingField, setDraggingField] = useState<number | null>(null);
+  const [draggingRegion, setDraggingRegion] = useState<number | null>(null);
+
+  // Initialize missing fields
+  useEffect(() => {
+    const existingKeys = new Set(fields.map((f) => f.fieldKey));
+    const missing = templateTypeConfig.fieldKeys.filter(
+      (k) => !existingKeys.has(k),
+    );
+    if (missing.length > 0) {
+      setFields((prev) => [
+        ...prev,
+        ...missing.map((key, i) => ({
+          fieldKey: key,
+          xPercent: 10 + i * 5,
+          yPercent: 10 + i * 5,
+          fontSize: 12,
+          textAlign: "left" as const,
+        })),
+      ]);
+    }
+  }, [templateTypeConfig.fieldKeys, fields]);
+
+  function handleCanvasClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const xPercent = ((e.clientX - rect.left) / rect.width) * 100;
+    const yPercent = ((e.clientY - rect.top) / rect.height) * 100;
+
+    // If there's an unplaced field, place it
+    const unplacedIndex = fields.findIndex(
+      (f) => f.xPercent === 0 && f.yPercent === 0,
+    );
+    if (unplacedIndex >= 0) {
+      setFields((prev) =>
+        prev.map((f, i) =>
+          i === unplacedIndex ? { ...f, xPercent, yPercent } : f,
+        ),
+      );
+    }
+  }
+
+  function handleFieldMouseDown(e: React.MouseEvent, index: number) {
+    e.stopPropagation();
+    setDraggingField(index);
+  }
+
+  function handleCanvasMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    if (draggingField === null && draggingRegion === null) return;
+    if (!canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const xPercent = Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100));
+    const yPercent = Math.min(100, Math.max(0, ((e.clientY - rect.top) / rect.height) * 100));
+
+    if (draggingField !== null) {
+      const idx = draggingField;
+      setFields((prev) =>
+        prev.map((f, i) => (i === idx ? { ...f, xPercent, yPercent } : f)),
+      );
+    } else if (draggingRegion !== null) {
+      const idx = draggingRegion;
+      setTableRegions((prev) =>
+        prev.map((tr, i) =>
+          i === idx ? { ...tr, anchorXPercent: xPercent, anchorYPercent: yPercent } : tr,
+        ),
+      );
+    }
+  }
+
+  function handleCanvasMouseUp() {
+    setDraggingField(null);
+    setDraggingRegion(null);
+  }
+
+  function addTableRegion() {
+    if (!templateTypeConfig.hasTableRegion) return;
+    setTableRegions((prev) => [
+      ...prev,
+      {
+        anchorXPercent: 10,
+        anchorYPercent: 50,
+        rowHeightPercent: 5,
+        columns: (templateTypeConfig.tableColumns ?? []).map((c) => ({
+          ...c,
+          xPercent: 10,
+        })),
+      },
+    ]);
+  }
+
+  function updateField(
+    index: number,
+    key: string,
+    value: string | number,
+  ) {
+    setFields((prev) =>
+      prev.map((f, i) =>
+        i === index ? { ...f, [key]: value } : f,
+      ),
+    );
+  }
+
+  function updateTableRegion(
+    index: number,
+    key: string,
+    value: number,
+  ) {
+    setTableRegions((prev) =>
+      prev.map((tr, i) =>
+        i === index ? { ...tr, [key]: value } : tr,
+      ),
+    );
+  }
+
+  function updateTableRegionColumn(
+    regionIndex: number,
+    colIndex: number,
+    key: string,
+    value: number,
+  ) {
+    setTableRegions((prev) =>
+      prev.map((tr, i) =>
+        i === regionIndex
+          ? {
+              ...tr,
+              columns: tr.columns.map((c, ci) =>
+                ci === colIndex ? { ...c, [key]: value } : c,
+              ),
+            }
+          : tr,
+      ),
+    );
+  }
+
+  async function handleSave() {
+    try {
+      setSaving(true);
+      const res = await fetch(`/api/templates/${template.id}/fields`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fields, tableRegions }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Save failed");
+      addToast("success", "Field positions saved");
+      onClose();
+    } catch (err) {
+      addToast("error", err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex bg-black/50">
+      <div className="flex h-full w-full flex-col bg-white">
+        {/* Editor toolbar */}
+        <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-2">
+          <div>
+            <h2 className="text-sm font-semibold text-zinc-900">
+              Edit Fields — {templateTypeConfig.label}
+            </h2>
+            <p className="text-xs text-zinc-500">
+              Drag fields on the canvas to position them. Fields use percentage-based coordinates.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {templateTypeConfig.hasTableRegion && (
+              <button
+                onClick={addTableRegion}
+                className="border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+              >
+                + Add Table Region
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save Positions"}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-1 overflow-hidden">
+          {/* Canvas area */}
+          <div className="flex-1 overflow-auto bg-zinc-100 p-8">
+            <div
+              ref={canvasRef}
+              className="relative mx-auto bg-white shadow-sm border border-zinc-200"
+              style={{ width: "700px", height: "990px", aspectRatio: "210/297" }}
+              onClick={handleCanvasClick}
+              onMouseMove={handleCanvasMouseMove}
+              onMouseUp={handleCanvasMouseUp}
+              onMouseLeave={handleCanvasMouseUp}
+            >
+              {/* Background image */}
+              <img
+                src={template.backgroundImageUrl}
+                alt="Template background"
+                className="pointer-events-none absolute inset-0 h-full w-full object-contain"
+                draggable={false}
+              />
+
+              {/* Field markers */}
+              {fields.map((field, i) => (
+                <div
+                  key={field.fieldKey}
+                  className="absolute cursor-move select-none"
+                  style={{
+                    left: `${field.xPercent}%`,
+                    top: `${field.yPercent}%`,
+                    transform: "translate(-50%, -50%)",
+                  }}
+                  onMouseDown={(e) => handleFieldMouseDown(e, i)}
+                >
+                  <div className="border border-blue-500 bg-blue-500/10 px-1 py-0.5 text-[10px] font-mono text-blue-700 whitespace-nowrap">
+                    {field.fieldKey}
+                  </div>
+                </div>
+              ))}
+
+              {/* Table region markers */}
+              {tableRegions.map((region, i) => (
+                <div
+                  key={`tr-${i}`}
+                  className="absolute cursor-move border border-dashed border-orange-400 bg-orange-400/10"
+                  style={{
+                    left: `${region.anchorXPercent}%`,
+                    top: `${region.anchorYPercent}%`,
+                    width: "60%",
+                    height: `${region.rowHeightPercent * 3}%`,
+                  }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    setDraggingRegion(i);
+                  }}
+                >
+                  <span className="absolute -top-4 left-0 text-[10px] font-mono text-orange-600">
+                    Table Region {i + 1}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Field properties panel */}
+          <div className="w-80 overflow-y-auto border-l border-zinc-200 p-4">
+            <h3 className="mb-3 text-xs font-semibold uppercase text-zinc-500">
+              Single Fields
+            </h3>
+            <div className="space-y-2">
+              {fields.map((field, i) => (
+                <div key={field.fieldKey} className="border border-zinc-200 p-2">
+                  <div className="mb-1 text-[11px] font-medium text-zinc-700">
+                    {field.fieldKey}
+                  </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    <label className="text-[10px] text-zinc-500">
+                      X%
+                      <input
+                        type="number"
+                        value={Math.round(field.xPercent * 10) / 10}
+                        onChange={(e) =>
+                          updateField(i, "xPercent", parseFloat(e.target.value) || 0)
+                        }
+                        className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                        min={0}
+                        max={100}
+                        step={0.5}
+                      />
+                    </label>
+                    <label className="text-[10px] text-zinc-500">
+                      Y%
+                      <input
+                        type="number"
+                        value={Math.round(field.yPercent * 10) / 10}
+                        onChange={(e) =>
+                          updateField(i, "yPercent", parseFloat(e.target.value) || 0)
+                        }
+                        className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                        min={0}
+                        max={100}
+                        step={0.5}
+                      />
+                    </label>
+                    <label className="text-[10px] text-zinc-500">
+                      Font
+                      <input
+                        type="number"
+                        value={field.fontSize}
+                        onChange={(e) =>
+                          updateField(i, "fontSize", parseInt(e.target.value) || 12)
+                        }
+                        className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                        min={6}
+                        max={72}
+                      />
+                    </label>
+                    <label className="text-[10px] text-zinc-500">
+                      Align
+                      <select
+                        value={field.textAlign}
+                        onChange={(e) => updateField(i, "textAlign", e.target.value)}
+                        className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px]"
+                      >
+                        <option value="left">Left</option>
+                        <option value="center">Center</option>
+                        <option value="right">Right</option>
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {tableRegions.length > 0 && (
+              <>
+                <h3 className="mb-3 mt-4 text-xs font-semibold uppercase text-zinc-500">
+                  Table Regions
+                </h3>
+                <div className="space-y-3">
+                  {tableRegions.map((region, ri) => (
+                    <div
+                      key={`trp-${ri}`}
+                      className="border border-orange-200 bg-orange-50/50 p-2"
+                    >
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="text-[11px] font-medium text-orange-700">
+                          Region {ri + 1}
+                        </span>
+                        <button
+                          onClick={() =>
+                            setTableRegions((prev) =>
+                              prev.filter((_, i) => i !== ri),
+                            )
+                          }
+                          className="text-[10px] text-red-500 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1">
+                        <label className="text-[10px] text-zinc-500">
+                          Anchor X%
+                          <input
+                            type="number"
+                            value={Math.round(region.anchorXPercent * 10) / 10}
+                            onChange={(e) =>
+                              updateTableRegion(
+                                ri,
+                                "anchorXPercent",
+                                parseFloat(e.target.value) || 0,
+                              )
+                            }
+                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                            min={0}
+                            max={100}
+                            step={0.5}
+                          />
+                        </label>
+                        <label className="text-[10px] text-zinc-500">
+                          Anchor Y%
+                          <input
+                            type="number"
+                            value={Math.round(region.anchorYPercent * 10) / 10}
+                            onChange={(e) =>
+                              updateTableRegion(
+                                ri,
+                                "anchorYPercent",
+                                parseFloat(e.target.value) || 0,
+                              )
+                            }
+                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                            min={0}
+                            max={100}
+                            step={0.5}
+                          />
+                        </label>
+                        <label className="text-[10px] text-zinc-500">
+                          Row Height %
+                          <input
+                            type="number"
+                            value={Math.round(region.rowHeightPercent * 10) / 10}
+                            onChange={(e) =>
+                              updateTableRegion(
+                                ri,
+                                "rowHeightPercent",
+                                parseFloat(e.target.value) || 1,
+                              )
+                            }
+                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                            min={0.5}
+                            max={50}
+                            step={0.5}
+                          />
+                        </label>
+                      </div>
+
+                      {/* Column positions */}
+                      <div className="mt-2 space-y-1">
+                        <span className="text-[10px] text-zinc-500">Column X%:</span>
+                        {region.columns.map((col, ci) => (
+                          <div
+                            key={col.fieldKey}
+                            className="flex items-center gap-1"
+                          >
+                            <span className="w-20 truncate text-[10px] text-zinc-600">
+                              {col.label}
+                            </span>
+                            <input
+                              type="number"
+                              value={Math.round(col.xPercent * 10) / 10}
+                              onChange={(e) =>
+                                updateTableRegionColumn(
+                                  ri,
+                                  ci,
+                                  "xPercent",
+                                  parseFloat(e.target.value) || 0,
+                                )
+                              }
+                              className="w-16 border border-zinc-300 px-1 py-0.5 text-[11px] font-mono"
+                              min={0}
+                              max={100}
+                              step={0.5}
+                            />
+                            <span className="text-[10px] text-zinc-400">%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
