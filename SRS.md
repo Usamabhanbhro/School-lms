@@ -1,6 +1,6 @@
 # School LMS — Software Requirements Specification (SRS)
 
-**Status: Draft v5 — functionally complete, including Fee Challan structure. Only visual/print design remains deferred** (Certificates, Fee Challan's three-copy layout, Report Card). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
+**Status: Draft v6 — template-based document generation.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
 
 ---
 
@@ -65,22 +65,44 @@ Since there is exactly one Admin and no one above them, Admin cannot rely on "so
 
 **Known tradeoff:** if both the password and the recovery code are lost, there is no further self-service recovery path — this is the accepted cost of removing vendor/developer involvement from password recovery. This should be called out clearly in onboarding material for each school.
 
-### 1.8 Certificates *(design deferred)*
+### 1.8 Certificates — Template-Based Generation
 
-Admin (and Academics — see §1A) generate, per student: **Leaving Certificate**, **Character Certificate**. Layout/design not yet decided — this is a functional placeholder until a design pass happens. Anticipated fields once designed: student name, father/guardian name, class/section, admission date, date of leaving (leaving certificate), DOB, conduct remark (character certificate).
+Admin (and Academics — see §1A) generate, per student: **Leaving Certificate** or **Character Certificate**. Document layout is defined by **templates** that Admin uploads and configures.
 
-### 1.9 Fee Challan
+**Template workflow:**
+1. Admin uploads a template image (PNG/JPG) or PDF (converted client-side to an image) as the document background.
+2. Admin uses a visual editor to place fields at specific positions on the template (percentage-based coordinates so positions scale across screen sizes and print).
+3. Positions are saved and reused for every future document of that type.
+4. Templates are **versioned**: already-generated documents reference the template version that was active when they were created. Changing the active template does not reflow historical documents.
+
+**Field keys for Leaving Certificate:** studentName, guardianName, classSection, admissionDate, dateOfLeaving, dob, issueDate
+
+**Field keys for Character Certificate:** studentName, guardianName, classSection, dob, conductRemark, issueDate
+
+**Generation flow:** Admin selects a student, chooses certificate type (LEAVING or CHARACTER), and clicks Generate. The system creates the certificate record (snapshots student data and the active template ID), then renders the print view by overlaying the student's data onto the template background at the saved positions.
+
+**Fallback:** If no active template exists for a certificate type, the print view shows a clear message: "No template configured — ask your Admin to upload one in Settings" instead of rendering blank.
+
+### 1.9 Fee Challan — Template-Based Generation
 
 Admin (and Academics — see §1A) generate a fee challan by selecting a student. The generation view:
 
 - **Bank details** — bank name, bank account number. Sourced from a school-wide **Bank Settings** singleton (a "Fees" tab where Admin can edit these independently of any single challan). Snapshotted onto the challan at generation time, so historical challans stay accurate even if bank details change later.
-- **Student details** (read-only, pulled from the Student record) — name, father/guardian name, guardian CNIC, class, section. Also snapshotted at generation time, for the same reason (a student changing class later shouldn't retroactively alter an old challan).
+- **Student details** (read-only, pulled from the Student record) — name, father/guardian name, guardian CNIC, class, section. Also snapshotted at generation time, for the same reason.
 - **Fee line items** — Admin can edit the base fee and **add arbitrary line items** (e.g. "Arrears", "Late Fee") as description + amount pairs. Total is computed as the sum.
-- **Print action** — clicking Print **saves the challan** (persists it with its snapshot of bank/student details, line items, and issue date) and then produces the printable output. This is a single combined action, not a separate save-then-print flow.
+- **Print action** — clicking Print **saves the challan** (persists it with its snapshot of bank/student details, line items, issue date, and active template ID) and then produces the printable output.
 
-**Print layout:** one page containing **three identical copies** of the same challan — Bank Copy, Student Copy, School Copy — each prominently labeled. Exact visual design still deferred (per Open Items), but the three-copy structure is confirmed and drives the schema/print-stylesheet work.
+**Template-based print layout:** The Fee Challan template is the **full page** — Admin manually places fields **three times** (once per copy: Bank Copy, Student Copy, School Copy). There is **no auto-triplication** of positions. Admin is responsible for laying out all three copies on the single template image.
 
-Once saved, a challan is treated as an immutable historical record (consistent with the snapshot approach above) — regenerating for the same student creates a new challan rather than editing the old one.
+**Table Region:** The Fee Challan has a variable number of line items (rows). The template supports a **Table Region** — an anchor position, row height, and column x-positions — that repeats for each line item. Admin places the table region once; the renderer lays out N rows starting at the anchor, incrementing y by rowHeight per row.
+
+**Field keys:** studentName, guardianName, guardianCnic, classSection, bankName, bankAccountNumber, issueDate, total
+
+**Table Region columns:** description, amount
+
+**Fallback:** If no active template exists, the print view shows a clear message instead of rendering blank.
+
+Once saved, a challan is treated as an immutable historical record — regenerating for the same student creates a new challan rather than editing the old one. The template version used at generation time is recorded on the challan.
 
 ---
 
@@ -114,6 +136,81 @@ Academics accounts are managed exclusively by Admin:
 - Required fields: Name, CNIC, Phone, Email, Password (set by Admin at creation)
 
 Admin retains full authority to perform every action an Academics user can — Academics is a delegation, not a separate permission layer.
+
+---
+
+## 2. Teachers
+
+Multiple accounts, scoped to assignments. Two assignment types: Class Teacher (one active per class+section, holds attendance rights) and Subject Teacher (per class+subject, holds test/marks/report-card rights).
+
+### 2.1 Attendance Marking
+
+Class Teachers mark student attendance for their assigned class: draft → confirm (lock). Once locked, only Admin can override. CSV export available.
+
+### 2.2 Tests & Marks
+
+Subject Teachers create tests (title, date, max marks) scoped to their class+subject assignment, then enter marks per student against each test.
+
+### 2.3 Report Card Generation
+
+The active Class Teacher generates report cards: selects a student, creates/selects a Term, picks which tests count (multi-select across subjects within the class), and generates an aggregate report card.
+
+### 2.4 Report Card — Template-Based Print
+
+Report card print output uses a **template** configured by Admin (see §3). The template includes:
+
+- **Single fields:** studentName, classSection, termName
+- **Table Region:** a variable-length area for test rows. Columns: subject, testTitle, marksObtained, maxMarks. Admin places the table region once (anchor position + row height + column x-positions); the renderer lays out N rows starting at the anchor, incrementing y by rowHeight per row.
+
+The teacher's generation flow (term, test selection) is unchanged — only the print/output step uses the template renderer.
+
+---
+
+## 3. Document Templates
+
+Admin-configured templates control the print layout of Certificates, Report Cards, and Fee Challans. Templates are visual — Admin uploads a background image and places data fields on it.
+
+### 3.1 Template Lifecycle
+
+1. Admin uploads a template image (PNG/JPG) or PDF (converted client-side to an image via pdf.js rendering to canvas, then uploaded as PNG).
+2. Admin uses a visual editor to place fields at percentage-based coordinates on the template background.
+3. Positions are saved and reused for every future document of that type.
+4. Templates are **versioned**: each generated document records which template version was active when it was created. Changing the active template does not reflow historical documents.
+
+### 3.2 Template Types
+
+| Type | Enum | Fields | Table Region |
+|---|---|---|---|
+| Leaving Certificate | `LEAVING_CERTIFICATE` | studentName, guardianName, classSection, admissionDate, dateOfLeaving, dob, issueDate | No |
+| Character Certificate | `CHARACTER_CERTIFICATE` | studentName, guardianName, classSection, dob, conductRemark, issueDate | No |
+| Report Card | `REPORT_CARD` | studentName, classSection, termName | Yes (subject, testTitle, marksObtained, maxMarks) |
+| Fee Challan | `FEE_CHALLAN` | studentName, guardianName, guardianCnic, classSection, bankName, bankAccountNumber, issueDate, total | Yes (description, amount) |
+
+### 3.3 Fee Challan Template — Three Copies
+
+The Fee Challan template is the **full page**. Admin manually places fields **three times** — once per copy (Bank Copy, Student Copy, School Copy). There is **no auto-triplication** of positions. The same field key can have multiple position records (e.g. `studentName` placed at three different x/y coordinates for the three copies).
+
+### 3.4 Table Regions
+
+Report Card and Fee Challan need a second placement type beyond single fields: a **Table Region**. This is defined by:
+- Anchor position (x%, y%)
+- Row height (in % of template height)
+- Column definitions: array of { fieldKey, x% } — the x position for each column
+
+The renderer lays out N rows starting at the anchor, incrementing y by rowHeight per row, placing each column's value at its defined x position.
+
+### 3.5 Rendering Approach
+
+A shared print view component fetches the active (or document-specific, per templateId snapshot) template, its field positions, and the actual document data. It renders:
+1. The background image via CSS
+2. Absolutely-positioned text at saved percentage coordinates on top of it
+3. For table regions: N rows starting at the anchor, incrementing y by rowHeight per row
+
+This is one shared rendering component parameterized by document type — but the table-region layout logic is genuinely different from single-field layout, so they use separate code paths internally.
+
+### 3.6 Graceful Fallback
+
+If no active template exists for a document type, the print view shows: "No template configured — ask your Admin to upload one in Settings" instead of crashing or rendering blank.
 
 # School LMS
 

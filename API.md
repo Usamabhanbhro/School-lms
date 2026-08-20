@@ -360,6 +360,49 @@ NextAuth handler — login/logout/session. Credentials provider only.
 
 ---
 
+## Document Templates (Admin-only)
+
+### GET /api/templates
+**Role required:** Admin
+**Purpose:** List all document templates, grouped by type
+**Query params (optional):** `type` (filter by `LEAVING_CERTIFICATE`, `CHARACTER_CERTIFICATE`, `REPORT_CARD`, `FEE_CHALLAN`)
+**Status:** implemented
+
+### POST /api/templates
+**Role required:** Admin
+**Purpose:** Upload a new document template (image or PDF)
+**Request body:** FormData with `file` (image/PDF) and `type` (enum value)
+**Notes:** If PDF, the client converts to PNG before upload (see ARCHITECTURE.md). Stores original file and background image via Vercel Blob. Sets `isActive: true` for this type (deactivates previous active).
+**Response (201):** `{ data: { id, type, backgroundImageUrl, isActive } }`
+**Status:** implemented
+
+### PATCH /api/templates/:id
+**Role required:** Admin
+**Purpose:** Activate a template (set as active for its type), or update metadata
+**Request body:** `{ isActive: true }` — deactivates all other templates of the same type
+**Status:** implemented
+
+### GET /api/templates/:id/fields
+**Role required:** Admin
+**Purpose:** Get all field positions and table regions for a template
+**Response:** `{ data: { fields: [...], tableRegions: [...] } }`
+**Status:** implemented
+
+### PUT /api/templates/:id/fields
+**Role required:** Admin
+**Purpose:** Save all field positions and table regions for a template (replaces existing)
+**Request body:** `{ fields: [{ fieldKey, xPercent, yPercent, fontSize, textAlign }], tableRegions: [{ anchorXPercent, anchorYPercent, rowHeightPercent, columns: [{ fieldKey, xPercent }] }] }`
+**Notes:** Atomic — replaces all positions in one transaction
+**Status:** implemented
+
+### GET /api/templates/active/:type
+**Role required:** Admin, Academics, Teacher (for rendering documents)
+**Purpose:** Get the active template for a document type, with its field positions
+**Response:** `{ data: { template, fields, tableRegions } }` or 404 if no active template
+**Status:** implemented
+
+---
+
 ## Not Yet Scoped
 
-- No remaining API-level gaps — rate limiting and recovery code lifecycle are fully implemented
+- No remaining API-level gaps — rate limiting, recovery code lifecycle, and document templates are fully implemented

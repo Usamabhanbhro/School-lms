@@ -71,13 +71,17 @@ Both are easy to upgrade incrementally; starting on free tiers is low-risk for i
 
 ## Print & Export
 
-Report cards and attendance sheets require print-optimized output — plan a dedicated print stylesheet (see DESIGN.md) and/or PDF export route early, since this is a recurring requirement across roles (admin generating report cards, teachers printing attendance registers).
+Document print output (Certificates, Report Cards, Fee Challans) uses a **template-based rendering system** (see SRS §3). Admin uploads a background image, places data fields at percentage-based coordinates, and the renderer overlays text on the background at print time.
+
+**Rendering approach:** A shared print view component (`/print/[type]/[id]`) fetches the active template (or the document's snapshot template), its field positions (`TemplateField`), table regions (`TemplateTableRegion`), and the actual document data. It renders the background image via CSS and absolutely positions text at saved percentage coordinates. For table regions, it lays out N rows starting at an anchor point, incrementing y by rowHeight per row.
+
+**Client-side PDF conversion:** PDF templates are converted to PNG client-side in the browser (using pdf.js rendering to canvas) before upload — avoids heavy server-side dependencies and sidesteps Vercel's execution time limits.
+
+**Template versioning:** Each generated document records the `templateId` that was active when it was created. Changing the active template does not reflow historical documents.
 
 ## Open / Not Yet Decided
 
 - Background job strategy for anything exceeding Vercel's serverless time limits (e.g. bulk report generation)
-- Certificate and Report Card print layouts (functional data exists, visual design deferred — see SRS §1.8, ROADMAP Phase 6)
-- Fee Challan three-copy print layout (structure confirmed, visual design deferred)
 - Multi-school / multi-tenancy — currently assumed single school per deployment; revisit if that changes
 
 > **Note:** This document is current with SRS v5 — stack rationale, role list, entity list, and deployment constraints all reflect the implemented state (Phases 0–5 complete per `ROADMAP.md`).
