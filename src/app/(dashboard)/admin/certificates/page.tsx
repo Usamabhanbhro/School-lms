@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { FileText } from "lucide-react";
 import { authOptions } from "@/lib/auth";
-import { EmptyState } from "@/components/ui/empty-state";
+import { CertificateGeneration } from "@/components/certificates/certificate-generation";
 import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata: Metadata = {
@@ -20,13 +19,9 @@ export default async function AdminCertificatesPage() {
     <>
       <PageHeader
         title="Certificates"
-        description="Generate and manage student certificates."
+        description="Generate Leaving and Character certificates for students."
       />
-      <EmptyState
-        icon={FileText}
-        title="Certificate generation"
-        description="Certificates (Leaving, Character) can be generated via the API. A dedicated generation UI is planned."
-      />
+      <CertificateGeneration />
     </>
   );
 }

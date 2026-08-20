@@ -6,6 +6,37 @@ import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
 
 /**
+ * GET /api/certificates
+ *
+ * Admin: all certificates (global oversight).
+ * Academics: all certificates (read-only).
+ *
+ * Lists all generated certificates, newest first.
+ */
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    requireRole(session, ["ADMIN", "ACADEMICS"]);
+
+    const certificates = await prisma.certificate.findMany({
+      include: {
+        student: {
+          select: { id: true, name: true, classSection: { select: { className: true, sectionName: true } } },
+        },
+        generatedByUser: {
+          select: { id: true, name: true },
+        },
+      },
+      orderBy: { issuedDate: "desc" },
+    });
+
+    return NextResponse.json({ data: certificates });
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+/**
  * POST /api/certificates
  *
  * Admin: allowed.

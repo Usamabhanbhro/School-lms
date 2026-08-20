@@ -13,7 +13,7 @@ import { getScopedClassSectionIds } from "@/lib/teacher-scope";
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    const authedSession = requireRole(session, ["ADMIN", "TEACHER"]);
+    const authedSession = requireRole(session, ["ADMIN", "TEACHER", "ACADEMICS"]);
 
     const scopedIds = await getScopedClassSectionIds(authedSession);
 

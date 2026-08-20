@@ -285,6 +285,12 @@ NextAuth handler — login/logout/session. Credentials provider only.
 
 ## Certificates
 
+### GET /api/certificates
+**Role required:** Admin, Academics
+**Purpose:** List all generated certificates (newest first)
+**Response:** `{ data: [{ id, type, student: { ... }, generatedByUser: { ... }, issuedDate, ... }] }`
+**Status:** implemented
+
 ### POST /api/certificates
 **Role required:** Admin, Academics
 **Purpose:** Generate a certificate record for a student

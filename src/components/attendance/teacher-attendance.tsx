@@ -238,7 +238,7 @@ export function TeacherAttendance() {
 
     try {
       const res = await fetch(
-        `/api/attendance/${selectedClassId}/${date}/confirm`,
+        `/api/attendance/confirm?classSectionId=${selectedClassId}&date=${date}`,
         { method: "POST" },
       );
 

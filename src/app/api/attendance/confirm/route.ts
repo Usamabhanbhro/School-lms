@@ -7,7 +7,7 @@ import { getTeacherProfile } from "@/lib/teacher-scope";
 import { requireActiveClassTeacher } from "@/lib/class-teacher";
 
 /**
- * POST /api/attendance/:classSectionId/:date/confirm
+ * POST /api/attendance/confirm?classSectionId=xxx&date=2026-01-15
  *
  * Teacher ONLY (must be the active Class Teacher for this classSectionId).
  * Locks all draft attendance records for this class+date by setting
@@ -16,15 +16,22 @@ import { requireActiveClassTeacher } from "@/lib/class-teacher";
  * This is a batch operation — all records for the class+date are locked
  * together in a single transaction.
  */
-export async function POST(
-  _request: Request,
-  { params }: { params: Promise<{ classSectionId: string; date: string }> },
-) {
+export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     const authedSession = requireRole(session, ["TEACHER"]);
 
-    const { classSectionId, date } = await params;
+    const { searchParams } = new URL(request.url);
+    const classSectionId = searchParams.get("classSectionId");
+    const date = searchParams.get("date");
+
+    if (!classSectionId || !date) {
+      return NextResponse.json(
+        { error: { message: "classSectionId and date query parameters are required.", code: "VALIDATION_ERROR" } },
+        { status: 400 },
+      );
+    }
+
     const recordDate = new Date(date);
 
     // Resolve teacher profile

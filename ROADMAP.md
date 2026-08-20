@@ -2,7 +2,7 @@
 
 Build order for reconciling and implementing the SRS (v5). Each phase unlocks the next — don't skip ahead, since later phases read data/patterns established earlier.
 
-**Status: Phases 0–6 implemented and verified. Admin provisioning, school settings, and hardened admin self-recovery added. See `API.md` for per-route status.**
+**Status: Phases 0–8 implemented and verified. Admin provisioning, school settings, hardened admin self-recovery, certificate/fee-challan generation UIs, and document template system added. Migration chain validated from empty database (9 migrations). See `API.md` for per-route status.**
 
 ## Phase 0 — Reconciliation ✅ Complete
 
@@ -78,8 +78,8 @@ Sequential — each step depends on the last:
 ## Phase 5 — Fee Challan ✅ Complete
 
 - BankSettings: admin edits bank name/account number (singleton, "Fees" tab — Admin only; Academics can read but not edit)
-- Certificate generation: Admin and Academics can both generate Leaving/Character certificates
-- Challan generation: Admin and Academics can both generate fee challans — select a student, edit fee line items (base + arrears/late fee/etc.), click Print to snapshot and save
+- Certificate generation: Admin and Academics can both generate Leaving/Character certificates via UI (`/admin/certificates` — student search, type selector, generate & print action, certificate history with reprint)
+- Challan generation: Admin and Academics can both generate fee challans via UI (`/admin/fees` — student search, editable line items with running total, save & print action, challan history with reprint)
 - Challan history: list past challans per student, reprint from a saved snapshot (does not reflect later changes to bank settings or student class/section, by design)
 
 Depends only on Phase 1 (Student records) — can run in parallel with Phase 4 if bandwidth allows.
@@ -94,7 +94,7 @@ Print layouts for all three document types:
 
 **School identity centralization:** All print layouts use `getSchoolSettings()` from `src/lib/school-settings.ts`, which reads school identity from the database `SchoolSettings` model. Configuration is managed through the Admin Settings UI at `/admin/settings`.
 
-**Print isolation:** Dedicated `(print)` route group with its own minimal layout — no sidebar, no navigation, no dashboard chrome. Screen-only toolbar hidden via `print:hidden`.
+**Print isolation:** Dedicated `print` directory with its own minimal layout — no sidebar, no navigation, no dashboard chrome. Screen-only toolbar hidden via `print:hidden`. Pages are at `/print/certificates/[id]`, `/print/fee-challans/[id]`, `/print/report-cards/[id]`.
 
 ## Phase 7 — Internal UI Foundation ✅ Complete
 
@@ -125,6 +125,21 @@ Template-based document generation replacing hardcoded print layouts:
 - **Sidebar**: Templates link added to admin navigation.
 
 **Requires:** `BLOB_READ_WRITE_TOKEN` env var for Vercel Blob storage (template image uploads).
+
+## Migration Reconciliation (Post-Phase 8)
+
+After Phase 8, the migration chain was found to be incomplete — the database schema had drifted from `schema.prisma`. Three reconciliation migrations were added:
+
+1. **`20260820120000_add_academics_role`**: Adds `ACADEMICS` to the `Role` enum (standalone, per Postgres limitation that new enum values cannot be used in the same transaction).
+2. **`20260820120001_add_template_system_and_schema_fixes`**: Adds `isActive` to `ClassTeacherAssignment` with correct backfill (marks historical assignments inactive, only most-recent per class section active); renames `generatedByAdminId` → `generatedByUserId` on `Certificate`/`FeeChallan` via `RENAME COLUMN` (data-safe); creates `DocumentTemplate`, `TemplateField`, `TemplateTableRegion` tables; adds `templateId` FK columns.
+3. **`20260820130000_add_academics_profile_table`**: Creates `AcademicsProfile` table missing from the init migration.
+
+The full chain (9 migrations) was validated with `prisma migrate reset --force` from an empty database.
+
+**Known pre-existing issues found during verification:**
+- `(print)` route group returned 404 in Next.js 16.3.1/Turbopack — fixed by renaming from route group `(print)` to literal directory `print`, making URLs resolve to `/print/certificates/[id]` etc.
+- Attendance routes have `[classSectionId]` and `[id]` at the same path level, causing a Next.js conflict. Fixed by moving confirm endpoint to `/api/attendance/confirm` with query params.
+- Stale `.next` build cache had to be cleared after the print route rename to resolve TS2307 module resolution errors.
 
 ## Not in Any Phase (explicitly out of scope for SRS v5)
 

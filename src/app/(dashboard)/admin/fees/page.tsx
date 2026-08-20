@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { Banknote } from "lucide-react";
 import { authOptions } from "@/lib/auth";
-import { EmptyState } from "@/components/ui/empty-state";
+import { FeeChallanGeneration } from "@/components/fees/fee-challan-generation";
 import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata: Metadata = {
@@ -20,13 +19,9 @@ export default async function AdminFeesPage() {
     <>
       <PageHeader
         title="Fees & Challans"
-        description="Manage bank settings and generate fee challans."
+        description="Generate fee challans with editable line items and print three-copy layouts."
       />
-      <EmptyState
-        icon={Banknote}
-        title="Fee management"
-        description="Fee challans and bank settings are available via the API. A dedicated fee management UI is planned."
-      />
+      <FeeChallanGeneration />
     </>
   );
 }

@@ -179,3 +179,7 @@ A variable-length table region on a template (used by Report Card and Fee Challa
 
 - Use Prisma Migrate (`bun run db:migrate` locally, `bun run db:deploy` in production)
 - Every migration should have a one-line comment explaining the "why," matching the corresponding update to this file
+- **Migration `20260820120000_add_academics_role`**: Adds `ACADEMICS` to Role enum (standalone, per Postgres enum limitation)
+- **Migration `20260820120001_add_template_system_and_schema_fixes`**: Reconciles schema/database drift — adds `isActive` to `ClassTeacherAssignment` with backfill (most-recent-per-class active), renames `generatedByAdminId` → `generatedByUserId` via `RENAME COLUMN` (data-safe), creates DocumentTemplate/TemplateField/TemplateTableRegion tables, adds `templateId` FK columns
+- **Migration `20260820130000_add_academics_profile_table`**: Creates `AcademicsProfile` table missing from the init migration
+- The full chain (9 migrations) was validated from an empty database with `prisma migrate reset --force`
