@@ -50,6 +50,13 @@ export function SchoolSettings() {
   const [newRecoveryCode, setNewRecoveryCode] = useState<string | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
 
+  // Bank settings state
+  const [bankName, setBankName] = useState("");
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [bankSaving, setBankSaving] = useState(false);
+  const [bankLoading, setBankLoading] = useState(true);
+  const [bankExists, setBankExists] = useState(false);
+
   // Form state
   const [schoolName, setSchoolName] = useState("");
   const [address, setAddress] = useState("");
@@ -62,20 +69,40 @@ export function SchoolSettings() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/settings/school");
-        if (!res.ok) throw new Error("Failed to load settings");
-        const json = await res.json();
-        const data = json.data;
-        setSettings(data);
-        setSchoolName(data.schoolName ?? "");
-        setAddress(data.address ?? "");
-        setPhone(data.phone ?? "");
-        setEmail(data.email ?? "");
-        setPrincipalName(data.principalName ?? "");
+        const [schoolRes, bankRes] = await Promise.all([
+          fetch("/api/settings/school"),
+          fetch("/api/settings/bank"),
+        ]);
+
+        if (schoolRes.ok) {
+          const schoolJson = await schoolRes.json();
+          const data = schoolJson.data;
+          setSettings(data);
+          setSchoolName(data.schoolName ?? "");
+          setAddress(data.address ?? "");
+          setPhone(data.phone ?? "");
+          setEmail(data.email ?? "");
+          setPrincipalName(data.principalName ?? "");
+        } else {
+          setError("Failed to load school settings.");
+        }
+
+        if (bankRes.ok) {
+          const bankJson = await bankRes.json();
+          setBankName(bankJson.data.bankName ?? "");
+          setBankAccountNumber(bankJson.data.bankAccountNumber ?? "");
+          setBankExists(true);
+        } else if (bankRes.status === 404) {
+          // No bank settings yet — that's fine, the form will create them
+          setBankExists(false);
+        } else {
+          // Silently handle bank settings load failure
+        }
       } catch {
         setError("Failed to load school settings.");
       } finally {
         setLoading(false);
+        setBankLoading(false);
       }
     })();
   }, []);
@@ -218,13 +245,40 @@ export function SchoolSettings() {
     }
   }, []);
 
+  // ─── Save bank settings ──────────────────────────────────────
+
+  const handleSaveBank = useCallback(async () => {
+    setBankSaving(true);
+
+    try {
+      const res = await fetch("/api/settings/bank", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bankName, bankAccountNumber }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json();
+        addToast("error", json.error?.message ?? "Failed to save bank settings.");
+        return;
+      }
+
+      setBankExists(true);
+      addToast("success", "Bank settings saved.");
+    } catch {
+      addToast("error", "Network error. Please try again.");
+    } finally {
+      setBankSaving(false);
+    }
+  }, [bankName, bankAccountNumber, addToast]);
+
   return (
     <>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       <PageHeader
         title="School Settings"
-        description="Configure your school identity and contact information."
+        description="Configure your school identity, contact information, and bank details."
       />
 
       {loading ? (
@@ -317,6 +371,59 @@ export function SchoolSettings() {
                 {saving && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
                 <Save className="size-4" aria-hidden="true" />
                 Save Settings
+              </Button>
+            </div>
+          </Card>
+
+          {/* Bank Settings Section */}
+          <Card className="p-6">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-text/70">
+              Bank Settings
+            </h2>
+
+            <p className="mb-4 text-sm text-text/60">
+              Configure bank details for fee challans. These details are snapshotted onto each challan at generation time.
+            </p>
+
+            {bankLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label htmlFor="bankName" className="text-sm font-medium">
+                    Bank Name
+                  </label>
+                  <Input
+                    id="bankName"
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    placeholder="e.g. Habib Bank Limited"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="bankAccountNumber" className="text-sm font-medium">
+                    Account Number
+                  </label>
+                  <Input
+                    id="bankAccountNumber"
+                    value={bankAccountNumber}
+                    onChange={(e) => setBankAccountNumber(e.target.value)}
+                    placeholder="e.g. 1234-5678-9012"
+                    className="tabular-nums"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 flex justify-end">
+              <Button onClick={handleSaveBank} disabled={bankSaving || bankLoading}>
+                {bankSaving && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+                <Save className="size-4" aria-hidden="true" />
+                {bankExists ? "Update Bank Settings" : "Save Bank Settings"}
               </Button>
             </div>
           </Card>
