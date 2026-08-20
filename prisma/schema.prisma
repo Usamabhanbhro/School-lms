@@ -77,7 +77,7 @@ model User {
 
 /// One-time recovery code for Admin self-service password recovery.
 /// Many historical records per Admin; only one active code at a time.
-/// A code is active only if consumedAt IS NULL AND replacedAt IS NULL AND expiresAt > now.
+/// A code is active only if consumedAt IS NULL AND replacedAt IS NULL.
 model AdminRecoveryCode {
   id           String @id @default(cuid())
   userId       String

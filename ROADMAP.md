@@ -68,10 +68,12 @@ Both depend only on Phase 1 entities. No dependency between the two attendance t
 
 Sequential — each step depends on the last:
 
-1. Subject teacher creates a Test (title, date, max marks) scoped to their class+subject
-2. Subject teacher enters Marks per student against that test
-3. Subject teacher creates a Term on the fly (name only, no dates)
-4. Subject teacher selects which tests count and generates a ReportCard aggregating them
+1. Subject teacher creates a Test (title, date, max marks) scoped to their class+subject — **UI: `/teacher/tests` via `TestManagement` component**
+2. Subject teacher enters Marks per student against that test — **UI: inline in `TestManagement` marks entry view**
+3. Subject teacher creates a Term on the fly (name only, no dates) — **UI: inline in `ReportCardGeneration` component**
+4. Subject teacher selects which tests count and generates a ReportCard aggregating them — **UI: `/teacher/report-cards` via `ReportCardGeneration` component with multi-select test picker**
+5. Admin oversight of all tests, marks, and report cards — **UI: `/admin/tests` via `TestOverview` component, `/admin/report-cards` via `ReportCardOverview` component**
+6. Academics read-only oversight of tests, marks, and report cards — **same components, read-only for ACADEMICS role**
 
 ## Phase 5 — Fee Challan ✅ Complete
 

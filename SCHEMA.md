@@ -108,7 +108,7 @@ A single fee component on a challan — base fee, arrears, late fee, or any admi
 
 ### Recovery Lifecycle
 
-1. **Signup:** Admin account is created → recovery code generated → plaintext displayed once → only bcrypt hash stored in DB → code expires in 24 hours
+1. **Signup:** Admin account is created → recovery code generated → plaintext displayed once → only bcrypt hash stored in DB → code valid until used or manually regenerated
 2. **Replacement:** If code expires/is consumed → Admin requests new code via `POST /api/admin/recover/code` (public) → previous code invalidated → new code displayed once
 3. **Password Reset:** Admin submits recovery code + new password → old code consumed atomically → password changed → fresh recovery code generated and displayed once
 4. **Manual Rotation:** Admin can rotate their recovery code at any time via `POST /api/admin/recovery-code/regenerate` (authenticated)
@@ -116,7 +116,7 @@ A single fee component on a challan — base fee, arrears, late fee, or any admi
 ### Key Properties
 
 - **Single active code:** At most one recovery code is valid per Admin at any time. Enforced at both application level (transactional `createRecoveryCode()`) and database level (partial unique index on `AdminRecoveryCode` WHERE `consumedAt IS NULL AND replacedAt IS NULL`)
-- **24-hour expiration:** Codes expire 24 hours after generation (configurable via `RECOVERY_CODE_TTL_MS` in `src/lib/admin-recovery.ts`). Expired codes are never accepted.
+- **No time-based expiry:** Codes remain valid indefinitely until either (a) used successfully (consumed on password reset), or (b) manually regenerated from the Admin panel. The `expiresAt` column in the database is deprecated and not read.
 - **Single-use:** Consumed atomically on successful password reset. Cannot be reused.
 - **Only hashes stored:** Plaintext recovery codes exist only briefly during generation, in the API response, and in the browser UI until the user leaves. Never persisted in DB, logs, cookies, localStorage, sessionStorage, or URL parameters.
 - **Cryptographically secure:** Codes are 64 hex characters (256 bits of entropy) generated via `crypto.randomBytes()`.
@@ -140,8 +140,8 @@ Existing JWT-based sessions are **not** invalidated after a password change or r
 ### AdminRecoveryCode
 
 One-time recovery codes for Admin self-service password recovery. Many historical records per Admin; only one active code at a time.
-- Fields: `userId`, `codeHash` (bcrypt), `expiresAt` (24 hours), `consumedAt` (nullable), `replacedAt` (nullable)
-- A code is active only if: `consumedAt IS NULL AND replacedAt IS NULL AND expiresAt > now`
+- Fields: `userId`, `codeHash` (bcrypt), `expiresAt` (deprecated — no longer enforced; column remains for migration compatibility), `consumedAt` (nullable), `replacedAt` (nullable)
+- A code is active only if: `consumedAt IS NULL AND replacedAt IS NULL` — no time-based expiry
 - Database constraint: partial unique index on `userId` WHERE `consumedAt IS NULL AND replacedAt IS NULL` prevents multiple active codes
 - Generating a new code sets `replacedAt` on the prior active code (within a transaction)
 - Consuming a code sets `consumedAt` (within the same transaction as the password change)

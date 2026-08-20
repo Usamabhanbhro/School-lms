@@ -134,8 +134,9 @@ export function AdminSignupForm() {
           )}
           <p className="mt-2 text-xs text-text/60">
             This code can be used to recover your account if you forget your
-            password. It expires in 24 hours. Write it down or save it in a
-            password manager — you will only see it once.
+            password. It remains valid until you use it or regenerate a new one.
+            Write it down or save it in a password manager — you will only see
+            it once.
           </p>
         </div>
 

@@ -84,7 +84,7 @@ function validateDate(value: string, label: string): string | null {
 
 // ─── Main Component ─────────────────────────────────────────────────
 
-export function StudentManagement() {
+export function StudentManagement({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [view, setView] = useState<View>("list");
   const [students, setStudents] = useState<Student[]>([]);
   const [classSections, setClassSections] = useState<ClassSection[]>([]);
@@ -248,9 +248,9 @@ export function StudentManagement() {
 
       <PageHeader
         title="Students"
-        description="Manage student records and class allotments."
+        description={readOnly ? "View student records and class allotments." : "Manage student records and class allotments."}
         actions={
-          view === "list" ? (
+          view === "list" && !readOnly ? (
             <Button onClick={openCreate}>
               <Plus className="size-4" aria-hidden="true" />
               Add Student
@@ -410,7 +410,7 @@ export function StudentManagement() {
               icon={Users}
               title="No students yet"
               description="Create the first student record to get started."
-              action={<Button onClick={openCreate}><Plus className="size-4" aria-hidden="true" />Add Student</Button>}
+              action={!readOnly ? <Button onClick={openCreate}><Plus className="size-4" aria-hidden="true" />Add Student</Button> : undefined}
             />
           ) : (
             <Card className="overflow-hidden">
@@ -424,7 +424,7 @@ export function StudentManagement() {
                       <TH>Class</TH>
                       <TH>DOB</TH>
                       <TH>Admission</TH>
-                      <TH className="w-20">Actions</TH>
+                      {!readOnly && <TH className="w-20">Actions</TH>}
                     </TR>
                   </THead>
                   <TBody>
@@ -436,17 +436,19 @@ export function StudentManagement() {
                         <TD>{classLabel(s.classSection)}</TD>
                         <TD className="tabular-nums">{formatDate(s.dateOfBirth)}</TD>
                         <TD className="tabular-nums">{formatDate(s.admissionDate)}</TD>
-                        <TD>
-                          <button
-                            type="button"
-                            onClick={() => openEdit(s)}
-                            className="inline-flex size-8 items-center justify-center border border-transparent text-text/50 hover:bg-surface hover:text-text"
-                            title="Edit"
-                            aria-label={`Edit ${s.name}`}
-                          >
-                            <Edit3 className="size-3.5" aria-hidden="true" />
-                          </button>
-                        </TD>
+                        {!readOnly && (
+                          <TD>
+                            <button
+                              type="button"
+                              onClick={() => openEdit(s)}
+                              className="inline-flex size-8 items-center justify-center border border-transparent text-text/50 hover:bg-surface hover:text-text"
+                              title="Edit"
+                              aria-label={`Edit ${s.name}`}
+                            >
+                              <Edit3 className="size-3.5" aria-hidden="true" />
+                            </button>
+                          </TD>
+                        )}
                       </TR>
                     ))}
                   </TBody>

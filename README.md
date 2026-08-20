@@ -112,10 +112,14 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/admin/students` | ADMIN | Student management |
 | `/admin/attendance` | ADMIN | Attendance overview and overrides |
 | `/admin/teacher-attendance` | ADMIN | Teacher attendance management |
-| `/admin/report-cards` | ADMIN, ACADEMICS | Report cards list |
+| `/admin/tests` | ADMIN, ACADEMICS | Tests & marks oversight (read-only) |
+| `/admin/report-cards` | ADMIN, ACADEMICS | Report cards list (read-only) |
 | `/admin/certificates` | ADMIN, ACADEMICS | Certificate generation |
 | `/admin/fees` | ADMIN, ACADEMICS | Fee challan generation |
-| `/teacher` | TEACHER | Teacher dashboard and role home |
+| `/teacher` | TEACHER | Teacher dashboard and quick actions |
+| `/teacher/attendance` | TEACHER | Student attendance marking (draft → lock) |
+| `/teacher/tests` | TEACHER | Tests & marks entry |
+| `/teacher/report-cards` | TEACHER | Report card generation |
 | `/print/certificates/[id]` | ADMIN, ACADEMICS | Certificate print view (Leaving + Character) |
 | `/print/fee-challans/[id]` | ADMIN, ACADEMICS | Fee Challan print view (3 copies: Bank/Student/School) |
 | `/print/report-cards/[id]` | ADMIN, ACADEMICS | Report Card print view |
@@ -169,7 +173,7 @@ The single Admin account uses a one-time recovery code for password reset. **The
 
 ### Recovery Lifecycle
 
-1. **Signup**: Admin account created → recovery code generated → plaintext displayed **once** → only bcrypt hash stored → code expires in 24 hours
+1. **Signup**: Admin account created → recovery code generated → plaintext displayed **once** → only bcrypt hash stored → code valid until used or regenerated
 2. **Replacement**: If code expires/is consumed → Admin requests new code via the UI → previous code invalidated → new code displayed once
 3. **Password Reset**: Admin submits recovery code + new password → old code consumed, password changed, and new recovery code generated — all **atomically** in one database transaction → new code displayed once
 4. **Manual Rotation**: Admin can rotate their recovery code at any time from within the admin panel
@@ -177,7 +181,7 @@ The single Admin account uses a one-time recovery code for password reset. **The
 ### Key Properties
 
 - **Single active code**: At most one recovery code is valid per Admin at any time (enforced by Prisma transaction + database partial unique index)
-- **24-hour expiration**: Codes expire 24 hours after generation (configurable in `src/lib/admin-recovery.ts`)
+- **No time-based expiry**: Codes remain valid indefinitely until used (consumed) or manually regenerated
 - **Single-use**: Consumed atomically on successful password reset
 - **Only hashes stored**: Plaintext codes exist only during generation, in the API response, and in the browser UI until the user leaves
 - **Cryptographically secure**: 64 hex characters (256 bits of entropy) via `crypto.randomBytes()`

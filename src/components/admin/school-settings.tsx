@@ -354,7 +354,7 @@ export function SchoolSettings() {
                   <p className="mt-1 text-xs text-success">Copied to clipboard.</p>
                 )}
                 <p className="mt-2 text-xs text-text/60">
-                  Your previous recovery code is no longer valid. This code expires in 24 hours.
+                  Your previous recovery code is no longer valid. This code remains valid until used or regenerated.
                 </p>
               </div>
             ) : (

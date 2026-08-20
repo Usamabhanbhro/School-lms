@@ -8,6 +8,7 @@ import {
   BookOpen,
   CalendarDays,
   ClipboardCheck,
+  FileSpreadsheet,
   FileText,
   GraduationCap,
   LayoutDashboard,
@@ -41,6 +42,8 @@ const adminNav: NavItem[] = [
   { label: "Classes", href: "/admin/classes", icon: School },
   { label: "Subjects", href: "/admin/subjects", icon: BookMarked },
   { label: "Attendance", href: "/admin/attendance", icon: ClipboardCheck },
+  { label: "Teacher Attendance", href: "/admin/teacher-attendance", icon: ClipboardCheck },
+  { label: "Tests & Marks", href: "/admin/tests", icon: FileSpreadsheet },
   { label: "Report Cards", href: "/admin/report-cards", icon: Award },
   { label: "Certificates", href: "/admin/certificates", icon: FileText },
   { label: "Fees", href: "/admin/fees", icon: Banknote },
@@ -49,16 +52,22 @@ const adminNav: NavItem[] = [
 
 const teacherNav: NavItem[] = [
   { label: "Attendance", href: "/teacher/attendance", icon: ClipboardCheck },
+  { label: "Tests & Marks", href: "/teacher/tests", icon: FileSpreadsheet },
+  { label: "Report Cards", href: "/teacher/report-cards", icon: Award },
 ];
 
 /**
  * Academics staff — delegated certificate & fee challan generation;
  * read-only oversight of students, attendance, marks, report cards.
- * Based on SRS v5 ACADEMICS permissions.
+ * Based on SRS v5 ACADEMICS permissions (§1A).
  */
 const academicsNav: NavItem[] = [
   { label: "Certificates", href: "/admin/certificates", icon: FileText },
   { label: "Fees", href: "/admin/fees", icon: Banknote },
+  { label: "Students", href: "/admin/students", icon: Users },
+  { label: "Attendance", href: "/admin/attendance", icon: ClipboardCheck },
+  { label: "Tests & Marks", href: "/admin/tests", icon: FileSpreadsheet },
+  { label: "Report Cards", href: "/admin/report-cards", icon: Award },
 ];
 
 function getNavForRole(role: Role): NavItem[] {

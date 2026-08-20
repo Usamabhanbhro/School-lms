@@ -12,7 +12,8 @@ export const metadata: Metadata = {
 export default async function AdminStudentAttendancePage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect(roleHome(session.user.role));
+  if (session.user.role !== "ADMIN" && session.user.role !== "ACADEMICS")
+    redirect(roleHome(session.user.role));
 
-  return <AdminStudentAttendance />;
+  return <AdminStudentAttendance readOnly={session.user.role === "ACADEMICS"} />;
 }

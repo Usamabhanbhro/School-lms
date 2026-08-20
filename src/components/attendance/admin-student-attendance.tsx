@@ -60,7 +60,7 @@ const STATUS_OPTIONS: { value: StatusOption; label: string; color: string }[] = 
 
 // ─── Component ──────────────────────────────────────────────────────
 
-export function AdminStudentAttendance() {
+export function AdminStudentAttendance({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [classes, setClasses] = useState<ClassSection[]>([]);
   const [selectedClassId, setSelectedClassId] = useState("");
   const [date, setDate] = useState(todayStr());
@@ -170,7 +170,7 @@ export function AdminStudentAttendance() {
 
       <PageHeader
         title="Student Attendance"
-        description="View attendance for any class. Override locked records when needed."
+        description={readOnly ? "View attendance for any class." : "View attendance for any class. Override locked records when needed."}
       />
 
       {/* Selection bar */}
@@ -270,7 +270,7 @@ export function AdminStudentAttendance() {
                   <TH>Guardian</TH>
                   <TH className="text-center">Status</TH>
                   <TH>State</TH>
-                  <TH className="text-center">Override</TH>
+                  {!readOnly && <TH className="text-center">Override</TH>}
                 </TR>
               </THead>
               <TBody>
@@ -313,34 +313,36 @@ export function AdminStudentAttendance() {
                         )}
                       </span>
                     </TD>
-                    <TD className="text-center">
-                      <div className="flex justify-center gap-1">
-                        {STATUS_OPTIONS.map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => handleOverride(r.id, opt.value)}
-                            disabled={overriding === r.id}
-                            className={cn(
-                              "inline-flex h-7 w-7 items-center justify-center border text-xs font-bold",
-                              r.status === opt.value
-                                ? opt.color
-                                : "border-border bg-bg text-text/30",
-                              "cursor-pointer hover:border-text/20",
-                              overriding === r.id && "opacity-50",
-                            )}
-                            aria-label={`Override ${r.student.name} to ${opt.value}`}
-                            title={`Set ${opt.value}`}
-                          >
-                            {overriding === r.id ? (
-                              <Loader2 className="size-3 animate-spin" />
-                            ) : (
-                              opt.label
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </TD>
+                    {!readOnly && (
+                      <TD className="text-center">
+                        <div className="flex justify-center gap-1">
+                          {STATUS_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => handleOverride(r.id, opt.value)}
+                              disabled={overriding === r.id}
+                              className={cn(
+                                "inline-flex h-7 w-7 items-center justify-center border text-xs font-bold",
+                                r.status === opt.value
+                                  ? opt.color
+                                  : "border-border bg-bg text-text/30",
+                                "cursor-pointer hover:border-text/20",
+                                overriding === r.id && "opacity-50",
+                              )}
+                              aria-label={`Override ${r.student.name} to ${opt.value}`}
+                              title={`Set ${opt.value}`}
+                            >
+                              {overriding === r.id ? (
+                                <Loader2 className="size-3 animate-spin" />
+                              ) : (
+                                opt.label
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </TD>
+                    )}
                   </TR>
                 ))}
               </TBody>
