@@ -62,6 +62,11 @@ interface TemplateField {
   xPercent: number;
   yPercent: number;
   fontSize: number;
+  fontFamily?: string | null;
+  fontColor?: string | null;
+  fontWeight?: string | null;
+  fontStyle?: string | null;
+  textDecoration?: string | null;
   textAlign: string;
 }
 
@@ -468,6 +473,11 @@ function TemplateEditor({
       xPercent: number;
       yPercent: number;
       fontSize: number;
+      fontFamily: string;
+      fontColor: string;
+      fontWeight: string;
+      fontStyle: string;
+      textDecoration: string;
       textAlign: "left" | "center" | "right";
     }>
   >(
@@ -476,9 +486,43 @@ function TemplateEditor({
       xPercent: f.xPercent,
       yPercent: f.yPercent,
       fontSize: f.fontSize,
+      fontFamily: (f as any).fontFamily || "",
+      fontColor: (f as any).fontColor || "",
+      fontWeight: (f as any).fontWeight || "",
+      fontStyle: (f as any).fontStyle || "",
+      textDecoration: (f as any).textDecoration || "",
       textAlign: f.textAlign as "left" | "center" | "right",
     })),
   );
+
+  // Undo/redo state
+  const [history, setHistory] = useState<Array<typeof fields>>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [selectedFieldIdx, setSelectedFieldIdx] = useState<number | null>(null);
+
+  function pushHistory(newFields: typeof fields) {
+    setHistory((prev) => {
+      const trimmed = prev.slice(0, historyIndex + 1);
+      return [...trimmed, newFields];
+    });
+    setHistoryIndex((prev) => prev + 1);
+  }
+
+  function undo() {
+    if (historyIndex > 0) {
+      const prev = history[historyIndex - 1];
+      setFields(prev);
+      setHistoryIndex((prev) => prev - 1);
+    }
+  }
+
+  function redo() {
+    if (historyIndex < history.length - 1) {
+      const next = history[historyIndex + 1];
+      setFields(next);
+      setHistoryIndex((prev) => prev + 1);
+    }
+  }
   const [tableRegions, setTableRegions] = useState<
     Array<{
       anchorXPercent: number;
@@ -505,18 +549,25 @@ function TemplateEditor({
       (k) => !existingKeys.has(k),
     );
     if (missing.length > 0) {
-      setFields((prev) => [
-        ...prev,
+      const newFields = [
+        ...fields,
         ...missing.map((key, i) => ({
           fieldKey: key,
           xPercent: 10 + i * 5,
           yPercent: 10 + i * 5,
           fontSize: 12,
+          fontFamily: "",
+          fontColor: "",
+          fontWeight: "",
+          fontStyle: "",
+          textDecoration: "",
           textAlign: "left" as const,
         })),
-      ]);
+      ];
+      setFields(newFields);
     }
-  }, [templateTypeConfig.fieldKeys, fields]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateTypeConfig.fieldKeys]);
 
   function handleCanvasClick(e: React.MouseEvent<HTMLDivElement>) {
     if (!canvasRef.current) return;
@@ -591,25 +642,32 @@ function TemplateEditor({
     key: string,
     value: string | number,
   ) {
-    setFields((prev) =>
-      prev.map((f, i) =>
-        i === index ? { ...f, [key]: value } : f,
-      ),
+    const newFields = fields.map((f, i) =>
+      i === index ? { ...f, [key]: value } : f,
     );
+    setFields(newFields);
+    pushHistory(newFields);
   }
 
   function addDuplicateField(index: number) {
     const original = fields[index];
-    setFields((prev) => [
-      ...prev,
+    const newFields = [
+      ...fields,
       {
         fieldKey: original.fieldKey,
         xPercent: Math.min(100, original.xPercent + 5),
         yPercent: Math.min(100, original.yPercent + 5),
         fontSize: original.fontSize,
+        fontFamily: original.fontFamily,
+        fontColor: original.fontColor,
+        fontWeight: original.fontWeight,
+        fontStyle: original.fontStyle,
+        textDecoration: original.textDecoration,
         textAlign: original.textAlign,
       },
-    ]);
+    ];
+    setFields(newFields);
+    pushHistory(newFields);
   }
 
   function removeField(index: number) {
@@ -677,10 +735,29 @@ function TemplateEditor({
               Edit Fields — {templateTypeConfig.label}
             </h2>
             <p className="text-xs text-zinc-500">
-              Drag fields on the canvas to position them. Fields use percentage-based coordinates.
+              Drag fields on the canvas to position them. Use the formatting controls to style each field.
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {/* Undo/Redo */}
+            <div className="flex items-center border border-zinc-300">
+              <button
+                onClick={undo}
+                disabled={historyIndex <= 0}
+                className="px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50 disabled:text-zinc-300 disabled:cursor-not-allowed border-r border-zinc-300"
+                title="Undo"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 10h10a5 5 0 015 5v2M3 10l5 5M3 10l5-5"/></svg>
+              </button>
+              <button
+                onClick={redo}
+                disabled={historyIndex >= history.length - 1}
+                className="px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50 disabled:text-zinc-300 disabled:cursor-not-allowed"
+                title="Redo"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10H11a5 5 0 00-5 5v2M21 10l-5 5M21 10l-5-5"/></svg>
+              </button>
+            </div>
             {templateTypeConfig.hasTableRegion && (
               <button
                 onClick={addTableRegion}
@@ -852,7 +929,7 @@ function TemplateEditor({
                       />
                     </label>
                     <label className="text-[10px] text-zinc-500">
-                      Font
+                      Size
                       <input
                         type="number"
                         value={field.fontSize}
@@ -876,6 +953,61 @@ function TemplateEditor({
                         <option value="right">Right</option>
                       </select>
                     </label>
+                  </div>
+                  {/* Formatting controls */}
+                  <div className="mt-1 grid grid-cols-2 gap-1">
+                    <label className="text-[10px] text-zinc-500">
+                      Font
+                      <select
+                        value={field.fontFamily}
+                        onChange={(e) => updateField(i, "fontFamily", e.target.value)}
+                        className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px]"
+                      >
+                        <option value="">Default</option>
+                        <option value="serif">Serif</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Arial">Arial</option>
+                        <option value="Inter, sans-serif">Inter</option>
+                        <option value="Courier New, monospace">Courier New</option>
+                      </select>
+                    </label>
+                    <label className="text-[10px] text-zinc-500">
+                      Color
+                      <input
+                        type="color"
+                        value={field.fontColor || "#000000"}
+                        onChange={(e) => updateField(i, "fontColor", e.target.value)}
+                        className="mt-0.5 block h-5 w-full border border-zinc-300 px-0.5 py-0"
+                      />
+                    </label>
+                  </div>
+                  {/* Style toggles */}
+                  <div className="mt-1 flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => updateField(i, "fontWeight", field.fontWeight === "bold" ? "" : "bold")}
+                      className={`border px-1.5 py-0.5 text-[11px] font-bold ${field.fontWeight === "bold" ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"}`}
+                      title="Bold"
+                    >
+                      B
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateField(i, "fontStyle", field.fontStyle === "italic" ? "" : "italic")}
+                      className={`border px-1.5 py-0.5 text-[11px] italic ${field.fontStyle === "italic" ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"}`}
+                      title="Italic"
+                    >
+                      I
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateField(i, "textDecoration", field.textDecoration === "underline" ? "" : "underline")}
+                      className={`border px-1.5 py-0.5 text-[11px] underline ${field.textDecoration === "underline" ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"}`}
+                      title="Underline"
+                    >
+                      U
+                    </button>
                   </div>
                 </div>
                   );

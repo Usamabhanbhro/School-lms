@@ -168,6 +168,7 @@ Visual template for document print layout. Admin uploads a background image and 
 ### TemplateField
 A single field placement on a template. Positioned at percentage-based coordinates so the print view scales correctly regardless of screen size.
 - Fields: `templateId`, `fieldKey` (string — e.g. `studentName`, `guardianName`, `classSection`), `xPercent` (0-100), `yPercent` (0-100), `fontSize` (px), `textAlign` (enum: `left`, `center`, `right`)
+- Rich formatting (all nullable for backward compatibility): `fontFamily` (CSS font-family string), `fontColor` (CSS color — e.g. `#000000`), `fontWeight` (`normal` or `bold`), `fontStyle` (`normal` or `italic`), `textDecoration` (`none` or `underline`)
 - Note: the same `fieldKey` can appear multiple times on a Fee Challan template (once per copy — Bank, Student, School)
 
 ### TemplateTableRegion
@@ -194,4 +195,5 @@ Immutable audit record for ADMIN/ACADEMICS attendance edits. Every edit by Admin
 - **Migration `20260820120001_add_template_system_and_schema_fixes`**: Reconciles schema/database drift — adds `isActive` to `ClassTeacherAssignment` with backfill (most-recent-per-class active), renames `generatedByAdminId` → `generatedByUserId` via `RENAME COLUMN` (data-safe), creates DocumentTemplate/TemplateField/TemplateTableRegion tables, adds `templateId` FK columns
 - **Migration `20260820130000_add_academics_profile_table`**: Creates `AcademicsProfile` table missing from the init migration
 - **Migration `20260821100000_add_student_id_roll_number_and_audit_trail`**: Adds `studentId` (unique, nullable) and `rollNumber` (nullable) to Student for Admin/ACADEMICS-assigned identifiers; creates `AttendanceAuditLog` table for immutable audit trail of attendance edits by Admin/Academics
-- The full chain (10 migrations) was validated from an empty database with `prisma migrate reset --force`
+- **Migration `20260821140000_add_template_field_rich_formatting`**: Adds `fontFamily`, `fontColor`, `fontWeight`, `fontStyle`, `textDecoration` columns to TemplateField for rich text formatting in the template editor. All nullable for backward compatibility with existing templates.
+- The full chain (11 migrations) was validated from an empty database with `prisma migrate reset --force`

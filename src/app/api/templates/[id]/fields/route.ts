@@ -10,6 +10,11 @@ const fieldSchema = z.object({
   xPercent: z.number().min(0).max(100),
   yPercent: z.number().min(0).max(100),
   fontSize: z.number().min(6).max(72),
+  fontFamily: z.string().max(100).nullable().optional(),
+  fontColor: z.string().max(20).nullable().optional(),
+  fontWeight: z.enum(["normal", "bold"]).nullable().optional(),
+  fontStyle: z.enum(["normal", "italic"]).nullable().optional(),
+  textDecoration: z.enum(["none", "underline"]).nullable().optional(),
   textAlign: z.enum(["left", "center", "right"]).default("left"),
 });
 
@@ -115,6 +120,11 @@ export async function POST(
             xPercent: f.xPercent,
             yPercent: f.yPercent,
             fontSize: f.fontSize,
+            fontFamily: f.fontFamily ?? null,
+            fontColor: f.fontColor ?? null,
+            fontWeight: f.fontWeight ?? null,
+            fontStyle: f.fontStyle ?? null,
+            textDecoration: f.textDecoration ?? null,
             textAlign: f.textAlign,
           },
         }),

@@ -74,11 +74,21 @@ export async function POST(request: Request) {
       );
     }
 
+    // Snapshot the active template for this certificate type
+    const templateType = body.type === "LEAVING"
+      ? "LEAVING_CERTIFICATE"
+      : "CHARACTER_CERTIFICATE";
+    const activeTemplate = await prisma.documentTemplate.findFirst({
+      where: { type: templateType as any, isActive: true },
+      select: { id: true },
+    });
+
     const certificate = await prisma.certificate.create({
       data: {
         studentId: body.studentId,
         type: body.type,
         generatedByUserId: authedSession.user.id,
+        templateId: activeTemplate?.id ?? null,
       },
       include: {
         student: {

@@ -426,7 +426,7 @@ NextAuth handler — login/logout/session. Credentials provider only.
 **Status:** implemented### POST /api/templates/:id/fields
 **Role required:** Admin
 **Purpose:** Save all field positions and table regions for a template (replaces existing)
-**Request body:** `{ fields: [{ fieldKey, xPercent, yPercent, fontSize, textAlign }], tableRegions: [{ anchorXPercent, anchorYPercent, rowHeightPercent, columns: [{ fieldKey, xPercent, label }] }] }`
+**Request body:** `{ fields: [{ fieldKey, xPercent, yPercent, fontSize, textAlign, fontFamily?, fontColor?, fontWeight?, fontStyle?, textDecoration? }], tableRegions: [{ anchorXPercent, anchorYPercent, rowHeightPercent, columns: [{ fieldKey, xPercent, label }] }] }`
 **Notes:** Atomic — replaces all positions in one transaction. Zod validation enforces column shape (fieldKey, xPercent, label all required, non-empty).
 **Status:** implemented
 

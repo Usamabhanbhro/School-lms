@@ -19,6 +19,11 @@ interface TemplateField {
   xPercent: number;
   yPercent: number;
   fontSize: number;
+  fontFamily?: string | null;
+  fontColor?: string | null;
+  fontWeight?: string | null;
+  fontStyle?: string | null;
+  textDecoration?: string | null;
   textAlign: string;
 }
 
@@ -109,10 +114,13 @@ export function TemplateRenderer({
               top: `${field.yPercent}%`,
               transform: "translate(-50%, -50%)",
               fontSize: `${field.fontSize}px`,
-              fontFamily: "inherit",
+              fontFamily: field.fontFamily || "inherit",
+              fontWeight: (field.fontWeight as React.CSSProperties['fontWeight']) || undefined,
+              fontStyle: (field.fontStyle as React.CSSProperties['fontStyle']) || undefined,
+              textDecoration: (field.textDecoration as React.CSSProperties['textDecoration']) || undefined,
               textAlign: field.textAlign as "left" | "center" | "right",
               lineHeight: 1.2,
-              color: "#000",
+              color: field.fontColor || "#000",
               whiteSpace: "pre-wrap",
             }}
           >

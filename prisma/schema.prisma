@@ -519,6 +519,11 @@ model TemplateField {
   xPercent   Float
   yPercent   Float
   fontSize   Int
+  fontFamily String?   // CSS font family — e.g. 'serif', 'Georgia', 'Times New Roman'
+  fontColor  String?   // CSS color — e.g. '#000000', '#0F172A'
+  fontWeight  String?   // CSS font weight — 'normal', 'bold'
+  fontStyle   String?   // CSS font style — 'normal', 'italic'
+  textDecoration String? // CSS text decoration — 'none', 'underline'
   textAlign  String @default("left")
 
   createdAt DateTime @default(now())
