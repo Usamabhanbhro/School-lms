@@ -82,6 +82,7 @@ export async function POST(request: Request) {
     // Upload to Vercel Blob (public access for rendering in <img>)
     const blob = await put(safeFilename, file, {
       access: "public",
+      token: process.env.BLOB_READ_WRITE_TOKEN,
     });
 
     // Update settings with blob URL

@@ -143,6 +143,7 @@ export async function POST(request: Request) {
     // Upload to Vercel Blob (public access for rendering)
     const blob = await put(safeFilename, file, {
       access: "public",
+      token: process.env.BLOB_READ_WRITE_TOKEN,
     });
 
     // Create template record — file is both original and background (client already converted PDF to image)
