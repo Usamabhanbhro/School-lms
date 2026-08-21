@@ -1,6 +1,6 @@
 # School LMS — Software Requirements Specification (SRS)
 
-**Status: Draft v6 — template-based document generation.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
+**Status: Draft v7 — attendance audit, student IDs, teacher unassignment.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
 
 ---
 
@@ -25,10 +25,12 @@ Admin can: edit any field, delete a teacher, revoke a teacher's login (disable w
 Admin creates Classes/Sections (e.g. "Grade 5 - A") and Subjects (e.g. "Mathematics") as base data.
 
 Admin allots teachers in **two distinct ways**:
-- **Class Teacher** — exactly one teacher per class+section, holds attendance-marking rights for that class. No other teacher can mark attendance for that class.
+- **Class Teacher** — exactly one active teacher per class+section, holds attendance-marking rights for that class. No other teacher can mark/confirm attendance for that class unless they are the active Class Teacher. A teacher may be Class Teacher for **multiple** class sections simultaneously (e.g. Grade 5-A and Grade 6-B).
 - **Subject Teacher** — a teacher assigned to a class+section+subject combination, holds rights to create tests, enter marks, and generate report cards for that subject. Multiple subject teachers per class (one per subject), and a teacher can hold multiple subject-teacher assignments across classes.
 
-A teacher may simultaneously be a Class Teacher for one class and a Subject Teacher for others (or the same class).
+A teacher may simultaneously be a Class Teacher for one or more classes and a Subject Teacher for others (or the same class). Being a Subject Teacher for a class does **not** confer Class Teacher attendance authority for that class.
+
+**Unassignment:** Admin can unassign a Class Teacher (deactivates the assignment) or unassign a Subject Teacher (removes the assignment). Unassignment does **not** delete the teacher, the subject, the class, or any historical records (attendance, tests, marks, report cards). Only the relationship is removed. A confirmation dialog is shown before unassignment.
 
 ### 1.3 Student Management
 
@@ -39,15 +41,32 @@ Admin creates Student records and allots each student to a class+section. Requir
 - Date of birth
 - Admission date
 
+**Optional fields (Admin/ACADEMICS-assigned):**
+- **Student ID** — a unique identifier assigned by Admin or Academics (e.g. `STD-2026-001`). Auto-suggested on creation based on existing records, but the value is **editable** before save. Globally unique across all students. Nullable for existing records — not retroactively generated.
+- **Roll Number** — a class-section-scoped number assigned by Admin or Academics. Auto-suggested based on existing roll numbers in the class section, but the value is **editable** before save. Unique within the class section (not globally). Nullable for existing records.
+
+Both fields are validated server-side for uniqueness. Duplicate values produce a clear error message. Moving a student to a different class section does not create uniqueness conflicts for roll number.
+
 Teachers only see students within the class(es) they're assigned to (as class teacher or subject teacher).
 
 ### 1.4 Teacher Attendance
 
 Admin marks teacher attendance directly (Present/Absent/Leave). No draft/confirm lock — Admin has direct edit access at all times, since Admin is already the top authority.
 
+**Teacher Attendance CSV Export:** Admin can download teacher attendance records as CSV. The export supports filtering by:
+- All teachers (no teacher filter)
+- A specific teacher (by teacher ID)
+- Date range (from/to)
+
+The CSV includes school metadata as header rows (see §8).
+
 ### 1.5 Student Attendance Oversight
 
-Admin can view any class's attendance sheet (any date), download it as printable CSV, and **edit attendance even after it's been confirmed/locked by the class teacher** — this is the one case where a lock can still be overridden, and only Admin has this right.
+Admin can view any class's attendance sheet (any date), download it as printable CSV, and **edit attendance even after it's been confirmed/locked by the class teacher**.
+
+**Attendance editing:** Admin and Academics can edit any student attendance record (draft or locked). Every edit produces an immutable audit log entry (see §7). Admin can also edit teacher attendance (see §1.4). Neither Admin nor Academics can delete attendance records.
+
+**Student Attendance CSV Export:** Admin and Academics can download student attendance as CSV for any class+date. Teachers can export for their own class (if active Class Teacher). The CSV includes school metadata as header rows (see §8).
 
 ### 1.6 Oversight of Teacher-Generated Content
 
@@ -115,6 +134,7 @@ Multiple accounts — staff delegated to handle certificate and fee challan gene
 Academics users can:
 - Generate **Leaving Certificates** and **Character Certificates** for students (same flow as Admin, see §1.8)
 - Generate **Fee Challans** for students, including adding fee line items and printing (same flow as Admin, see §1.9)
+- **Read and edit student attendance** — Academics can view any class's attendance and edit any attendance record (draft or locked). Every edit produces an immutable audit log entry (see §7). Academics **cannot** delete attendance records.
 - **Read-only oversight** of: student lists, attendance records, tests, marks, and report cards — to provide context when generating certificates and challans
 
 ### 1A.2 Boundaries
@@ -122,11 +142,12 @@ Academics users can:
 Academics **cannot**:
 - Manage user accounts (Admin, Teacher, or other Academics)
 - Create or edit classes, sections, or subjects
-- Assign Class Teachers or Subject Teachers
+- Assign or unassign Class Teachers or Subject Teachers
 - Edit global Bank Settings (Admin-only per §1.9)
-- Override locked attendance
-- Mark or confirm attendance
+- Mark or confirm attendance (Teacher-specific action)
+- Edit teacher attendance (Admin-only per §1.4)
 - Create tests, enter marks, or generate report cards
+- View the attendance audit trail (Admin-only per §7)
 
 ### 1A.3 Account Management
 
@@ -145,7 +166,7 @@ Multiple accounts, scoped to assignments. Two assignment types: Class Teacher (o
 
 ### 2.1 Attendance Marking
 
-Class Teachers mark student attendance for their assigned class: draft → confirm (lock). Once locked, only Admin can override. CSV export available.
+Class Teachers mark student attendance for their assigned class: draft → confirm (lock). Once locked, only Admin or Academics can edit the record (see §1.5). CSV export available for the teacher's own class.
 
 ### 2.2 Tests & Marks
 
@@ -211,6 +232,76 @@ This is one shared rendering component parameterized by document type — but th
 ### 3.6 Graceful Fallback
 
 If no active template exists for a document type, the print view shows: "No template configured — ask your Admin to upload one in Settings" instead of crashing or rendering blank.
+
+### 3.7 Upload/Storage Requirements
+
+All file uploads (school logo, document templates) use **Vercel Blob** storage. The `BLOB_READ_WRITE_TOKEN` environment variable must be configured in the Vercel Production environment for uploads to function.
+
+**Upload validation (applies to all upload endpoints):**
+- MIME type validation: only allowed file types are accepted
+- File size validation: maximum sizes are enforced (2MB for logo, 10MB for templates)
+- Authorization: only authorized roles can upload (Admin for logo and templates)
+- Error handling: clear error messages for invalid types, oversized files, missing tokens, and network failures
+
+**Uploaded assets:**
+- School logo: stored as a public Blob URL, displayed in print layouts and the settings UI. Previous logos are deleted when a new one is uploaded.
+- Document templates: stored as public Blob URLs (both original file and background image). Templates are versioned — already-generated documents reference the template version active at generation time.
+
+---
+
+## 4. Attendance Audit Trail
+
+Every attendance edit by Admin or Academics produces an **immutable audit record**. Audit records cannot be edited or deleted through the application.
+
+### 4.1 What Is Recorded
+
+Each audit entry contains:
+- The attendance record that was changed
+- The user who performed the change (by user ID and name)
+- The user's role (ADMIN or ACADEMICS)
+- The previous attendance status (PRESENT, ABSENT, or LEAVE)
+- The new attendance status
+- The timestamp of the change
+
+### 4.2 Access Control
+
+- **Admin** can view the full audit history (any class, any date, any student)
+- **Academics** can edit attendance but **cannot** view the audit history
+- **Teachers** cannot view or interact with audit records
+
+### 4.3 Immutability
+
+Audit records are write-once. There is no application-level API to edit or delete audit entries. The database schema enforces a one-to-one relationship between an attendance edit and its audit entry.
+
+---
+
+## 5. CSV Exports
+
+All CSV exports throughout the LMS include **school metadata** as header rows above the data table. This ensures every exported file is self-identifying.
+
+### 5.1 Metadata Header Format
+
+Every CSV export includes these header rows (when school settings are configured):
+
+```
+School: [school name]
+Address: [school address]
+Phone: [school phone]
+Generated By: [user name]
+Role: [user role]
+Generated At: [YYYY-MM-DD HH:MM:SS]
+```
+
+The metadata is placed **above** the data table as separate rows. The data table itself remains a clean CSV that opens correctly in spreadsheet applications.
+
+### 5.2 Supported Exports
+
+| Export | Access | Filters |
+|---|---|---|
+| Student Attendance CSV | Admin, Academics, Teacher (own class) | classSectionId, date |
+| Teacher Attendance CSV | Admin | teacherId, from, to |
+
+Both exports respect the current filter selections in the UI.
 
 # School LMS
 
