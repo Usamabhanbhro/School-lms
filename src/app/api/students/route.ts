@@ -46,6 +46,8 @@ const createStudentSchema = z.object({
   dateOfBirth: z.string().min(1), // ISO date string, validated as Date by Prisma
   admissionDate: z.string().min(1),
   classSectionId: z.string().min(1),
+  studentId: z.string().max(50).optional(),
+  rollNumber: z.string().max(20).optional(),
 });
 
 export async function POST(request: Request) {
@@ -66,6 +68,32 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate uniqueness of studentId if provided
+    if (body.studentId) {
+      const existing = await prisma.student.findFirst({
+        where: { studentId: body.studentId },
+      });
+      if (existing) {
+        return NextResponse.json(
+          { error: { message: "A student with this ID already exists.", code: "CONFLICT" } },
+          { status: 409 },
+        );
+      }
+    }
+
+    // Validate uniqueness of rollNumber within class section if provided
+    if (body.rollNumber) {
+      const existing = await prisma.student.findFirst({
+        where: { classSectionId: body.classSectionId, rollNumber: body.rollNumber },
+      });
+      if (existing) {
+        return NextResponse.json(
+          { error: { message: "A student with this roll number already exists in this class section.", code: "CONFLICT" } },
+          { status: 409 },
+        );
+      }
+    }
+
     const student = await prisma.student.create({
       data: {
         name: body.name,
@@ -74,6 +102,8 @@ export async function POST(request: Request) {
         dateOfBirth: new Date(body.dateOfBirth),
         admissionDate: new Date(body.admissionDate),
         classSectionId: body.classSectionId,
+        studentId: body.studentId || null,
+        rollNumber: body.rollNumber || null,
       },
       include: {
         classSection: {
@@ -103,7 +133,7 @@ function handleError(error: unknown): NextResponse {
   }
   if ((error as { code?: string }).code === "P2002") {
     return NextResponse.json(
-      { error: { message: "A student with that CNIC already exists.", code: "CONFLICT" } },
+      { error: { message: "A student with that identifier already exists. Please check Student ID and Roll Number.", code: "CONFLICT" } },
       { status: 409 },
     );
   }

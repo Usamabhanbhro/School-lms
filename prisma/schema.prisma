@@ -81,6 +81,9 @@ model User {
   // Document templates uploaded by this user (admin only)
   uploadedTemplates DocumentTemplate[]
 
+  // Attendance audit logs edited by this user
+  attendanceEdits AttendanceAuditLog[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -220,6 +223,11 @@ model Student {
   classSectionId  String
   classSection    ClassSection @relation(fields: [classSectionId], references: [id], onDelete: Restrict)
 
+  /// Admin/ACADEMICS-assigned student identifier (e.g. STD-2026-001). Nullable for existing records.
+  studentId       String?     @unique
+  /// Admin/ACADEMICS-assigned roll number, unique within class section. Nullable for existing records.
+  rollNumber      String?
+
   attendance      StudentAttendance[]
   marks           Mark[]
   reportCards     ReportCard[]
@@ -228,6 +236,8 @@ model Student {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([classSectionId, rollNumber], name: "Student_classSection_rollNumber_unique")
 }
 
 // ─── Attendance ──────────────────────────────────────────────────────
@@ -248,6 +258,9 @@ model StudentAttendance {
 
   /// Set if Admin overrides a locked record (SRS 1.5)
   lastEditedByAdmin String?
+
+  /// Audit trail for edits
+  auditLogs AttendanceAuditLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -435,6 +448,24 @@ model FeeChallanLineItem {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ─── Attendance Audit Trail ──────────────────────────────────────
+
+/// Immutable audit record for ADMIN/ACADEMICS attendance edits.
+/// Every edit produces one row. Audit records must not be edited or deleted through the application.
+model AttendanceAuditLog {
+  id                   String           @id @default(cuid())
+  studentAttendanceId  String           @unique
+  studentAttendance    StudentAttendance @relation(fields: [studentAttendanceId], references: [id], onDelete: Cascade)
+  editedById           String
+  editedBy             User             @relation(fields: [editedById], references: [id], onDelete: Restrict)
+  editedByRole         Role
+  previousStatus       AttendanceStatus
+  newStatus            AttendanceStatus
+  createdAt            DateTime         @default(now())
+
+  @@index([studentAttendanceId])
 }
 
 // ─── School Settings ─────────────────────────────────────────────────

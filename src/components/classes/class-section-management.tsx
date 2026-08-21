@@ -7,6 +7,7 @@ import {
   Loader2,
   Plus,
   School,
+  UserMinus,
   UserPlus,
   X,
   BookMarked,
@@ -86,6 +87,9 @@ export function ClassSectionManagement() {
   const [assignSubjectTeacher, setAssignSubjectTeacher] = useState<ClassSection | null>(null);
   const [selectedSubjectTeacherId, setSelectedSubjectTeacherId] = useState("");
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
+
+  // Unassignment confirmation
+  const [unassignConfirm, setUnassignConfirm] = useState<{ type: "classTeacher" | "subjectTeacher"; classSectionId: string; teacherId?: string; subjectId?: string; teacherName?: string; subjectName?: string } | null>(null);
 
   const { toasts, addToast, dismissToast } = useToast();
 
@@ -265,6 +269,57 @@ export function ClassSectionManagement() {
     }
   }, [assignSubjectTeacher, selectedSubjectTeacherId, selectedSubjectId, addToast, fetchAll]);
 
+  // ─── Unassignment Handlers ─────────────────────────────────────
+
+  const handleUnassignClassTeacher = useCallback(async () => {
+    if (!unassignConfirm || unassignConfirm.type !== "classTeacher") return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/class-sections/${unassignConfirm.classSectionId}/class-teacher`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        addToast("error", json.error?.message ?? "Failed to unassign.");
+      } else {
+        addToast("success", "Class teacher unassigned.");
+      }
+    } catch {
+      addToast("error", "Network error.");
+    } finally {
+      setSubmitting(false);
+      setUnassignConfirm(null);
+      await fetchAll();
+    }
+  }, [unassignConfirm, addToast, fetchAll]);
+
+  const handleUnassignSubjectTeacher = useCallback(async () => {
+    if (!unassignConfirm || unassignConfirm.type !== "subjectTeacher" || !unassignConfirm.teacherId || !unassignConfirm.subjectId) return;
+    setSubmitting(true);
+    try {
+      const params = new URLSearchParams({
+        classSectionId: unassignConfirm.classSectionId,
+        teacherId: unassignConfirm.teacherId,
+        subjectId: unassignConfirm.subjectId,
+      });
+      const res = await fetch(`/api/class-sections/${unassignConfirm.classSectionId}/subject-teachers?${params.toString()}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        addToast("error", json.error?.message ?? "Failed to unassign.");
+      } else {
+        addToast("success", "Subject teacher unassigned.");
+      }
+    } catch {
+      addToast("error", "Network error.");
+    } finally {
+      setSubmitting(false);
+      setUnassignConfirm(null);
+      await fetchAll();
+    }
+  }, [unassignConfirm, addToast, fetchAll]);
+
   // ─── Render ────────────────────────────────────────────────────
 
   return (
@@ -392,7 +447,23 @@ export function ClassSectionManagement() {
                           <TD>{cs.sectionName}</TD>
                           <TD>
                             {activeTeacher ? (
-                              <span className="text-sm">{activeTeacher.name}</span>
+                              <div className="flex items-center gap-1">
+                                <span className="text-sm">{activeTeacher.name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setUnassignConfirm({
+                                    type: "classTeacher",
+                                    classSectionId: cs.id,
+                                    teacherId: cs.classTeacherAssignments[0]?.teacherId,
+                                    teacherName: activeTeacher.name,
+                                  })}
+                                  className="inline-flex size-6 items-center justify-center text-danger/60 hover:text-danger"
+                                  title="Unassign class teacher"
+                                  aria-label={`Unassign ${activeTeacher.name} as class teacher`}
+                                >
+                                  <UserMinus className="size-3" aria-hidden="true" />
+                                </button>
+                              </div>
                             ) : (
                               <span className="text-xs text-text/40">—</span>
                             )}
@@ -403,6 +474,22 @@ export function ClassSectionManagement() {
                                 {cs.subjectTeacherAssignments.map((sta) => (
                                   <span key={sta.id} className="inline-flex items-center border border-border px-1.5 py-0.5 text-xs">
                                     {sta.subject.name}: {sta.teacher.name}
+                                    <button
+                                      type="button"
+                                      onClick={() => setUnassignConfirm({
+                                        type: "subjectTeacher",
+                                        classSectionId: cs.id,
+                                        teacherId: sta.teacherId,
+                                        subjectId: sta.subjectId,
+                                        teacherName: sta.teacher.name,
+                                        subjectName: sta.subject.name,
+                                      })}
+                                      className="ml-1 inline-flex size-4 items-center justify-center text-danger/60 hover:text-danger"
+                                      title="Unassign"
+                                      aria-label={`Unassign ${sta.teacher.name} from ${sta.subject.name}`}
+                                    >
+                                      <X className="size-2.5" aria-hidden="true" />
+                                    </button>
                                   </span>
                                 ))}
                               </div>
@@ -543,6 +630,30 @@ export function ClassSectionManagement() {
           </div>
         </div>
       </ConfirmDialog>
+
+      {/* Unassignment Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!unassignConfirm}
+        onOpenChange={(open) => {
+          if (!open) setUnassignConfirm(null);
+        }}
+        icon={UserMinus}
+        iconVariant="danger"
+        title={!unassignConfirm ? "" : unassignConfirm.type === "classTeacher" ? "Unassign Class Teacher" : "Unassign Subject Teacher"}
+        description={
+          !unassignConfirm ? ""
+          : unassignConfirm.type === "classTeacher"
+            ? `Remove ${unassignConfirm.teacherName ?? "this teacher"} as class teacher? Historical attendance records will be preserved.`
+            : `Remove ${unassignConfirm.teacherName ?? "this teacher"} from ${unassignConfirm.subjectName ?? "this subject"}? Historical tests and marks will be preserved.`
+        }
+        confirmLabel="Unassign"
+        confirmVariant="danger"
+        loading={submitting}
+        onConfirm={() => {
+          if (unassignConfirm?.type === "classTeacher") handleUnassignClassTeacher();
+          else handleUnassignSubjectTeacher();
+        }}
+      />
     </>
   );
 }

@@ -52,14 +52,18 @@ A teacher assigned to teach one Subject within one ClassSection — holds rights
 ### Student
 Created by Admin, allotted to a ClassSection. **Not a login** — pure data record.
 - Fields: `name`, `guardianName` (father/guardian), `guardianCnic` (format `xxxxx-xxxxxxx-x`), `dateOfBirth`, `admissionDate`, `classSectionId`
+- `studentId` (nullable, unique) — Admin/ACADEMICS-assigned student identifier (e.g. `STD-2026-001`). Auto-suggested on creation, editable before save. Globally unique across all students.
+- `rollNumber` (nullable) — Admin/ACADEMICS-assigned roll number, unique within the class section. Auto-suggested based on existing roll numbers in the class. Editable before save.
 - No CNIC field for the student themselves (confirmed in SRS)
 - Relationships: has many `StudentAttendance`, many `Mark`, many `ReportCard`, many `Certificate`, many `FeeChallan`
+- Constraints: `@@unique([classSectionId, rollNumber])` (partial — only enforced when rollNumber is not null)
 
 ### StudentAttendance
-One record per student per class per day. Only the ClassSection's active Class Teacher can create/edit these (pre-lock).
-- Fields: `studentId`, `classSectionId`, `date`, `status` (enum: `PRESENT`, `ABSENT`, `LEAVE`), `isConfirmed` (draft vs locked), `markedByTeacherId`, `lastEditedByAdmin` (nullable — set if Admin overrides a locked record, per SRS 1.5)
+One record per student per class per day. Class Teacher can create/edit drafts. Admin and Academics can edit any record (including locked).
+- Fields: `studentId`, `classSectionId`, `date`, `status` (enum: `PRESENT`, `ABSENT`, `LEAVE`), `isConfirmed` (draft vs locked), `markedByTeacherId`, `lastEditedByAdmin` (nullable — set if Admin/Academics edits a record)
+- `auditLogs` — has many `AttendanceAuditLog` entries (one per edit by Admin/Academics)
 - Index on `(classSectionId, date)` at minimum — this is the highest-traffic table
-- Business rule enforced at API level, not just UI: once `isConfirmed = true`, only a request from the Admin role may modify the row
+- Business rule enforced at API level: Teacher can only edit drafts; Admin and Academics can edit any record; every edit by Admin/Academics produces an audit log entry
 
 ### TeacherAttendance
 One record per teacher per day, marked directly by Admin — no draft/confirm lock (Admin already has full edit rights).
@@ -171,6 +175,13 @@ A variable-length table region on a template (used by Report Card and Fee Challa
 - Fields: `templateId`, `anchorXPercent` (0-100), `anchorYPercent` (0-100), `rowHeightPercent` (0-100 — height of each row as % of template height), `columns` (JSON array of `{ fieldKey: string, xPercent: number }`)
 - The renderer lays out N rows starting at the anchor, incrementing y by `rowHeightPercent` per row
 
+### AttendanceAuditLog
+Immutable audit record for ADMIN/ACADEMICS attendance edits. Every edit by Admin or Academics produces one row. Audit records must not be edited or deleted through the application.
+- Fields: `studentAttendanceId` (unique — one audit log per edit), `editedById` (the user who made the change), `editedByRole` (ADMIN or ACADEMICS), `previousStatus`, `newStatus`, `createdAt`
+- Relationships: belongs to one `StudentAttendance`, belongs to one `User` (editor)
+- Constraints: `@@unique([studentAttendanceId])` — one audit entry per edit; `@@index([studentAttendanceId])` for efficient queries
+- Access: ADMIN only can view audit history. ACADEMICS can edit attendance but must NOT view audit history. Teachers cannot view or edit audit logs.
+
 ## Not Yet Modeled
 
 - None — all models documented above are implemented
@@ -182,4 +193,5 @@ A variable-length table region on a template (used by Report Card and Fee Challa
 - **Migration `20260820120000_add_academics_role`**: Adds `ACADEMICS` to Role enum (standalone, per Postgres enum limitation)
 - **Migration `20260820120001_add_template_system_and_schema_fixes`**: Reconciles schema/database drift — adds `isActive` to `ClassTeacherAssignment` with backfill (most-recent-per-class active), renames `generatedByAdminId` → `generatedByUserId` via `RENAME COLUMN` (data-safe), creates DocumentTemplate/TemplateField/TemplateTableRegion tables, adds `templateId` FK columns
 - **Migration `20260820130000_add_academics_profile_table`**: Creates `AcademicsProfile` table missing from the init migration
-- The full chain (9 migrations) was validated from an empty database with `prisma migrate reset --force`
+- **Migration `20260821100000_add_student_id_roll_number_and_audit_trail`**: Adds `studentId` (unique, nullable) and `rollNumber` (nullable) to Student for Admin/ACADEMICS-assigned identifiers; creates `AttendanceAuditLog` table for immutable audit trail of attendance edits by Admin/Academics
+- The full chain (10 migrations) was validated from an empty database with `prisma migrate reset --force`

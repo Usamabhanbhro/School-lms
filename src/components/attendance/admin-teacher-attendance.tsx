@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  Download,
   Loader2,
   XCircle,
 } from "lucide-react";
@@ -152,6 +153,22 @@ export function AdminTeacherAttendance() {
       <PageHeader
         title="Teacher Attendance"
         description="Mark teacher attendance directly. No draft or lock — changes save immediately."
+        actions={
+          <Button
+            variant="secondary"
+            onClick={() => {
+              const params = new URLSearchParams();
+              if (date) {
+                params.set("from", date);
+                params.set("to", date);
+              }
+              window.open(`/api/teacher-attendance/export?${params.toString()}`, "_blank");
+            }}
+          >
+            <Download className="size-4" aria-hidden="true" />
+            Export CSV
+          </Button>
+        }
       />
 
       {/* Date selection */}

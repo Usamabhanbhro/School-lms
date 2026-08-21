@@ -6,6 +6,55 @@ import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
 
 /**
+ * DELETE /api/class-sections/:id/class-teacher
+ * Remove the active Class Teacher assignment for a ClassSection.
+ * Admin only. Does not delete the teacher — only removes the relationship.
+ */
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    requireRole(session, ["ADMIN"]);
+
+    const { id: classSectionId } = await params;
+
+    // Find the active assignment
+    const activeAssignment = await prisma.classTeacherAssignment.findFirst({
+      where: { classSectionId, isActive: true },
+    });
+
+    if (!activeAssignment) {
+      return NextResponse.json(
+        { error: { message: "No active class teacher assignment found.", code: "NOT_FOUND" } },
+        { status: 404 },
+      );
+    }
+
+    // Deactivate the assignment
+    await prisma.classTeacherAssignment.update({
+      where: { id: activeAssignment.id },
+      data: { isActive: false },
+    });
+
+    return NextResponse.json({ data: { message: "Class teacher unassigned." } });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(
+        { error: { message: error.message, code: error.code } },
+        { status: error.status },
+      );
+    }
+    console.error(error);
+    return NextResponse.json(
+      { error: { message: "An internal error occurred.", code: "INTERNAL_ERROR" } },
+      { status: 500 },
+    );
+  }
+}
+
+/**
  * POST /api/class-sections/:id/class-teacher
  * Assign (or reassign) the single active Class Teacher for a ClassSection.
  * Admin only.

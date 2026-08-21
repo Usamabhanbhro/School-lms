@@ -8,10 +8,12 @@ import { ApiError, requireRole } from "@/lib/rbac";
 /**
  * PATCH /api/attendance/:id
  *
- * Admin ONLY. Allows editing a record after it has been locked
- * (isConfirmed: true). This is the override path described in SRS §1.5.
+ * Admin and Academics. Allows editing any attendance record:
+ * - Admin can edit locked records (SRS §1.5 override)
+ * - Academics can edit any record (read-write oversight per new requirement)
  *
- * Sets lastEditedByAdmin to the Admin's user ID for audit trail.
+ * Every edit produces an AttendanceAuditLog entry.
+ * Sets lastEditedByAdmin for Admin overrides.
  *
  * Body: { status } — the new attendance status
  */
@@ -25,7 +27,7 @@ export async function PATCH(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    const authedSession = requireRole(session, ["ADMIN"]);
+    const authedSession = requireRole(session, ["ADMIN", "ACADEMICS"]);
 
     const { id } = await params;
     const body = overrideAttendanceSchema.parse(await request.json());
@@ -41,13 +43,39 @@ export async function PATCH(
       );
     }
 
-    // Update the record with audit trail
-    const record = await prisma.studentAttendance.update({
+    // If status hasn't changed, nothing to do
+    if (existing.status === body.status) {
+      return NextResponse.json({ data: existing });
+    }
+
+    // Update the record with audit trail in a transaction
+    const record = await prisma.$transaction(async (tx) => {
+      // Update the attendance record
+      const updated = await tx.studentAttendance.update({
+        where: { id },
+        data: {
+          status: body.status,
+          lastEditedByAdmin: authedSession.user.id,
+        },
+      });
+
+      // Create audit log entry
+      await tx.attendanceAuditLog.create({
+        data: {
+          studentAttendanceId: id,
+          editedById: authedSession.user.id,
+          editedByRole: authedSession.user.role,
+          previousStatus: existing.status,
+          newStatus: body.status,
+        },
+      });
+
+      return updated;
+    });
+
+    // Return with related data
+    const result = await prisma.studentAttendance.findUnique({
       where: { id },
-      data: {
-        status: body.status,
-        lastEditedByAdmin: authedSession.user.id,
-      },
       include: {
         student: {
           select: { id: true, name: true },
@@ -58,7 +86,7 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json({ data: record });
+    return NextResponse.json({ data: result });
   } catch (error) {
     if (error instanceof ApiError) {
       return NextResponse.json(

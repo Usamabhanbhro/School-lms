@@ -16,6 +16,8 @@ const editStudentSchema = z.object({
   dateOfBirth: z.string().min(1).optional(),
   admissionDate: z.string().min(1).optional(),
   classSectionId: z.string().min(1).optional(),
+  studentId: z.string().max(50).optional(),
+  rollNumber: z.string().max(20).optional(),
 });
 
 export async function PATCH(
@@ -58,6 +60,35 @@ export async function PATCH(
     if (body.dateOfBirth !== undefined) updateData.dateOfBirth = new Date(body.dateOfBirth);
     if (body.admissionDate !== undefined) updateData.admissionDate = new Date(body.admissionDate);
     if (body.classSectionId !== undefined) updateData.classSectionId = body.classSectionId;
+    if (body.studentId !== undefined) updateData.studentId = body.studentId || null;
+    if (body.rollNumber !== undefined) updateData.rollNumber = body.rollNumber || null;
+
+    // Validate studentId uniqueness if changing
+    if (body.studentId) {
+      const dup = await prisma.student.findFirst({
+        where: { studentId: body.studentId, id: { not: id } },
+      });
+      if (dup) {
+        return NextResponse.json(
+          { error: { message: "A student with this ID already exists.", code: "CONFLICT" } },
+          { status: 409 },
+        );
+      }
+    }
+
+    // Validate rollNumber uniqueness within class section if changing
+    if (body.rollNumber) {
+      const targetClassId = body.classSectionId ?? existing.classSectionId;
+      const dup = await prisma.student.findFirst({
+        where: { classSectionId: targetClassId, rollNumber: body.rollNumber, id: { not: id } },
+      });
+      if (dup) {
+        return NextResponse.json(
+          { error: { message: "A student with this roll number already exists in this class section.", code: "CONFLICT" } },
+          { status: 409 },
+        );
+      }
+    }
 
     const student = await prisma.student.update({
       where: { id },

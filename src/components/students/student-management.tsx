@@ -36,6 +36,8 @@ interface Student {
   admissionDate: string;
   classSectionId: string;
   classSection: { id: string; className: string; sectionName: string };
+  studentId: string | null;
+  rollNumber: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -49,6 +51,8 @@ interface StudentForm {
   dateOfBirth: string;
   admissionDate: string;
   classSectionId: string;
+  studentId: string;
+  rollNumber: string;
 }
 
 function todayStr(): string {
@@ -64,7 +68,34 @@ function emptyForm(): StudentForm {
     dateOfBirth: "",
     admissionDate: "",
     classSectionId: "",
+    studentId: "",
+    rollNumber: "",
   };
+}
+
+/** Generate a suggested student ID based on existing records. */
+function suggestStudentId(students: Student[]): string {
+  const year = new Date().getFullYear();
+  const prefix = `STD-${year}-`;
+  const existing = students
+    .map((s) => s.studentId)
+    .filter((id): id is string => !!id && id.startsWith(prefix))
+    .map((id) => parseInt(id.replace(prefix, ""), 10))
+    .filter((n) => !isNaN(n));
+  const next = existing.length > 0 ? Math.max(...existing) + 1 : 1;
+  return `${prefix}${String(next).padStart(3, "0")}`;
+}
+
+/** Generate a suggested roll number for a class section. */
+function suggestRollNumber(students: Student[], classSectionId: string): string {
+  const classStudents = students.filter((s) => s.classSectionId === classSectionId);
+  const numbers = classStudents
+    .map((s) => s.rollNumber)
+    .filter((r): r is string => !!r)
+    .map((r) => parseInt(r, 10))
+    .filter((n) => !isNaN(n));
+  const next = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+  return String(next);
 }
 
 // ─── Validation (client-side, matches server Zod) ───────────────────
@@ -134,11 +165,13 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
   // ─── Create/Edit ────────────────────────────────────────────────
 
   const openCreate = useCallback(() => {
-    setForm(emptyForm());
+    const f = emptyForm();
+    f.studentId = suggestStudentId(students);
+    setForm(f);
     setEditingItem(null);
     setFieldErrors({});
     setView("create");
-  }, []);
+  }, [students]);
 
   const openEdit = useCallback((item: Student) => {
     setForm({
@@ -148,6 +181,8 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
       dateOfBirth: item.dateOfBirth.split("T")[0],
       admissionDate: item.admissionDate.split("T")[0],
       classSectionId: item.classSectionId,
+      studentId: item.studentId ?? "",
+      rollNumber: item.rollNumber ?? "",
     });
     setEditingItem(item);
     setFieldErrors({});
@@ -349,6 +384,34 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
               {fieldErrors.classSectionId && <p id="class-error" className="mt-1 text-xs text-danger">{fieldErrors.classSectionId}</p>}
             </div>
 
+            {/* Student ID */}
+            <div>
+              <label htmlFor="studentId" className="mb-1 block text-xs font-medium text-text/60">
+                Student ID
+              </label>
+              <Input
+                id="studentId"
+                value={form.studentId}
+                onChange={(e) => setForm((f) => ({ ...f, studentId: e.target.value }))}
+                placeholder={suggestStudentId(students)}
+              />
+              <p className="mt-1 text-xs text-text/40">Leave blank to skip. Must be unique across all students.</p>
+            </div>
+
+            {/* Roll Number */}
+            <div>
+              <label htmlFor="rollNumber" className="mb-1 block text-xs font-medium text-text/60">
+                Roll Number
+              </label>
+              <Input
+                id="rollNumber"
+                value={form.rollNumber}
+                onChange={(e) => setForm((f) => ({ ...f, rollNumber: e.target.value }))}
+                placeholder={form.classSectionId ? suggestRollNumber(students, form.classSectionId) : "Select class first"}
+              />
+              <p className="mt-1 text-xs text-text/40">Unique within the class section. Leave blank to skip.</p>
+            </div>
+
             {/* Date of Birth */}
             <div>
               <label htmlFor="dateOfBirth" className="mb-1 block text-xs font-medium text-text/60">
@@ -426,8 +489,9 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
                   <THead>
                     <TR>
                       <TH>Name</TH>
+                      <TH>Student ID</TH>
+                      <TH>Roll #</TH>
                       <TH>Guardian</TH>
-                      <TH>CNIC</TH>
                       <TH>Class</TH>
                       <TH>DOB</TH>
                       <TH>Admission</TH>
@@ -438,8 +502,9 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
                     {students.map((s) => (
                       <TR key={s.id}>
                         <TD className="font-medium">{s.name}</TD>
+                        <TD className="tabular-nums">{s.studentId ?? "—"}</TD>
+                        <TD className="tabular-nums">{s.rollNumber ?? "—"}</TD>
                         <TD>{s.guardianName}</TD>
-                        <TD className="tabular-nums">{s.guardianCnic}</TD>
                         <TD>{classLabel(s.classSection)}</TD>
                         <TD className="tabular-nums">{formatDate(s.dateOfBirth)}</TD>
                         <TD className="tabular-nums">{formatDate(s.admissionDate)}</TD>
