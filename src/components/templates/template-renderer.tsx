@@ -18,6 +18,8 @@ interface TemplateField {
   fieldKey: string;
   xPercent: number;
   yPercent: number;
+  widthPercent?: number | null;
+  heightPercent?: number | null;
   fontSize: number;
   fontFamily?: string | null;
   fontColor?: string | null;
@@ -105,6 +107,8 @@ export function TemplateRenderer({
         const value = fieldValues[field.fieldKey];
         if (value === undefined || value === null) return null;
 
+        const hasExplicitSize = field.widthPercent != null && field.heightPercent != null;
+
         return (
           <div
             key={field.id}
@@ -112,7 +116,15 @@ export function TemplateRenderer({
             style={{
               left: `${field.xPercent}%`,
               top: `${field.yPercent}%`,
-              transform: "translate(-50%, -50%)",
+              ...(hasExplicitSize
+                ? {
+                    width: `${field.widthPercent}%`,
+                    height: `${field.heightPercent}%`,
+                    transform: "translate(-50%, -50%)",
+                  }
+                : {
+                    transform: "translate(-50%, -50%)",
+                  }),
               fontSize: `${field.fontSize}px`,
               fontFamily: field.fontFamily || "inherit",
               fontWeight: (field.fontWeight as React.CSSProperties['fontWeight']) || undefined,
@@ -122,6 +134,7 @@ export function TemplateRenderer({
               lineHeight: 1.2,
               color: field.fontColor || "#000",
               whiteSpace: "pre-wrap",
+              overflow: "hidden",
             }}
           >
             {value}

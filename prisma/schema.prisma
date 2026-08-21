@@ -518,6 +518,8 @@ model TemplateField {
   fieldKey   String
   xPercent   Float
   yPercent   Float
+  widthPercent  Float?  // nullable — when null, field auto-sizes to content
+  heightPercent Float?  // nullable — when null, field auto-sizes to content
   fontSize   Int
   fontFamily String?   // CSS font family — e.g. 'serif', 'Georgia', 'Times New Roman'
   fontColor  String?   // CSS color — e.g. '#000000', '#0F172A'

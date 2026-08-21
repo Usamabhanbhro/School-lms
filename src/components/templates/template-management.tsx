@@ -467,24 +467,29 @@ function TemplateEditor({
 }: TemplateEditorProps) {
   const { addToast } = useToast();
   const canvasRef = useRef<HTMLDivElement>(null);
-  const [fields, setFields] = useState<
-    Array<{
-      fieldKey: string;
-      xPercent: number;
-      yPercent: number;
-      fontSize: number;
-      fontFamily: string;
-      fontColor: string;
-      fontWeight: string;
-      fontStyle: string;
-      textDecoration: string;
-      textAlign: "left" | "center" | "right";
-    }>
-  >(
+
+  type EditorField = {
+    fieldKey: string;
+    xPercent: number;
+    yPercent: number;
+    widthPercent: number | null;
+    heightPercent: number | null;
+    fontSize: number;
+    fontFamily: string;
+    fontColor: string;
+    fontWeight: string;
+    fontStyle: string;
+    textDecoration: string;
+    textAlign: "left" | "center" | "right";
+  };
+
+  const [fields, setFields] = useState<EditorField[]>(
     template.fields.map((f) => ({
       fieldKey: f.fieldKey,
       xPercent: f.xPercent,
       yPercent: f.yPercent,
+      widthPercent: (f as any).widthPercent ?? null,
+      heightPercent: (f as any).heightPercent ?? null,
       fontSize: f.fontSize,
       fontFamily: (f as any).fontFamily || "",
       fontColor: (f as any).fontColor || "",
@@ -496,11 +501,17 @@ function TemplateEditor({
   );
 
   // Undo/redo state
-  const [history, setHistory] = useState<Array<typeof fields>>([]);
+  const [history, setHistory] = useState<EditorField[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [selectedFieldIdx, setSelectedFieldIdx] = useState<number | null>(null);
 
-  function pushHistory(newFields: typeof fields) {
+  // Interaction state
+  type InteractionMode = "idle" | "dragging" | "resizing";
+  const [mode, setMode] = useState<InteractionMode>("idle");
+  const [resizeHandle, setResizeHandle] = useState<string | null>(null);
+  const interactionStart = useRef<{ x: number; y: number; field: EditorField } | null>(null);
+
+  function pushHistory(newFields: EditorField[]) {
     setHistory((prev) => {
       const trimmed = prev.slice(0, historyIndex + 1);
       return [...trimmed, newFields];
@@ -523,6 +534,7 @@ function TemplateEditor({
       setHistoryIndex((prev) => prev + 1);
     }
   }
+
   const [tableRegions, setTableRegions] = useState<
     Array<{
       anchorXPercent: number;
@@ -539,7 +551,6 @@ function TemplateEditor({
     })),
   );
   const [saving, setSaving] = useState(false);
-  const [draggingField, setDraggingField] = useState<number | null>(null);
   const [draggingRegion, setDraggingRegion] = useState<number | null>(null);
 
   // Initialize missing fields
@@ -555,6 +566,8 @@ function TemplateEditor({
           fieldKey: key,
           xPercent: 10 + i * 5,
           yPercent: 10 + i * 5,
+          widthPercent: null as number | null,
+          heightPercent: null as number | null,
           fontSize: 12,
           fontFamily: "",
           fontColor: "",
@@ -569,6 +582,107 @@ function TemplateEditor({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateTypeConfig.fieldKeys]);
 
+  // Convert screen coordinates to canvas percentage coordinates
+  function screenToCanvas(clientX: number, clientY: number) {
+    if (!canvasRef.current) return { x: 0, y: 0 };
+    const rect = canvasRef.current.getBoundingClientRect();
+    return {
+      x: Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100)),
+      y: Math.min(100, Math.max(0, ((clientY - rect.top) / rect.height) * 100)),
+    };
+  }
+
+  // Pointer event handlers for field interaction
+  function handleFieldPointerDown(e: React.PointerEvent, index: number) {
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedFieldIdx(index);
+    setMode("dragging");
+    const f = fields[index];
+    interactionStart.current = { x: e.clientX, y: e.clientY, field: { ...f } };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  function handleResizePointerDown(e: React.PointerEvent, index: number, handle: string) {
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedFieldIdx(index);
+    setMode("resizing");
+    setResizeHandle(handle);
+    const f = fields[index];
+    interactionStart.current = { x: e.clientX, y: e.clientY, field: { ...f } };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    if (mode === "idle" || interactionStart.current === null) return;
+    if (!canvasRef.current) return;
+    if (selectedFieldIdx === null) return;
+
+    const start = interactionStart.current;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const dxPx = e.clientX - start.x;
+    const dyPx = e.clientY - start.y;
+    const dxPercent = (dxPx / rect.width) * 100;
+    const dyPercent = (dyPx / rect.height) * 100;
+
+    if (mode === "dragging") {
+      const newX = Math.min(100, Math.max(0, start.field.xPercent + dxPercent));
+      const newY = Math.min(100, Math.max(0, start.field.yPercent + dyPercent));
+      setFields((prev) =>
+        prev.map((f, i) =>
+          i === selectedFieldIdx ? { ...f, xPercent: newX, yPercent: newY } : f,
+        ),
+      );
+    } else if (mode === "resizing" && resizeHandle) {
+      const origW = start.field.widthPercent ?? 20;
+      const origH = start.field.heightPercent ?? 5;
+      let newW = origW;
+      let newH = origH;
+      let newX = start.field.xPercent;
+      let newY = start.field.yPercent;
+
+      // Compute new width/height based on handle
+      if (resizeHandle.includes("right")) newW = Math.max(2, Math.min(80, origW + dxPercent));
+      if (resizeHandle.includes("left")) newW = Math.max(2, Math.min(80, origW - dxPercent));
+      if (resizeHandle.includes("bottom")) newH = Math.max(1, Math.min(50, origH + dyPercent));
+      if (resizeHandle.includes("top")) newH = Math.max(1, Math.min(50, origH - dyPercent));
+
+      // Adjust position for left/top handles
+      if (resizeHandle.includes("left")) {
+        newX = start.field.xPercent + (origW - newW) / 2;
+      }
+      if (resizeHandle.includes("top")) {
+        newY = start.field.yPercent + (origH - newH) / 2;
+      }
+
+      newX = Math.min(100, Math.max(0, newX));
+      newY = Math.min(100, Math.max(0, newY));
+
+      setFields((prev) =>
+        prev.map((f, i) =>
+          i === selectedFieldIdx
+            ? { ...f, widthPercent: newW, heightPercent: newH, xPercent: newX, yPercent: newY }
+            : f,
+        ),
+      );
+    }
+  }
+
+  function handlePointerUp() {
+    if (mode !== "idle" && interactionStart.current !== null && selectedFieldIdx !== null) {
+      // Push to history
+      setFields((current) => {
+        pushHistory(current);
+        return current;
+      });
+    }
+    setMode("idle");
+    setResizeHandle(null);
+    interactionStart.current = null;
+  }
+
+  // Canvas click — deselect or place unplaced field
   function handleCanvasClick(e: React.MouseEvent<HTMLDivElement>) {
     if (!canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
@@ -580,44 +694,34 @@ function TemplateEditor({
       (f) => f.xPercent === 0 && f.yPercent === 0,
     );
     if (unplacedIndex >= 0) {
-      setFields((prev) =>
-        prev.map((f, i) =>
-          i === unplacedIndex ? { ...f, xPercent, yPercent } : f,
-        ),
+      const newFields = fields.map((f, i) =>
+        i === unplacedIndex ? { ...f, xPercent, yPercent } : f,
       );
+      setFields(newFields);
+      pushHistory(newFields);
+    } else {
+      setSelectedFieldIdx(null);
     }
   }
 
-  function handleFieldMouseDown(e: React.MouseEvent, index: number) {
-    e.stopPropagation();
-    setDraggingField(index);
-  }
-
+  // Table region drag
   function handleCanvasMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    if (draggingField === null && draggingRegion === null) return;
+    if (draggingRegion === null) return;
     if (!canvasRef.current) return;
 
     const rect = canvasRef.current.getBoundingClientRect();
     const xPercent = Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100));
     const yPercent = Math.min(100, Math.max(0, ((e.clientY - rect.top) / rect.height) * 100));
 
-    if (draggingField !== null) {
-      const idx = draggingField;
-      setFields((prev) =>
-        prev.map((f, i) => (i === idx ? { ...f, xPercent, yPercent } : f)),
-      );
-    } else if (draggingRegion !== null) {
-      const idx = draggingRegion;
-      setTableRegions((prev) =>
-        prev.map((tr, i) =>
-          i === idx ? { ...tr, anchorXPercent: xPercent, anchorYPercent: yPercent } : tr,
-        ),
-      );
-    }
+    const idx = draggingRegion;
+    setTableRegions((prev) =>
+      prev.map((tr, i) =>
+        i === idx ? { ...tr, anchorXPercent: xPercent, anchorYPercent: yPercent } : tr,
+      ),
+    );
   }
 
   function handleCanvasMouseUp() {
-    setDraggingField(null);
     setDraggingRegion(null);
   }
 
@@ -640,7 +744,7 @@ function TemplateEditor({
   function updateField(
     index: number,
     key: string,
-    value: string | number,
+    value: string | number | null,
   ) {
     const newFields = fields.map((f, i) =>
       i === index ? { ...f, [key]: value } : f,
@@ -657,6 +761,8 @@ function TemplateEditor({
         fieldKey: original.fieldKey,
         xPercent: Math.min(100, original.xPercent + 5),
         yPercent: Math.min(100, original.yPercent + 5),
+        widthPercent: original.widthPercent,
+        heightPercent: original.heightPercent,
         fontSize: original.fontSize,
         fontFamily: original.fontFamily,
         fontColor: original.fontColor,
@@ -671,7 +777,13 @@ function TemplateEditor({
   }
 
   function removeField(index: number) {
-    setFields((prev) => prev.filter((_, i) => i !== index));
+    const newFields = fields.filter((_, i) => i !== index);
+    setFields(newFields);
+    pushHistory(newFields);
+    if (selectedFieldIdx === index) setSelectedFieldIdx(null);
+    else if (selectedFieldIdx !== null && selectedFieldIdx > index) {
+      setSelectedFieldIdx(selectedFieldIdx - 1);
+    }
   }
 
   function updateTableRegion(
@@ -790,9 +902,21 @@ function TemplateEditor({
               className="relative mx-auto bg-white shadow-sm border border-zinc-200"
               style={{ width: "700px", height: "990px", aspectRatio: "210/297" }}
               onClick={handleCanvasClick}
-              onMouseMove={handleCanvasMouseMove}
-              onMouseUp={handleCanvasMouseUp}
-              onMouseLeave={handleCanvasMouseUp}
+              onPointerMove={(e) => {
+                handlePointerMove(e);
+                // Also handle table region drag via mouse events
+                if (draggingRegion !== null) {
+                  handleCanvasMouseMove(e as any);
+                }
+              }}
+              onPointerUp={() => {
+                handlePointerUp();
+                handleCanvasMouseUp();
+              }}
+              onPointerLeave={() => {
+                handlePointerUp();
+                handleCanvasMouseUp();
+              }}
             >
               {/* Background image */}
               <img
@@ -814,20 +938,96 @@ function TemplateEditor({
                   const idx = (keyIndices[field.fieldKey] ?? 0);
                   keyIndices[field.fieldKey] = idx + 1;
                   const label = count > 1 ? `${field.fieldKey} (${idx + 1})` : field.fieldKey;
+                  const isSelected = selectedFieldIdx === i;
+                  const hasSize = field.widthPercent != null && field.heightPercent != null;
+
                   return (
                     <div
                       key={`${field.fieldKey}-${i}`}
-                      className="absolute cursor-move select-none"
+                      className="absolute select-none"
                       style={{
                         left: `${field.xPercent}%`,
                         top: `${field.yPercent}%`,
                         transform: "translate(-50%, -50%)",
+                        ...(hasSize
+                          ? {
+                              width: `${field.widthPercent}%`,
+                              height: `${field.heightPercent}%`,
+                            }
+                          : {}),
+                        zIndex: isSelected ? 20 : 10,
+                        cursor: mode === "dragging" && isSelected ? "grabbing" : "grab",
                       }}
-                      onMouseDown={(e) => handleFieldMouseDown(e, i)}
+                      onPointerDown={(e) => handleFieldPointerDown(e, i)}
                     >
-                      <div className="border border-blue-500 bg-blue-500/10 px-1 py-0.5 text-[10px] font-mono text-blue-700 whitespace-nowrap">
+                      {/* Field content box */}
+                      <div
+                        className={`h-full w-full border px-1 py-0.5 text-[10px] font-mono whitespace-nowrap overflow-hidden ${
+                          isSelected
+                            ? "border-blue-600 bg-blue-500/15 text-blue-800"
+                            : "border-blue-400 bg-blue-500/10 text-blue-700"
+                        }`}
+                        style={{
+                          fontSize: `${Math.min(field.fontSize, 14)}px`,
+                          fontFamily: field.fontFamily || "monospace",
+                          fontWeight: field.fontWeight || undefined,
+                          fontStyle: field.fontStyle || undefined,
+                          textAlign: field.textAlign,
+                        }}
+                      >
                         {label}
                       </div>
+
+                      {/* Selection outline + resize handles */}
+                      {isSelected && (
+                        <>
+                          {/* Corner handles */}
+                          {(["top-left", "top-right", "bottom-left", "bottom-right"] as const).map((handle) => (
+                            <div
+                              key={handle}
+                              className="absolute z-30"
+                              style={{
+                                width: "8px",
+                                height: "8px",
+                                background: "#2563eb",
+                                border: "1px solid white",
+                                ...(
+                                  handle.includes("top") ? { top: "-4px" } : { bottom: "-4px" }
+                                ),
+                                ...(
+                                  handle.includes("left") ? { left: "-4px" } : { right: "-4px" }
+                                ),
+                                cursor:
+                                  handle === "top-left" || handle === "bottom-right"
+                                    ? "nwse-resize"
+                                    : "nesw-resize",
+                              }}
+                              onPointerDown={(e) => handleResizePointerDown(e, i, handle)}
+                            />
+                          ))}
+                          {/* Edge handles */}
+                          {(["top", "bottom", "left", "right"] as const).map((handle) => (
+                            <div
+                              key={handle}
+                              className="absolute z-30"
+                              style={{
+                                background: "#2563eb",
+                                border: "1px solid white",
+                                ...(
+                                  handle === "top"
+                                    ? { top: "-4px", left: "50%", transform: "translateX(-50%)", width: "20px", height: "6px", cursor: "ns-resize" }
+                                    : handle === "bottom"
+                                    ? { bottom: "-4px", left: "50%", transform: "translateX(-50%)", width: "20px", height: "6px", cursor: "ns-resize" }
+                                    : handle === "left"
+                                    ? { left: "-4px", top: "50%", transform: "translateY(-50%)", width: "6px", height: "20px", cursor: "ew-resize" }
+                                    : { right: "-4px", top: "50%", transform: "translateY(-50%)", width: "6px", height: "20px", cursor: "ew-resize" }
+                                ),
+                              }}
+                              onPointerDown={(e) => handleResizePointerDown(e, i, handle)}
+                            />
+                          ))}
+                        </>
+                      )}
                     </div>
                   );
                 });
@@ -925,6 +1125,36 @@ function TemplateEditor({
                         className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
                         min={0}
                         max={100}
+                        step={0.5}
+                      />
+                    </label>
+                    <label className="text-[10px] text-zinc-500">
+                      Width%
+                      <input
+                        type="number"
+                        value={field.widthPercent != null ? Math.round(field.widthPercent * 10) / 10 : ""}
+                        placeholder="auto"
+                        onChange={(e) =>
+                          updateField(i, "widthPercent", e.target.value === "" ? null : parseFloat(e.target.value) || null)
+                        }
+                        className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                        min={2}
+                        max={80}
+                        step={0.5}
+                      />
+                    </label>
+                    <label className="text-[10px] text-zinc-500">
+                      Height%
+                      <input
+                        type="number"
+                        value={field.heightPercent != null ? Math.round(field.heightPercent * 10) / 10 : ""}
+                        placeholder="auto"
+                        onChange={(e) =>
+                          updateField(i, "heightPercent", e.target.value === "" ? null : parseFloat(e.target.value) || null)
+                        }
+                        className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                        min={1}
+                        max={50}
                         step={0.5}
                       />
                     </label>

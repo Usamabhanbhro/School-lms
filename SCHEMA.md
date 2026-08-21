@@ -168,6 +168,7 @@ Visual template for document print layout. Admin uploads a background image and 
 ### TemplateField
 A single field placement on a template. Positioned at percentage-based coordinates so the print view scales correctly regardless of screen size.
 - Fields: `templateId`, `fieldKey` (string — e.g. `studentName`, `guardianName`, `classSection`), `xPercent` (0-100), `yPercent` (0-100), `fontSize` (px), `textAlign` (enum: `left`, `center`, `right`)
+- Dimensions (nullable for backward compatibility): `widthPercent` (field width as % of template), `heightPercent` (field height as % of template). When null, field auto-sizes to content.
 - Rich formatting (all nullable for backward compatibility): `fontFamily` (CSS font-family string), `fontColor` (CSS color — e.g. `#000000`), `fontWeight` (`normal` or `bold`), `fontStyle` (`normal` or `italic`), `textDecoration` (`none` or `underline`)
 - Note: the same `fieldKey` can appear multiple times on a Fee Challan template (once per copy — Bank, Student, School)
 
@@ -196,4 +197,5 @@ Immutable audit record for ADMIN/ACADEMICS attendance edits. Every edit by Admin
 - **Migration `20260820130000_add_academics_profile_table`**: Creates `AcademicsProfile` table missing from the init migration
 - **Migration `20260821100000_add_student_id_roll_number_and_audit_trail`**: Adds `studentId` (unique, nullable) and `rollNumber` (nullable) to Student for Admin/ACADEMICS-assigned identifiers; creates `AttendanceAuditLog` table for immutable audit trail of attendance edits by Admin/Academics
 - **Migration `20260821140000_add_template_field_rich_formatting`**: Adds `fontFamily`, `fontColor`, `fontWeight`, `fontStyle`, `textDecoration` columns to TemplateField for rich text formatting in the template editor. All nullable for backward compatibility with existing templates.
-- The full chain (11 migrations) was validated from an empty database with `prisma migrate reset --force`
+- **Migration `20260821150000_add_template_field_dimensions`**: Adds `widthPercent` and `heightPercent` columns to TemplateField for resizable fields in the template editor. Nullable for backward compatibility — null means auto-size to content.
+- The full chain (12 migrations) was validated from an empty database with `prisma migrate reset --force`
