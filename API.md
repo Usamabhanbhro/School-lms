@@ -194,6 +194,11 @@ NextAuth handler — login/logout/session. Credentials provider only.
 
 ## Student Attendance
 
+### GET /api/attendance/classes
+**Role required:** Admin, Academics, Teacher
+**Purpose:** Get class sections available for attendance marking. Teacher sees only classes where they are the active Class Teacher. Admin/Academics see all.
+**Status:** implemented
+
 ### GET /api/attendance
 **Role required:** Admin (any class); Teacher (only if active Class Teacher); Academics (read-only, any class)
 **Purpose:** Fetch attendance records, filterable by classSectionId, date, studentId, from/to date range

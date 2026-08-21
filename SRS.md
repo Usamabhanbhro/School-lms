@@ -168,6 +168,8 @@ Multiple accounts, scoped to assignments. Two assignment types: Class Teacher (o
 
 Class Teachers mark student attendance for their assigned class: draft → confirm (lock). Once locked, only Admin or Academics can edit the record (see §1.5). CSV export available for the teacher's own class.
 
+The teacher attendance page only shows classes where the teacher is the active Class Teacher — not classes where they are only a Subject Teacher. This ensures the attendance UI matches the actual permission scope.
+
 ### 2.2 Tests & Marks
 
 Subject Teachers create tests (title, date, max marks) scoped to their class+subject assignment, then enter marks per student against each test.

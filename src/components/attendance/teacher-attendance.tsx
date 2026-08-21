@@ -88,12 +88,12 @@ export function TeacherAttendance() {
   const [isLocked, setIsLocked] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(false);
 
-  // ─── Load class sections ────────────────────────────────────────
+  // ─── Load class sections (only classes where teacher is Class Teacher) ──
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/class-sections");
+        const res = await fetch("/api/attendance/classes");
         if (!res.ok) throw new Error("Failed to load classes");
         const json = await res.json();
         setClasses(json.data ?? []);
