@@ -23,9 +23,15 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.username || !credentials?.password) {
           return null;
         }
+        // Case-insensitive identifier match so "User@School.edu" and
+        // "user@school.edu" both resolve to the same account.
+        const identifier = credentials.username.trim();
         const user = await prisma.user.findFirst({
           where: {
-            OR: [{ username: credentials.username }, { email: credentials.username }],
+            OR: [
+              { username: { equals: identifier, mode: "insensitive" } },
+              { email: { equals: identifier, mode: "insensitive" } },
+            ],
           },
         });
         if (!user || !user.isActive) return null;

@@ -85,9 +85,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check for duplicate email
-    const existingEmail = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
+    // Check for duplicate email — case-insensitive so pre-normalization
+    // mixed-case rows are still caught
+    const existingEmail = await prisma.user.findFirst({
+      where: { email: { equals: normalizedEmail, mode: "insensitive" } },
     });
 
     if (existingEmail) {

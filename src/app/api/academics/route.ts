@@ -56,7 +56,9 @@ const createAcademicsSchema = z.object({
   email: z
     .union([z.email(), z.literal("")])
     .optional()
-    .transform((value) => (value === "" ? undefined : value)),
+    .transform((value) =>
+      value === "" || value === undefined ? undefined : value.trim().toLowerCase(),
+    ),
   password: z.string().min(8).max(100),
 });
 
@@ -69,7 +71,10 @@ export async function POST(request: Request) {
     const passwordHash = await bcrypt.hash(body.password, 12);
 
     const result = await prisma.$transaction(async (tx) => {
-      const username = body.email?.split("@")[0] ?? body.cnic.replace(/-/g, "");
+      // Usernames derived from the email prefix are lowercased too so login
+      // (case-insensitive) and storage stay consistent.
+      const username =
+        body.email?.split("@")[0].toLowerCase() ?? body.cnic.replace(/-/g, "");
       const user = await tx.user.create({
         data: {
           username,

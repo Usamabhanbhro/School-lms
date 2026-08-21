@@ -351,10 +351,11 @@ export function TestManagement() {
               </label>
               <input
                 id="test-date"
-                type="date"
-                value={testDate}
-                onChange={(e) => setTestDate(e.target.value)}
-                className="h-10 border border-border bg-bg px-4 text-sm text-text"
+              type="date"
+              value={testDate}
+              max={todayStr()}
+              onChange={(e) => setTestDate(e.target.value)}
+              className="h-10 border border-border bg-bg px-4 text-sm text-text"
               />
             </div>
 

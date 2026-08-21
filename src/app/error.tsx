@@ -14,13 +14,16 @@ export default function ErrorPage({ reset }: { reset: () => void }) {
         <h1 className="text-xl font-bold">Something went wrong</h1>
         <p className="mt-2 text-sm text-text/60">
           An unexpected error occurred while loading this page. Try again, or
-          return to the home page.
+          return to your dashboard.
         </p>
         <div className="mt-6 flex flex-col gap-4">
           <Button type="button" onClick={reset}>
             Try again
           </Button>
-          <Link href="/" className="text-sm font-medium text-primary underline underline-offset-2">
+          {/* /dashboard is role-aware: signed-in users land on their workspace,
+              anonymous users are redirected to /login. Linking to "/" instead
+              dumped authenticated users onto the public landing page. */}
+          <Link href="/dashboard" className="text-sm font-medium text-primary underline underline-offset-2">
             Back to home
           </Link>
         </div>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export function LoginForm() {
   const router = useRouter();
@@ -68,10 +69,9 @@ export function LoginForm() {
           <label htmlFor="password" className="text-sm font-medium">
             Password
           </label>
-          <Input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="current-password"

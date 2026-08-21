@@ -74,13 +74,16 @@ export async function POST(request: Request) {
 
     const body = recoverSchema.parse(await request.json());
 
+    // Case-insensitive identifier match (emails are stored lowercased)
+    const identifier = body.usernameOrEmail.trim().toLowerCase();
+
     // Find the Admin user (same query regardless of existence to prevent timing leak)
     const admin = await prisma.user.findFirst({
       where: {
         role: "ADMIN",
         OR: [
-          { username: body.usernameOrEmail },
-          { email: body.usernameOrEmail },
+          { username: { equals: identifier, mode: "insensitive" } },
+          { email: { equals: identifier, mode: "insensitive" } },
         ],
       },
       select: { id: true },

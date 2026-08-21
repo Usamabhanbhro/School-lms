@@ -20,7 +20,9 @@ const createTeacherSchema = z.object({
   email: z
     .union([z.email(), z.literal("")])
     .optional()
-    .transform((value) => (value === "" ? undefined : value)),
+    .transform((value) =>
+      value === "" || value === undefined ? undefined : value.trim().toLowerCase(),
+    ),
   password: z.string().min(8).max(100),
 });
 
@@ -70,7 +72,10 @@ export async function POST(request: Request) {
 
     // Create User (auth identity) + TeacherProfile in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      const username = body.email?.split("@")[0] ?? body.cnic.replace(/-/g, "");
+      // Usernames derived from the email prefix are lowercased too so login
+      // (case-insensitive) and storage stay consistent.
+      const username =
+        body.email?.split("@")[0].toLowerCase() ?? body.cnic.replace(/-/g, "");
       const user = await tx.user.create({
         data: {
           username,

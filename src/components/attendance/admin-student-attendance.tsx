@@ -206,6 +206,7 @@ export function AdminStudentAttendance({ readOnly = false }: { readOnly?: boolea
               id="admin-date-input"
               type="date"
               value={date}
+              max={todayStr()}
               onChange={(e) => setDate(e.target.value)}
               className="h-10 border border-border bg-bg px-4 text-sm text-text"
             />

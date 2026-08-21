@@ -21,7 +21,9 @@ export default function NotFound() {
         <p className="mt-2 text-sm text-text/60">
           The page you are looking for does not exist or has moved.
         </p>
-        <Link href="/" className={buttonClasses("primary", "mt-6 w-full")}>
+        {/* /dashboard is role-aware: signed-in users land on their workspace,
+            anonymous users are redirected to /login. */}
+        <Link href="/dashboard" className={buttonClasses("primary", "mt-6 w-full")}>
           Back to home
         </Link>
       </div>

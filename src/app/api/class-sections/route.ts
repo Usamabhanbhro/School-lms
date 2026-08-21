@@ -30,6 +30,12 @@ export async function GET() {
             },
           },
         },
+        subjectTeacherAssignments: {
+          include: {
+            teacher: { select: { id: true, name: true } },
+            subject: { select: { id: true, name: true } },
+          },
+        },
         _count: { select: { students: true } },
       },
       orderBy: [{ className: "asc" }, { sectionName: "asc" }],

@@ -19,7 +19,9 @@ const editTeacherSchema = z.object({
   email: z
     .union([z.email(), z.literal("")])
     .optional()
-    .transform((value) => (value === "" ? undefined : value)),
+    .transform((value) =>
+      value === "" || value === undefined ? undefined : value.trim().toLowerCase(),
+    ),
   isActive: z.boolean().optional(),
 });
 

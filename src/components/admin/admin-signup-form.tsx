@@ -7,6 +7,7 @@ import { signIn } from "next-auth/react";
 import { Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 
 /**
  * Admin Signup Form — client component.
@@ -206,9 +207,8 @@ export function AdminSignupForm() {
           <label htmlFor="password" className="text-sm font-medium">
             Password
           </label>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Minimum 8 characters"
@@ -221,9 +221,8 @@ export function AdminSignupForm() {
           <label htmlFor="confirmPassword" className="text-sm font-medium">
             Confirm Password
           </label>
-          <Input
+          <PasswordInput
             id="confirmPassword"
-            type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Re-enter password"

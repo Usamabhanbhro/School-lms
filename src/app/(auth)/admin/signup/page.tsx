@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AdminSignupForm } from "@/components/admin/admin-signup-form";
@@ -7,6 +8,12 @@ import { buttonClasses } from "@/components/ui/button";
 export const metadata: Metadata = {
   title: "Admin Setup",
 };
+
+// Must render per-request: whether an Admin exists changes at runtime, and a
+// statically prerendered page would keep showing the signup form forever.
+// `headers()` call below also guarantees dynamic rendering — no CDN cache
+// can serve a stale "no admin" version after an admin has been created.
+export const dynamic = "force-dynamic";
 
 /**
  * Admin Signup Page — First Admin Provisioning
@@ -19,6 +26,10 @@ export const metadata: Metadata = {
  * and the UI never exposes the form when registration would be rejected.
  */
 export default async function AdminSignupPage() {
+  // Touch headers() to guarantee dynamic rendering — prevents any CDN or
+  // build-time cache from serving a stale page after an admin exists.
+  await headers();
+
   // Check if any Admin user already exists
   const existingAdmin = await prisma.user.findFirst({
     where: { role: "ADMIN" },

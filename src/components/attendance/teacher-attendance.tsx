@@ -226,6 +226,9 @@ export function TeacherAttendance() {
       await loadRecords();
     } catch {
       addToast("error", "Network error. Please try again.");
+    } finally {
+      // Reset in all paths — previously only error paths reset this, leaving
+      // the button permanently disabled after a successful save.
       setSaving(false);
     }
   }, [selectedClassId, date, students, localStatus, addToast, loadRecords]);
@@ -255,8 +258,9 @@ export function TeacherAttendance() {
       await loadRecords();
     } catch {
       addToast("error", "Network error. Please try again.");
-      setConfirming(false);
       setConfirmDialog(false);
+    } finally {
+      setConfirming(false);
     }
   }, [selectedClassId, date, addToast, loadRecords]);
 
@@ -331,6 +335,7 @@ export function TeacherAttendance() {
               id="date-input"
               type="date"
               value={date}
+              max={todayStr()}
               onChange={(e) => setDate(e.target.value)}
               className="h-10 border border-border bg-bg px-4 text-sm text-text"
             />

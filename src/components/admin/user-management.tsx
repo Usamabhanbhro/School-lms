@@ -17,6 +17,7 @@ import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -612,9 +613,8 @@ export function UserManagement() {
                 >
                   Password *
                 </label>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   value={form.password}
                   onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
                   aria-invalid={!!fieldErrors.password}
@@ -874,9 +874,8 @@ export function UserManagement() {
               >
                 New Password *
               </label>
-              <Input
+              <PasswordInput
                 id="new-password"
-                type="password"
                 value={newPassword}
                 onChange={(e) => {
                   setNewPassword(e.target.value);

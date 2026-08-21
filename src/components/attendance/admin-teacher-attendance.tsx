@@ -130,6 +130,7 @@ export function AdminTeacherAttendance() {
 
         addToast("success", "Attendance saved.");
         await loadRecords();
+        setSaving(null);
       } catch {
         addToast("error", "Network error. Please try again.");
         setSaving(null);
@@ -164,6 +165,7 @@ export function AdminTeacherAttendance() {
               id="teacher-att-date"
               type="date"
               value={date}
+              max={todayStr()}
               onChange={(e) => setDate(e.target.value)}
               className="h-10 border border-border bg-bg px-4 text-sm text-text"
             />

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Copy, KeyRound, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 
 /**
  * Admin Recovery Form — client component.
@@ -310,9 +311,8 @@ export function AdminRecoverForm() {
           <label htmlFor="newPassword" className="text-sm font-medium">
             New password
           </label>
-          <Input
+          <PasswordInput
             id="newPassword"
-            type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             placeholder="Minimum 8 characters"
@@ -325,9 +325,8 @@ export function AdminRecoverForm() {
           <label htmlFor="confirmPassword" className="text-sm font-medium">
             Confirm new password
           </label>
-          <Input
+          <PasswordInput
             id="confirmPassword"
-            type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Re-enter password"

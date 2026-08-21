@@ -51,6 +51,11 @@ interface StudentForm {
   classSectionId: string;
 }
 
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function emptyForm(): StudentForm {
   return {
     name: "",
@@ -353,6 +358,7 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
                 id="dateOfBirth"
                 type="date"
                 value={form.dateOfBirth}
+                max={todayStr()}
                 onChange={(e) => setForm((f) => ({ ...f, dateOfBirth: e.target.value }))}
                 aria-invalid={!!fieldErrors.dateOfBirth}
                 aria-describedby={fieldErrors.dateOfBirth ? "dob-error" : undefined}
@@ -369,6 +375,7 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
                 id="admissionDate"
                 type="date"
                 value={form.admissionDate}
+                max={todayStr()}
                 onChange={(e) => setForm((f) => ({ ...f, admissionDate: e.target.value }))}
                 aria-invalid={!!fieldErrors.admissionDate}
                 aria-describedby={fieldErrors.admissionDate ? "adm-error" : undefined}
