@@ -62,15 +62,31 @@ One icon library only: **Lucide** (thin stroke, geometric, pairs with the square
 
 ## Tables
 
-Two density modes:
-- **Compact** — default for admin desktop views (attendance registers, gradebooks with many rows).
-- **Comfortable** — default for teacher mobile views (larger tap targets for marking attendance on a phone).
+Two density modes, controlled by a `density` prop on the `<Table>` element:
+- **Compact** (`density="compact"`, default) — admin desktop views (attendance registers, gradebooks with many rows). `px-3 py-1.5` cell padding.
+- **Comfortable** (`density="comfortable"`) — teacher mobile views (larger tap targets for marking attendance on a phone). `px-4 py-3` cell padding.
+
+Density cascades to all `th` and `td` descendants via Tailwind's child selector (`[*:where(th,td)]`).
 
 ## Status & Feedback
 
-- **Toasts**: square, left accent bar (blue/green/red by type), top-right or bottom-right, auto-dismiss with a visible progress bar.
+- **Toasts**: square, left accent bar (blue/green/red by type), top-right or bottom-right, auto-dismiss with a visible CSS-animated progress bar that drains from 100% to 0% over 4 seconds. Dismiss button (X icon) on the right. Icon: `CheckCircle2` for success, `XCircle` for error.
+- **Confirm dialogs**: shared `ConfirmDialog` component with icon, title, description, and action buttons. Do not hand-roll inline confirmation modals — use the shared component for all destructive or irreversible actions.
 - **Empty states**: plain and instructional, no illustrations. State what's missing + a clear primary action (e.g. "No students enrolled in this class yet" + "Add student" button).
 - **Errors**: interface voice, not personified. State what happened and how to fix it. Never vague, never apologetic.
+
+### Status indicators
+Status must **never** rely on color alone — pair color with a shape or icon:
+
+| Status | Icon | Color |
+|---|---|---|
+| Present | `CheckCircle2` | success |
+| Absent | `XCircle` | danger |
+| Leave | `Minus` | primary |
+| Locked | `Lock` | success |
+| Unlocked / Draft | `Unlock` | neutral |
+
+This applies to attendance status buttons, status display badges, and any other visible state indicator.
 
 ## Loading States
 

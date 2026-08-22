@@ -47,6 +47,16 @@ body {
   }
 }
 
+/* ─── Toast progress bar animation ──────────────────────────────── */
+@keyframes toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
 /* ─── Print stylesheet (Phase 6) ──────────────────────────────────── */
 @media print {
   /* Hide all screen-only chrome */

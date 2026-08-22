@@ -8,6 +8,7 @@ import {
   Edit3,
   Loader2,
   Lock,
+  Minus,
   Unlock,
   XCircle,
 } from "lucide-react";
@@ -52,10 +53,15 @@ function todayStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-const STATUS_OPTIONS: { value: StatusOption; label: string; color: string }[] = [
-  { value: "PRESENT", label: "P", color: "border-success/30 bg-success/10 text-success" },
-  { value: "ABSENT", label: "A", color: "border-danger/30 bg-danger/10 text-danger" },
-  { value: "LEAVE", label: "L", color: "border-primary/30 bg-primary/10 text-primary" },
+const STATUS_OPTIONS: {
+  value: StatusOption;
+  label: string;
+  icon: typeof CheckCircle2;
+  color: string;
+}[] = [
+  { value: "PRESENT", label: "Present", icon: CheckCircle2, color: "border-success/30 bg-success/10 text-success" },
+  { value: "ABSENT", label: "Absent", icon: XCircle, color: "border-danger/30 bg-danger/10 text-danger" },
+  { value: "LEAVE", label: "Leave", icon: Minus, color: "border-primary/30 bg-primary/10 text-primary" },
 ];
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -291,6 +297,13 @@ export function AdminStudentAttendance({ readOnly = false }: { readOnly?: boolea
                               : "border-primary/30 bg-primary/10 text-primary",
                         )}
                       >
+                        {r.status === "PRESENT" ? (
+                          <CheckCircle2 className="size-3" aria-hidden="true" />
+                        ) : r.status === "ABSENT" ? (
+                          <XCircle className="size-3" aria-hidden="true" />
+                        ) : (
+                          <Minus className="size-3" aria-hidden="true" />
+                        )}
                         {r.status}
                       </span>
                     </TD>
@@ -317,30 +330,33 @@ export function AdminStudentAttendance({ readOnly = false }: { readOnly?: boolea
                     {!readOnly && (
                       <TD className="text-center">
                         <div className="flex justify-center gap-1">
-                          {STATUS_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              onClick={() => handleOverride(r.id, opt.value)}
-                              disabled={overriding === r.id}
-                              className={cn(
-                                "inline-flex h-7 w-7 items-center justify-center border text-xs font-bold",
-                                r.status === opt.value
-                                  ? opt.color
-                                  : "border-border bg-bg text-text/30",
-                                "cursor-pointer hover:border-text/20",
-                                overriding === r.id && "opacity-50",
-                              )}
-                              aria-label={`Override ${r.student.name} to ${opt.value}`}
-                              title={`Set ${opt.value}`}
-                            >
+                          {STATUS_OPTIONS.map((opt) => {
+                            const StatusIcon = opt.icon;
+                            return (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => handleOverride(r.id, opt.value)}
+                                disabled={overriding === r.id}
+                                className={cn(
+                                  "inline-flex h-7 w-7 items-center justify-center border",
+                                  r.status === opt.value
+                                    ? opt.color
+                                    : "border-border bg-bg text-text/30",
+                                  "cursor-pointer hover:border-text/20",
+                                  overriding === r.id && "opacity-50",
+                                )}
+                                aria-label={`Override ${r.student.name} to ${opt.label}`}
+                                title={`Set ${opt.label}`}
+                              >
                               {overriding === r.id ? (
                                 <Loader2 className="size-3 animate-spin" />
                               ) : (
-                                opt.label
+                                <StatusIcon className="size-3.5" aria-hidden="true" />
                               )}
                             </button>
-                          ))}
+                            );
+                          })}
                         </div>
                       </TD>
                     )}

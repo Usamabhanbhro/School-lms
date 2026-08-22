@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Download,
   Loader2,
+  Minus,
   XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,10 +48,15 @@ function todayStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-const STATUS_OPTIONS: { value: StatusOption; label: string; color: string }[] = [
-  { value: "PRESENT", label: "P", color: "border-success/30 bg-success/10 text-success" },
-  { value: "ABSENT", label: "A", color: "border-danger/30 bg-danger/10 text-danger" },
-  { value: "LEAVE", label: "L", color: "border-primary/30 bg-primary/10 text-primary" },
+const STATUS_OPTIONS: {
+  value: StatusOption;
+  label: string;
+  icon: typeof CheckCircle2;
+  color: string;
+}[] = [
+  { value: "PRESENT", label: "Present", icon: CheckCircle2, color: "border-success/30 bg-success/10 text-success" },
+  { value: "ABSENT", label: "Absent", icon: XCircle, color: "border-danger/30 bg-danger/10 text-danger" },
+  { value: "LEAVE", label: "Leave", icon: Minus, color: "border-primary/30 bg-primary/10 text-primary" },
 ];
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -238,30 +244,33 @@ export function AdminTeacherAttendance() {
                       <TD className="tabular-nums text-text/60">{t.phone}</TD>
                       <TD>
                         <div className="flex justify-center gap-1">
-                          {STATUS_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              onClick={() => handleSave(t.id, opt.value)}
-                              disabled={saving === t.id}
-                              className={cn(
-                                "inline-flex h-8 w-8 items-center justify-center border text-xs font-bold",
-                                currentStatus === opt.value
-                                  ? opt.color
-                                  : "border-border bg-bg text-text/30",
-                                "cursor-pointer hover:border-text/20",
-                                saving === t.id && "opacity-50",
-                              )}
-                              aria-label={`${t.name}: ${opt.value}`}
-                              title={`Mark ${opt.value}`}
-                            >
+                          {STATUS_OPTIONS.map((opt) => {
+                            const StatusIcon = opt.icon;
+                            return (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => handleSave(t.id, opt.value)}
+                                disabled={saving === t.id}
+                                className={cn(
+                                  "inline-flex h-8 w-8 items-center justify-center border",
+                                  currentStatus === opt.value
+                                    ? opt.color
+                                    : "border-border bg-bg text-text/30",
+                                  "cursor-pointer hover:border-text/20",
+                                  saving === t.id && "opacity-50",
+                                )}
+                                aria-label={`${t.name}: ${opt.label}`}
+                                title={`Mark ${opt.label}`}
+                              >
                               {saving === t.id ? (
                                 <Loader2 className="size-3 animate-spin" />
                               ) : (
-                                opt.label
+                                <StatusIcon className="size-4" aria-hidden="true" />
                               )}
                             </button>
-                          ))}
+                            );
+                          })}
                         </div>
                       </TD>
                     </TR>

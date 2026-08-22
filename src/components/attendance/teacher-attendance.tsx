@@ -7,12 +7,14 @@ import {
   Download,
   Loader2,
   Lock,
+  Minus,
   Save,
   Unlock,
   XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,10 +61,15 @@ function todayStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-const STATUS_OPTIONS: { value: StatusOption; label: string; color: string }[] = [
-  { value: "PRESENT", label: "P", color: "border-success/30 bg-success/10 text-success" },
-  { value: "ABSENT", label: "A", color: "border-danger/30 bg-danger/10 text-danger" },
-  { value: "LEAVE", label: "L", color: "border-primary/30 bg-primary/10 text-primary" },
+const STATUS_OPTIONS: {
+  value: StatusOption;
+  label: string;
+  icon: typeof CheckCircle2;
+  color: string;
+}[] = [
+  { value: "PRESENT", label: "Present", icon: CheckCircle2, color: "border-success/30 bg-success/10 text-success" },
+  { value: "ABSENT", label: "Absent", icon: XCircle, color: "border-danger/30 bg-danger/10 text-danger" },
+  { value: "LEAVE", label: "Leave", icon: Minus, color: "border-primary/30 bg-primary/10 text-primary" },
 ];
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -301,9 +308,9 @@ export function TeacherAttendance() {
 
       {/* Selection bar */}
       <Card className="mb-6 p-4">
-        <div className="flex flex-wrap items-end gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:flex-wrap">
           {/* Class Section */}
-          <div className="min-w-[200px]">
+          <div className="w-full min-w-0 sm:min-w-[200px]">
             <label htmlFor="class-select" className="mb-1 block text-xs font-medium text-text/60">
               Class Section
             </label>
@@ -337,12 +344,12 @@ export function TeacherAttendance() {
               value={date}
               max={todayStr()}
               onChange={(e) => setDate(e.target.value)}
-              className="h-10 border border-border bg-bg px-4 text-sm text-text"
+              className="h-10 w-full border border-border bg-bg px-4 text-sm text-text sm:w-auto"
             />
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {isLocked && (
               <span className="inline-flex h-10 items-center gap-1 border border-success/30 bg-success/10 px-3 text-xs font-semibold text-success">
                 <Lock className="size-3" aria-hidden="true" />
@@ -414,16 +421,15 @@ export function TeacherAttendance() {
         />
       ) : (
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <THead>
-                <TR>
-                  <TH className="w-8">#</TH>
-                  <TH>Student Name</TH>
-                  <TH>Guardian</TH>
-                  <TH className="text-center">Status</TH>
-                </TR>
-              </THead>
+          <div className="overflow-x-auto">                <Table density="comfortable">
+                  <THead>
+                    <TR>
+                      <TH className="w-8">#</TH>
+                      <TH>Student Name</TH>
+                      <TH>Guardian</TH>
+                      <TH className="text-center">Status</TH>
+                    </TR>
+                  </THead>
               <TBody>
                 {students.map((s, i) => {
                   const status = localStatus[s.id] ?? "PRESENT";
@@ -434,27 +440,30 @@ export function TeacherAttendance() {
                       <TD className="text-text/60">{s.guardianName}</TD>
                       <TD>
                         <div className="flex justify-center gap-1">
-                          {STATUS_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              onClick={() => setStatus(s.id, opt.value)}
-                              disabled={isLocked}
-                              className={cn(
-                                "inline-flex h-8 w-8 items-center justify-center border text-xs font-bold",
-                                status === opt.value
-                                  ? opt.color
-                                  : "border-border bg-bg text-text/30",
-                                isLocked
-                                  ? "cursor-default opacity-60"
-                                  : "cursor-pointer hover:border-text/20",
-                              )}
-                              aria-label={`${s.name}: ${opt.value}`}
-                              title={opt.value}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
+                          {STATUS_OPTIONS.map((opt) => {
+                            const StatusIcon = opt.icon;
+                            return (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setStatus(s.id, opt.value)}
+                                disabled={isLocked}
+                                className={cn(
+                                  "inline-flex h-8 w-8 items-center justify-center border",
+                                  status === opt.value
+                                    ? opt.color
+                                    : "border-border bg-bg text-text/30",
+                                  isLocked
+                                    ? "cursor-default opacity-60"
+                                    : "cursor-pointer hover:border-text/20",
+                                )}
+                                aria-label={`${s.name}: ${opt.label}`}
+                                title={opt.label}
+                              >
+                                <StatusIcon className="size-4" aria-hidden="true" />
+                              </button>
+                            );
+                          })}
                         </div>
                       </TD>
                     </TR>
@@ -466,55 +475,27 @@ export function TeacherAttendance() {
         </Card>
       )}
 
-      {/* Confirm Dialog */}
-      {confirmDialog && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          onClick={() => setConfirmDialog(false)}
-          onKeyDown={(e) => e.key === "Escape" && setConfirmDialog(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="confirm-lock-title"
-        >
-          <Card
-            className="mx-4 w-full max-w-md p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center border border-danger/20 bg-danger/10">
-                <Lock className="size-5 text-danger" aria-hidden="true" />
-              </div>
-              <div>
-                <h3 id="confirm-lock-title" className="text-base font-semibold">
-                  Confirm &amp; Lock Attendance
-                </h3>
-                <p className="text-sm text-text/60">This action cannot be undone.</p>
-              </div>
-            </div>
-            <p className="mb-6 text-sm text-text/70">
-              You are about to lock attendance for{" "}
-              <strong>
-                {selectedClass?.className} — {selectedClass?.sectionName}
-              </strong>{" "}
-              on <strong>{date}</strong>. Once confirmed, this attendance sheet
-              becomes read-only. Only an Administrator can override locked records.
-            </p>
-            <div className="flex gap-3">
-              <Button onClick={handleConfirm} disabled={confirming}>
-                {confirming && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
-                Confirm &amp; Lock
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => setConfirmDialog(false)}
-                disabled={confirming}
-              >
-                Cancel
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
+      {/* Confirm Lock Dialog — uses shared ConfirmDialog */}
+      <ConfirmDialog
+        open={confirmDialog}
+        onOpenChange={setConfirmDialog}
+        icon={Lock}
+        iconVariant="danger"
+        title="Confirm & Lock Attendance"
+        confirmLabel="Confirm & Lock"
+        confirmVariant="danger"
+        loading={confirming}
+        onConfirm={handleConfirm}
+      >
+        <p>
+          Lock attendance for{' '}
+          <strong>
+            {selectedClass?.className} — {selectedClass?.sectionName}
+          </strong>{' '}
+          on <strong>{date}</strong>. Once confirmed, this attendance sheet
+          becomes read-only. Only an Administrator can override locked records.
+        </p>
+      </ConfirmDialog>
     </>
   );
 }
