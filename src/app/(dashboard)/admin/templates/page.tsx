@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { TemplateManagement } from "@/components/templates/template-management";
 
 export const metadata = {
-  title: "Document Templates | School LMS",
+  title: "Document Templates",
 };
 
 export default async function AdminTemplatesPage() {

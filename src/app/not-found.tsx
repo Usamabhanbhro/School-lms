@@ -1,20 +1,29 @@
 import Link from "next/link";
 import { GraduationCap } from "lucide-react";
 import { buttonClasses } from "@/components/ui/button";
+import { getSchoolSettings } from "@/lib/school-settings";
 
 /**
  * Generic not-found state for the foundation shell, per DESIGN.md (plain,
  * instructional, no illustrations). Not feature-specific — the SRS decides
  * what content the app eventually ships.
  */
-export default function NotFound() {
+export default async function NotFound() {
+  const school = await getSchoolSettings();
+  const schoolName = school.schoolName && school.schoolName !== "[SCHOOL NAME]" ? school.schoolName : null;
+  const logoPath = school.logoPath;
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12">
       <Link href="/" className="flex items-center gap-2 text-sm font-semibold">
-        <span className="flex size-8 items-center justify-center border border-border bg-surface">
-          <GraduationCap className="size-4" aria-hidden="true" />
+        <span className="flex size-9 items-center justify-center border border-border bg-surface">
+          {logoPath ? (
+            <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-7 object-contain" />
+          ) : (
+            <GraduationCap className="size-5" aria-hidden="true" />
+          )}
         </span>
-        School LMS
+        {schoolName || "School LMS"}
       </Link>
       <div className="mt-8 w-full max-w-sm border border-border bg-bg p-8 text-center">
         <h1 className="text-xl font-bold">Page not found</h1>

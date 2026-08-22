@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { getSchoolSettings } from "@/lib/school-settings";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -8,14 +9,22 @@ const inter = Inter({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "School LMS",
-    template: "%s · School LMS",
-  },
-  description:
-    "Attendance, gradebooks, assignments, timetables, and communication for schools — built for admin, teacher, student, and parent roles.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const school = await getSchoolSettings();
+  const schoolName =
+    school.schoolName && school.schoolName !== "[SCHOOL NAME]"
+      ? school.schoolName
+      : "School LMS";
+
+  return {
+    title: {
+      default: schoolName,
+      template: `%s · ${schoolName}`,
+    },
+    description:
+      "Attendance, gradebooks, assignments, timetables, and communication for schools — built for admin, teacher, student, and parent roles.",
+  };
+}
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

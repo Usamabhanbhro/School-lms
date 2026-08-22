@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 export default function RegisterPage() {
   return (
     <div className="border border-border bg-bg p-8">
-      <h1 className="text-xl font-bold">School LMS</h1>
+      <h1 className="text-xl font-bold">Registration</h1>
       <p className="mt-4 text-sm text-text/60">
-        School LMS does not allow self-registration. Your school administrator
+        This system does not allow self-registration. Your school administrator
         creates accounts for teachers and academics staff — you&apos;ll
         receive your username and password from them.
       </p>

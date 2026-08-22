@@ -138,11 +138,11 @@ export function Sidebar({
         className="flex items-center gap-2 border-b border-border px-4 py-4"
         onClick={() => setMobileOpen(false)}
       >
-        <span className="flex size-8 shrink-0 items-center justify-center border border-border bg-surface">
+        <span className="flex size-9 shrink-0 items-center justify-center border border-border bg-surface">
           {logoPath ? (
-            <img src={logoPath} alt="" className="size-4 object-contain" />
+            <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-7 object-contain" />
           ) : (
-            <GraduationCap className="size-4" aria-hidden="true" />
+            <GraduationCap className="size-5" aria-hidden="true" />
           )}
         </span>
         <span className="text-sm font-semibold leading-tight">
@@ -244,7 +244,7 @@ export function Sidebar({
         <Link href={home} className="flex items-center gap-2 text-sm font-semibold">
           <span className="flex size-8 items-center justify-center border border-border bg-surface">
             {logoPath ? (
-              <img src={logoPath} alt="" className="size-4 object-contain" />
+              <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-6 object-contain" />
             ) : (
               <GraduationCap className="size-4" aria-hidden="true" />
             )}
