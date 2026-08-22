@@ -206,6 +206,9 @@ export function TeacherAttendance() {
     if (!selectedClassId || !date) return;
     setSaving(true);
 
+    // Snapshot current local state for rollback on failure
+    const previousStatus = { ...localStatus };
+
     const recordsPayload = students.map((s) => ({
       studentId: s.id,
       status: localStatus[s.id] ?? "PRESENT",
@@ -224,6 +227,8 @@ export function TeacherAttendance() {
 
       if (!res.ok) {
         const json = await res.json();
+        // Rollback: revert local status to snapshot
+        setLocalStatus(previousStatus);
         addToast("error", json.error?.message ?? "Failed to save attendance.");
         setSaving(false);
         return;
@@ -232,6 +237,8 @@ export function TeacherAttendance() {
       addToast("success", "Attendance saved as draft.");
       await loadRecords();
     } catch {
+      // Rollback: revert local status to snapshot
+      setLocalStatus(previousStatus);
       addToast("error", "Network error. Please try again.");
     } finally {
       // Reset in all paths — previously only error paths reset this, leaving

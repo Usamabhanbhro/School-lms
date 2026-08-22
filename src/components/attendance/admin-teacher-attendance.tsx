@@ -120,7 +120,32 @@ export function AdminTeacherAttendance() {
 
   const handleSave = useCallback(
     async (teacherId: string, status: StatusOption) => {
+      // Snapshot current state for rollback on failure
+      const previousRecords = records;
+
+      // Optimistically update the local record immediately
+      setRecords((prev) => {
+        const existing = prev.find((r) => r.teacherId === teacherId);
+        if (existing) {
+          return prev.map((r) =>
+            r.teacherId === teacherId ? { ...r, status } : r,
+          );
+        }
+        // No existing record — create a placeholder optimistic record
+        return [
+          ...prev,
+          {
+            id: `optimistic-${teacherId}`,
+            teacherId,
+            date,
+            status,
+            markedById: null,
+            teacher: { id: teacherId, name: "", phone: "" },
+          },
+        ];
+      });
       setSaving(teacherId);
+
       try {
         const res = await fetch("/api/teacher-attendance", {
           method: "POST",
@@ -130,20 +155,25 @@ export function AdminTeacherAttendance() {
 
         if (!res.ok) {
           const json = await res.json();
+          // Rollback: restore previous records
+          setRecords(previousRecords);
           addToast("error", json.error?.message ?? "Failed to save attendance.");
           setSaving(null);
           return;
         }
 
         addToast("success", "Attendance saved.");
+        // Reconcile with server
         await loadRecords();
         setSaving(null);
       } catch {
+        // Rollback: restore previous records
+        setRecords(previousRecords);
         addToast("error", "Network error. Please try again.");
         setSaving(null);
       }
     },
-    [date, addToast, loadRecords],
+    [date, records, addToast, loadRecords],
   );
 
   // ─── Build lookup ─────────────────────────────────────────────

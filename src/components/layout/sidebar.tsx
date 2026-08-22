@@ -256,11 +256,17 @@ export function Sidebar({
       {/* ─── Mobile drawer ─────────────────────────────────────── */}
       {mobileOpen && (
         <>
+          {/* Backdrop / scrim — fades in */}
           <div
             className="fixed inset-0 z-30 bg-black/40 md:hidden"
+            style={{ animation: "scrim-fade-in 150ms ease-out both" }}
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border bg-bg md:hidden">
+          {/* Drawer — slides in from the right edge */}
+          <aside
+            className="fixed inset-y-0 right-0 z-40 flex w-64 flex-col border-l border-border bg-bg md:hidden"
+            style={{ animation: "drawer-slide-in 200ms ease-out both" }}
+          >
             {navContent}
           </aside>
         </>

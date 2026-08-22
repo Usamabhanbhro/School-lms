@@ -124,11 +124,21 @@ export function AdminStudentAttendance({ readOnly = false }: { readOnly?: boolea
     loadRecords();
   }, [loadRecords]);
 
-  // ─── Admin override ──────────────────────────────────────────
+  // ─── Admin override (optimistic) ─────────────────────────────
 
   const handleOverride = useCallback(
     async (recordId: string, newStatus: StatusOption) => {
+      // Snapshot current state for rollback on failure
+      const previousRecords = records;
+
+      // Optimistically update the local record immediately
+      setRecords((prev) =>
+        prev.map((r) =>
+          r.id === recordId ? { ...r, status: newStatus } : r,
+        ),
+      );
       setOverriding(recordId);
+
       try {
         const res = await fetch(`/api/attendance/${recordId}`, {
           method: "PATCH",
@@ -138,19 +148,24 @@ export function AdminStudentAttendance({ readOnly = false }: { readOnly?: boolea
 
         if (!res.ok) {
           const json = await res.json();
+          // Rollback: restore previous records
+          setRecords(previousRecords);
           addToast("error", json.error?.message ?? "Failed to override record.");
           setOverriding(null);
           return;
         }
 
         addToast("success", "Record overridden by Admin.");
+        // Reconcile with server to get audit log IDs etc.
         await loadRecords();
       } catch {
+        // Rollback: restore previous records
+        setRecords(previousRecords);
         addToast("error", "Network error. Please try again.");
         setOverriding(null);
       }
     },
-    [addToast, loadRecords],
+    [records, addToast, loadRecords],
   );
 
   // ─── CSV Export ────────────────────────────────────────────────
