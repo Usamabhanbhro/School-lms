@@ -27,7 +27,10 @@ export async function GET() {
           select: { id: true, className: true, sectionName: true },
         },
       },
-      orderBy: { name: "asc" },
+      orderBy: [
+        { studentId: { sort: "asc", nulls: "last" } },
+        { name: "asc" },
+      ],
     });
 
     return NextResponse.json({ data: students });

@@ -47,6 +47,7 @@ interface Student {
   id: string;
   name: string;
   guardianName: string;
+  studentId: string | null;
 }
 
 type View = "list" | "create" | "marks";
@@ -430,6 +431,7 @@ export function TestManagement() {
                     <THead>
                       <TR>
                         <TH className="w-8">#</TH>
+                        <TH>Student ID</TH>
                         <TH>Student Name</TH>
                         <TH>Guardian</TH>
                         <TH className="w-32 text-center">Marks (/{selectedTest.maxMarks})</TH>
@@ -439,6 +441,7 @@ export function TestManagement() {
                       {students.map((s, i) => (
                         <TR key={s.id}>
                           <TD className="tabular-nums text-text/50">{i + 1}</TD>
+                          <TD className="tabular-nums text-text/60">{s.studentId ?? "—"}</TD>
                           <TD className="font-medium">{s.name}</TD>
                           <TD className="text-text/60">{s.guardianName}</TD>
                           <TD className="text-center">

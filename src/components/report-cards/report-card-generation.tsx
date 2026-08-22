@@ -16,6 +16,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StudentPicker } from "@/components/ui/student-picker";
+import type { StudentPickerStudent } from "@/components/ui/student-picker";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { ToastContainer, useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
@@ -29,12 +31,7 @@ interface ClassSection {
   _count: { students: number };
 }
 
-interface Student {
-  id: string;
-  name: string;
-  guardianName: string;
-  classSection: { id: string; className: string; sectionName: string };
-}
+type Student = StudentPickerStudent;
 
 interface Term {
   id: string;
@@ -52,7 +49,7 @@ interface TestRecord {
 
 interface ReportCard {
   id: string;
-  student: { id: string; name: string };
+  student: { id: string; name: string; studentId: string | null };
   classSection: { id: string; className: string; sectionName: string };
   term: { id: string; name: string };
   generatedByTeacher: { id: string; name: string };
@@ -361,20 +358,13 @@ export function ReportCardGeneration() {
               {loadingStudents ? (
                 <Skeleton className="h-10 w-full" />
               ) : (
-                <select
-                  id="rc-student"
-                  value={selectedStudentId}
-                  onChange={(e) => setSelectedStudentId(e.target.value)}
+                <StudentPicker
+                  students={students}
+                  selectedStudentId={selectedStudentId}
+                  onSelect={setSelectedStudentId}
                   disabled={!selectedClassId}
-                  className="h-10 w-full border border-border bg-bg px-4 text-sm text-text disabled:opacity-50"
-                >
-                  <option value="">Select student…</option>
-                  {students.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
+                  classSectionId={selectedClassId || undefined}
+                />
               )}
               {fieldErrors.studentId && (
                 <p className="mt-1 text-xs text-danger">{fieldErrors.studentId}</p>
@@ -562,6 +552,7 @@ export function ReportCardGeneration() {
                 <Table>
                   <THead>
                     <TR>
+                      <TH>Student ID</TH>
                       <TH>Student</TH>
                       <TH>Class</TH>
                       <TH>Term</TH>
@@ -573,6 +564,7 @@ export function ReportCardGeneration() {
                   <TBody>
                     {reportCards.map((rc) => (
                       <TR key={rc.id}>
+                        <TD className="tabular-nums text-text/60">{rc.student.studentId ?? "—"}</TD>
                         <TD className="font-medium">{rc.student.name}</TD>
                         <TD>
                           {rc.classSection.className} — {rc.classSection.sectionName}

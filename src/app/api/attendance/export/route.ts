@@ -81,7 +81,7 @@ export async function GET(request: Request) {
       },
       include: {
         student: {
-          select: { id: true, name: true, guardianName: true },
+          select: { id: true, name: true, guardianName: true, studentId: true },
         },
       },
       orderBy: { student: { name: "asc" } },
@@ -113,15 +113,16 @@ export async function GET(request: Request) {
     lines.push("");
 
     // Header row
-    lines.push("Student Name,Guardian Name,Status,Confirmed");
+    lines.push("Student ID,Student Name,Guardian Name,Status,Confirmed");
 
     // Data rows
     for (const record of records) {
+      const studentId = escapeCsvField(record.student.studentId ?? "");
       const name = escapeCsvField(record.student.name);
       const guardian = escapeCsvField(record.student.guardianName);
       const status = record.status;
       const confirmed = record.isConfirmed ? "Yes" : "No";
-      lines.push(`${name},${guardian},${status},${confirmed}`);
+      lines.push(`${studentId},${name},${guardian},${status},${confirmed}`);
     }
 
     const csv = lines.join("\n");

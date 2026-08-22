@@ -58,7 +58,7 @@ export async function GET(request: Request) {
       where,
       include: {
         student: {
-          select: { id: true, name: true, guardianName: true },
+          select: { id: true, name: true, guardianName: true, studentId: true },
         },
         classSection: {
           select: { id: true, className: true, sectionName: true },

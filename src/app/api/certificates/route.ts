@@ -21,7 +21,7 @@ export async function GET() {
     const certificates = await prisma.certificate.findMany({
       include: {
         student: {
-          select: { id: true, name: true, classSection: { select: { className: true, sectionName: true } } },
+          select: { id: true, name: true, studentId: true, classSection: { select: { className: true, sectionName: true } } },
         },
         generatedByUser: {
           select: { id: true, name: true },

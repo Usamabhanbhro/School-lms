@@ -39,7 +39,7 @@ interface AttendanceRecord {
   isConfirmed: boolean;
   markedByTeacherId: string;
   lastEditedByAdmin: string | null;
-  student: { id: string; name: string; guardianName: string };
+  student: { id: string; name: string; guardianName: string; studentId: string | null };
   classSection: { id: string; className: string; sectionName: string };
   markedByTeacher: { id: string; name: string };
 }
@@ -288,6 +288,7 @@ export function AdminStudentAttendance({ readOnly = false }: { readOnly?: boolea
               <THead>
                 <TR>
                   <TH className="w-8">#</TH>
+                  <TH>Student ID</TH>
                   <TH>Student Name</TH>
                   <TH>Guardian</TH>
                   <TH className="text-center">Status</TH>
@@ -299,6 +300,7 @@ export function AdminStudentAttendance({ readOnly = false }: { readOnly?: boolea
                 {records.map((r, i) => (
                   <TR key={r.id}>
                     <TD className="tabular-nums text-text/50">{i + 1}</TD>
+                    <TD className="tabular-nums text-text/60">{r.student.studentId ?? "—"}</TD>
                     <TD className="font-medium">{r.student.name}</TD>
                     <TD className="text-text/60">{r.student.guardianName}</TD>
                     <TD className="text-center">

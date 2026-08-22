@@ -35,6 +35,7 @@ interface Student {
   id: string;
   name: string;
   guardianName: string;
+  studentId: string | null;
   classSection: { id: string; className: string; sectionName: string };
 }
 
@@ -432,6 +433,7 @@ export function TeacherAttendance() {
                   <THead>
                     <TR>
                       <TH className="w-8">#</TH>
+                      <TH>Student ID</TH>
                       <TH>Student Name</TH>
                       <TH>Guardian</TH>
                       <TH className="text-center">Status</TH>
@@ -443,6 +445,7 @@ export function TeacherAttendance() {
                   return (
                     <TR key={s.id}>
                       <TD className="tabular-nums text-text/50">{i + 1}</TD>
+                      <TD className="tabular-nums text-text/60">{s.studentId ?? "—"}</TD>
                       <TD className="font-medium">{s.name}</TD>
                       <TD className="text-text/60">{s.guardianName}</TD>
                       <TD>

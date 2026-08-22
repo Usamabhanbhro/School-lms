@@ -31,7 +31,7 @@ interface TestRecord {
 interface MarkRecord {
   id: string;
   marksObtained: number;
-  student: { id: string; name: string };
+  student: { id: string; name: string; studentId: string | null };
 }
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -165,6 +165,7 @@ export function TestOverview() {
                       <Table>
                         <THead>
                           <TR>
+                            <TH>Student ID</TH>
                             <TH>Student</TH>
                             <TH className="text-center">Marks Obtained</TH>
                             <TH className="text-center">Max Marks</TH>
@@ -173,6 +174,7 @@ export function TestOverview() {
                         <TBody>
                           {marks[t.id]?.map((m) => (
                             <TR key={m.id}>
+                              <TD className="tabular-nums text-text/60">{m.student.studentId ?? "—"}</TD>
                               <TD className="font-medium">{m.student.name}</TD>
                               <TD className="text-center tabular-nums">{m.marksObtained}</TD>
                               <TD className="text-center tabular-nums">{t.maxMarks}</TD>

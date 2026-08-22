@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 
 interface ReportCard {
   id: string;
-  student: { id: string; name: string; guardianName: string };
+  student: { id: string; name: string; guardianName: string; studentId: string | null };
   classSection: { id: string; className: string; sectionName: string };
   term: { id: string; name: string };
   generatedByTeacher: { id: string; name: string };
@@ -117,6 +117,7 @@ export function ReportCardOverview() {
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
+                      <span className="text-xs tabular-nums text-text/50">{rc.student.studentId ?? ""}</span>
                       <span className="font-medium">{rc.student.name}</span>
                       <span className="text-xs text-text/40">•</span>
                       <span className="text-sm text-text/60">

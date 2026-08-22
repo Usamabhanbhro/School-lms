@@ -6,24 +6,19 @@ import {
   Award,
   FileText,
   Printer,
-  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StudentPicker } from "@/components/ui/student-picker";
+import type { StudentPickerStudent } from "@/components/ui/student-picker";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
 // ─── Types ──────────────────────────────────────────────────────
 
-interface Student {
-  id: string;
-  name: string;
-  guardianName: string;
-  classSection: { id: string; className: string; sectionName: string };
-}
+type Student = StudentPickerStudent;
 
 interface Certificate {
   id: string;
@@ -31,6 +26,7 @@ interface Certificate {
   student: {
     id: string;
     name: string;
+    studentId: string | null;
     classSection: { className: string; sectionName: string };
   };
   generatedByUser: { id: string; name: string };
@@ -46,7 +42,6 @@ export function CertificateGeneration() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [certType, setCertType] = useState<"LEAVING" | "CHARACTER">("LEAVING");
   const [generating, setGenerating] = useState(false);
@@ -81,12 +76,6 @@ export function CertificateGeneration() {
     fetchData();
   }, [fetchData]);
 
-  const filteredStudents = students.filter(
-    (s) =>
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.guardianName.toLowerCase().includes(search.toLowerCase()),
-  );
-
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
 
   async function handleGenerate() {
@@ -103,7 +92,6 @@ export function CertificateGeneration() {
 
       addToast("success", "Certificate generated successfully");
       setSelectedStudentId("");
-      setSearch("");
       fetchData();
 
       // Open print view
@@ -149,44 +137,12 @@ export function CertificateGeneration() {
             <label htmlFor="student-search" className="mb-1 block text-xs font-medium text-text/60">
               Student
             </label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text/40" aria-hidden="true" />
-              <Input
-                id="student-search"
-                placeholder="Search by student or guardian name…"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setSelectedStudentId("");
-                }}
-                className="pl-9"
-              />
-            </div>
-            {search && !selectedStudentId && filteredStudents.length > 0 && (
-              <div className="mt-1 max-h-48 overflow-y-auto border border-border bg-bg">
-                {filteredStudents.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedStudentId(s.id);
-                      setSearch(`${s.name} (${s.classSection.className} ${s.classSection.sectionName})`);
-                    }}
-                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-surface"
-                  >
-                    <span className="font-medium">{s.name}</span>
-                    <span className="text-xs text-text/50">
-                      {s.classSection.className} — {s.classSection.sectionName}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {selectedStudent && (
-              <p className="mt-1 text-xs text-text/50">
-                {selectedStudent.name} — Guardian: {selectedStudent.guardianName}
-              </p>
-            )}
+            <StudentPicker
+              students={students}
+              selectedStudentId={selectedStudentId}
+              onSelect={setSelectedStudentId}
+              searchPlaceholder="Search by name, guardian, or student ID…"
+            />
           </div>
 
           {/* Certificate type */}
@@ -220,13 +176,11 @@ export function CertificateGeneration() {
             disabled={!selectedStudentId || generating}
           >
             {generating ? "Generating…" : "Generate & Print"}
-          </Button>
-          {selectedStudentId && (
+          </Button>            {selectedStudentId && (
             <Button
               variant="secondary"
               onClick={() => {
                 setSelectedStudentId("");
-                setSearch("");
               }}
             >
               Clear
@@ -251,6 +205,7 @@ export function CertificateGeneration() {
             <Card key={cert.id} className="flex items-center justify-between px-4 py-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
+                  <span className="text-xs tabular-nums text-text/50">{cert.student.studentId ?? ""}</span>
                   <span className="font-medium">{cert.student.name}</span>
                   <span className="text-xs text-text/40">•</span>
                   <span className="text-sm text-text/60">

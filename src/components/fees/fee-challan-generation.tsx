@@ -7,26 +7,21 @@ import {
   Minus,
   Plus,
   Printer,
-  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StudentPicker } from "@/components/ui/student-picker";
+import type { StudentPickerStudent } from "@/components/ui/student-picker";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
 // ─── Types ──────────────────────────────────────────────────────
 
-interface Student {
-  id: string;
-  name: string;
-  guardianName: string;
-  guardianCnic: string;
-  classSection: { id: string; className: string; sectionName: string };
-}
+type Student = StudentPickerStudent & { guardianCnic: string };
 
 interface BankSettings {
   bankName: string;
@@ -63,7 +58,6 @@ export function FeeChallanGeneration() {
   const [challans, setChallans] = useState<FeeChallan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [lineItems, setLineItems] = useState<Array<{ description: string; amount: number }>>([
     { description: "Base Fee", amount: 0 },
@@ -121,12 +115,6 @@ export function FeeChallanGeneration() {
     }
   }, [historyStudentId, fetchChallanHistory]);
 
-  const filteredStudents = students.filter(
-    (s) =>
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.guardianName.toLowerCase().includes(search.toLowerCase()),
-  );
-
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
 
   const total = lineItems.reduce((sum, item) => sum + item.amount, 0);
@@ -171,7 +159,6 @@ export function FeeChallanGeneration() {
 
       addToast("success", "Fee challan saved successfully");
       setSelectedStudentId("");
-      setSearch("");
       setLineItems([{ description: "Base Fee", amount: 0 }]);
       fetchData();
 
@@ -216,56 +203,31 @@ export function FeeChallanGeneration() {
             <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
             Bank settings not configured. An administrator must set up bank details in Settings before generating challans.
           </div>
-        )}
-
-        {/* Student search */}
-        <div className="mb-4">
-          <label htmlFor="fee-student-search" className="mb-1 block text-xs font-medium text-text/60">
-            Student
-          </label>
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text/40" aria-hidden="true" />
-            <Input
-              id="fee-student-search"
-              placeholder="Search by student or guardian name…"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setSelectedStudentId("");
-              }}
-              className="pl-9"
-            />
+        )}          {/* Student search */}
+          <div className="mb-4">
+            <label htmlFor="fee-student-search" className="mb-1 block text-xs font-medium text-text/60">
+              Student
+            </label>
+            <div className="max-w-md">
+              <StudentPicker
+                students={students}
+                selectedStudentId={selectedStudentId}
+                onSelect={(id) => {
+                  setSelectedStudentId(id);
+                  if (id) setHistoryStudentId(id);
+                }}
+                searchPlaceholder="Search by name, guardian, or student ID…"
+              />
+            </div>
+            {selectedStudent && (
+              <div className="mt-2 grid max-w-md grid-cols-2 gap-2 text-xs text-text/60">
+                <span>Guardian: {selectedStudent.guardianName}</span>
+                <span>CNIC: {selectedStudent.guardianCnic}</span>
+                <span>Class: {selectedStudent.classSection.className} — {selectedStudent.classSection.sectionName}</span>
+                {bankSettings && <span>Bank: {bankSettings.bankName}</span>}
+              </div>
+            )}
           </div>
-          {search && !selectedStudentId && filteredStudents.length > 0 && (
-            <div className="mt-1 max-h-48 w-full max-w-md overflow-y-auto border border-border bg-bg">
-              {filteredStudents.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedStudentId(s.id);
-                    setSearch(`${s.name} (${s.classSection.className} ${s.classSection.sectionName})`);
-                    setHistoryStudentId(s.id);
-                  }}
-                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-surface"
-                >
-                  <span className="font-medium">{s.name}</span>
-                  <span className="text-xs text-text/50">
-                    {s.classSection.className} — {s.classSection.sectionName}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-          {selectedStudent && (
-            <div className="mt-2 grid max-w-md grid-cols-2 gap-2 text-xs text-text/60">
-              <span>Guardian: {selectedStudent.guardianName}</span>
-              <span>CNIC: {selectedStudent.guardianCnic}</span>
-              <span>Class: {selectedStudent.classSection.className} — {selectedStudent.classSection.sectionName}</span>
-              {bankSettings && <span>Bank: {bankSettings.bankName}</span>}
-            </div>
-          )}
-        </div>
 
         {/* Line items */}
         {selectedStudentId && (
@@ -338,7 +300,6 @@ export function FeeChallanGeneration() {
                 variant="secondary"
                 onClick={() => {
                   setSelectedStudentId("");
-                  setSearch("");
                   setLineItems([{ description: "Base Fee", amount: 0 }]);
                   setHistoryStudentId(null);
                 }}
