@@ -141,13 +141,13 @@ export default async function PrintReportCardPage({
     if (reportCard.templateId) {
       template = await prisma.documentTemplate.findUnique({
         where: { id: reportCard.templateId },
-        include: { fields: true, tableRegions: true },
+        include: { fields: true, staticTexts: true, tableRegions: true },
       });
     }
     if (!template) {
       template = await prisma.documentTemplate.findFirst({
         where: { type: "REPORT_CARD" as any, isActive: true },
-        include: { fields: true, tableRegions: true },
+        include: { fields: true, staticTexts: true, tableRegions: true },
       });
     }
   } catch {
@@ -193,6 +193,21 @@ export default async function PrintReportCardPage({
             fontStyle: f.fontStyle,
             textDecoration: f.textDecoration,
             textAlign: f.textAlign,
+          })),
+          staticTexts: (template.staticTexts ?? []).map((st) => ({
+            id: st.id,
+            content: st.content,
+            xPercent: st.xPercent,
+            yPercent: st.yPercent,
+            widthPercent: st.widthPercent,
+            heightPercent: st.heightPercent,
+            fontSize: st.fontSize,
+            fontFamily: st.fontFamily,
+            fontColor: st.fontColor,
+            fontWeight: st.fontWeight,
+            fontStyle: st.fontStyle,
+            textDecoration: st.textDecoration,
+            textAlign: st.textAlign,
           })),
           tableRegions: template.tableRegions.map((tr) => ({
             id: tr.id,

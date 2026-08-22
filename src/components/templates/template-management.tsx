@@ -500,10 +500,44 @@ function TemplateEditor({
     })),
   );
 
+  // Static text state
+  type EditorStaticText = {
+    content: string;
+    xPercent: number;
+    yPercent: number;
+    widthPercent: number | null;
+    heightPercent: number | null;
+    fontSize: number;
+    fontFamily: string;
+    fontColor: string;
+    fontWeight: string;
+    fontStyle: string;
+    textDecoration: string;
+    textAlign: "left" | "center" | "right";
+  };
+
+  const [staticTexts, setStaticTexts] = useState<EditorStaticText[]>(
+    (template as any).staticTexts?.map((st: any) => ({
+      content: st.content,
+      xPercent: st.xPercent,
+      yPercent: st.yPercent,
+      widthPercent: st.widthPercent ?? null,
+      heightPercent: st.heightPercent ?? null,
+      fontSize: st.fontSize,
+      fontFamily: st.fontFamily || "",
+      fontColor: st.fontColor || "",
+      fontWeight: st.fontWeight || "",
+      fontStyle: st.fontStyle || "",
+      textDecoration: st.textDecoration || "",
+      textAlign: st.textAlign as "left" | "center" | "right",
+    })) ?? [],
+  );
+
   // Undo/redo state
   const [history, setHistory] = useState<EditorField[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [selectedFieldIdx, setSelectedFieldIdx] = useState<number | null>(null);
+  const [selectedStaticIdx, setSelectedStaticIdx] = useState<number | null>(null);
 
   // Interaction state
   type InteractionMode = "idle" | "dragging" | "resizing";
@@ -615,55 +649,76 @@ function TemplateEditor({
   }
 
   function handlePointerMove(e: React.PointerEvent) {
-    if (mode === "idle" || interactionStart.current === null) return;
     if (!canvasRef.current) return;
-    if (selectedFieldIdx === null) return;
-
-    const start = interactionStart.current;
     const rect = canvasRef.current.getBoundingClientRect();
-    const dxPx = e.clientX - start.x;
-    const dyPx = e.clientY - start.y;
+    const dxPx = e.clientX - (interactionStart.current?.x ?? e.clientX);
+    const dyPx = e.clientY - (interactionStart.current?.y ?? e.clientY);
     const dxPercent = (dxPx / rect.width) * 100;
     const dyPercent = (dyPx / rect.height) * 100;
 
-    if (mode === "dragging") {
-      const newX = Math.min(100, Math.max(0, start.field.xPercent + dxPercent));
-      const newY = Math.min(100, Math.max(0, start.field.yPercent + dyPercent));
-      setFields((prev) =>
-        prev.map((f, i) =>
-          i === selectedFieldIdx ? { ...f, xPercent: newX, yPercent: newY } : f,
-        ),
-      );
-    } else if (mode === "resizing" && resizeHandle) {
-      const origW = start.field.widthPercent ?? 20;
-      const origH = start.field.heightPercent ?? 5;
-      let newW = origW;
-      let newH = origH;
-      let newX = start.field.xPercent;
-      let newY = start.field.yPercent;
+    // Handle field drag/resize
+    if ((mode === "dragging" || mode === "resizing") && interactionStart.current !== null && selectedFieldIdx !== null) {
+      const start = interactionStart.current;
 
-      // Compute new width/height based on handle
-      if (resizeHandle.includes("right")) newW = Math.max(2, Math.min(80, origW + dxPercent));
-      if (resizeHandle.includes("left")) newW = Math.max(2, Math.min(80, origW - dxPercent));
-      if (resizeHandle.includes("bottom")) newH = Math.max(1, Math.min(50, origH + dyPercent));
-      if (resizeHandle.includes("top")) newH = Math.max(1, Math.min(50, origH - dyPercent));
+      if (mode === "dragging") {
+        const newX = Math.min(100, Math.max(0, start.field.xPercent + dxPercent));
+        const newY = Math.min(100, Math.max(0, start.field.yPercent + dyPercent));
+        setFields((prev) =>
+          prev.map((f, i) =>
+            i === selectedFieldIdx ? { ...f, xPercent: newX, yPercent: newY } : f,
+          ),
+        );
+      } else if (mode === "resizing" && resizeHandle) {
+        const origW = start.field.widthPercent ?? 20;
+        const origH = start.field.heightPercent ?? 5;
+        let newW = origW;
+        let newH = origH;
+        let newX = start.field.xPercent;
+        let newY = start.field.yPercent;
 
-      // Adjust position for left/top handles
-      if (resizeHandle.includes("left")) {
-        newX = start.field.xPercent + (origW - newW) / 2;
+        if (resizeHandle.includes("right")) newW = Math.max(2, Math.min(80, origW + dxPercent));
+        if (resizeHandle.includes("left")) newW = Math.max(2, Math.min(80, origW - dxPercent));
+        if (resizeHandle.includes("bottom")) newH = Math.max(1, Math.min(50, origH + dyPercent));
+        if (resizeHandle.includes("top")) newH = Math.max(1, Math.min(50, origH - dyPercent));
+
+        if (resizeHandle.includes("left")) {
+          newX = start.field.xPercent + (origW - newW) / 2;
+        }
+        if (resizeHandle.includes("top")) {
+          newY = start.field.yPercent + (origH - newH) / 2;
+        }
+
+        newX = Math.min(100, Math.max(0, newX));
+        newY = Math.min(100, Math.max(0, newY));
+
+        setFields((prev) =>
+          prev.map((f, i) =>
+            i === selectedFieldIdx
+              ? { ...f, widthPercent: newW, heightPercent: newH, xPercent: newX, yPercent: newY }
+              : f,
+          ),
+        );
       }
-      if (resizeHandle.includes("top")) {
-        newY = start.field.yPercent + (origH - newH) / 2;
+    }
+
+    // Handle static text drag/resize
+    if (interactionStartStatic.current !== null && selectedStaticIdx !== null) {
+      const start = interactionStartStatic.current;
+      const origW = start.text.widthPercent ?? 15;
+      const origH = start.text.heightPercent ?? 3;
+
+      // Determine which handle is being dragged (stored in resizeHandle during static resize)
+      if (resizeHandle && mode !== "resizing") {
+        // This is a static text resize — resizeHandle is set via data attribute
       }
 
-      newX = Math.min(100, Math.max(0, newX));
-      newY = Math.min(100, Math.max(0, newY));
-
-      setFields((prev) =>
-        prev.map((f, i) =>
-          i === selectedFieldIdx
-            ? { ...f, widthPercent: newW, heightPercent: newH, xPercent: newX, yPercent: newY }
-            : f,
+      // For static text, we always do drag (no resize handle tracking yet)
+      // Check if this is a resize by looking at what initiated it
+      const newX = Math.min(100, Math.max(0, start.text.xPercent + dxPercent));
+      const newY = Math.min(100, Math.max(0, start.text.yPercent + dyPercent));
+      setStaticTexts((prev) =>
+        prev.map((st, i) =>
+          i === selectedStaticIdx ? { ...st, xPercent: newX, yPercent: newY } : st,
         ),
       );
     }
@@ -671,15 +726,44 @@ function TemplateEditor({
 
   function handlePointerUp() {
     if (mode !== "idle" && interactionStart.current !== null && selectedFieldIdx !== null) {
-      // Push to history
       setFields((current) => {
         pushHistory(current);
         return current;
       });
     }
+    if (interactionStartStatic.current !== null && selectedStaticIdx !== null) {
+      // Static text move done — no history needed
+    }
     setMode("idle");
     setResizeHandle(null);
     interactionStart.current = null;
+    interactionStartStatic.current = null;
+  }
+
+  // Static text pointer handlers for drag and resize
+  type InteractionModeExtended = InteractionMode | "draggingStatic" | "resizingStatic";
+  const interactionStartStatic = useRef<{ x: number; y: number; text: EditorStaticText } | null>(null);
+
+  function handleStaticPointerDown(e: React.PointerEvent, index: number) {
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedStaticIdx(index);
+    setSelectedFieldIdx(null);
+    setMode("idle");
+    const st = staticTexts[index];
+    interactionStartStatic.current = { x: e.clientX, y: e.clientY, text: { ...st } };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  function handleStaticResizePointerDown(e: React.PointerEvent, index: number, handle: string) {
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedStaticIdx(index);
+    setSelectedFieldIdx(null);
+    setMode("idle");
+    const st = staticTexts[index];
+    interactionStartStatic.current = { x: e.clientX, y: e.clientY, text: { ...st } };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
   }
 
   // Canvas click — deselect or place unplaced field
@@ -824,7 +908,7 @@ function TemplateEditor({
       const res = await fetch(`/api/templates/${template.id}/fields`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fields, tableRegions }),
+        body: JSON.stringify({ fields, tableRegions, staticTexts }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message || "Save failed");
@@ -870,6 +954,28 @@ function TemplateEditor({
                 <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10H11a5 5 0 00-5 5v2M21 10l-5 5M21 10l-5-5"/></svg>
               </button>
             </div>
+            <button
+              onClick={() => {
+                const newText: EditorStaticText = {
+                  content: "New Label",
+                  xPercent: 50,
+                  yPercent: 50,
+                  widthPercent: null,
+                  heightPercent: null,
+                  fontSize: 14,
+                  fontFamily: "",
+                  fontColor: "",
+                  fontWeight: "",
+                  fontStyle: "",
+                  textDecoration: "",
+                  textAlign: "left",
+                };
+                setStaticTexts((prev) => [...prev, newText]);
+              }}
+              className="border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+            >
+              + Add Text Label
+            </button>
             {templateTypeConfig.hasTableRegion && (
               <button
                 onClick={addTableRegion}
@@ -1033,6 +1139,85 @@ function TemplateEditor({
                 });
               })()}
 
+              {/* Static text markers on canvas */}
+              {staticTexts.map((st, i) => {
+                const isSelected = selectedStaticIdx === i;
+                const hasSize = st.widthPercent != null && st.heightPercent != null;
+                return (
+                  <div
+                    key={`st-canvas-${i}`}
+                    className="absolute select-none"
+                    style={{
+                      left: `${st.xPercent}%`,
+                      top: `${st.yPercent}%`,
+                      transform: "translate(-50%, -50%)",
+                      ...(hasSize
+                        ? {
+                            width: `${st.widthPercent}%`,
+                            height: `${st.heightPercent}%`,
+                          }
+                        : {}),
+                      zIndex: isSelected ? 20 : 10,
+                      cursor: "grab",
+                    }}
+                    onPointerDown={(e) => handleStaticPointerDown(e, i)}
+                  >
+                    <div
+                      className={`h-full w-full border px-1 py-0.5 text-[10px] whitespace-nowrap overflow-hidden ${
+                        isSelected
+                          ? "border-green-600 bg-green-500/15 text-green-800"
+                          : "border-green-400 bg-green-500/10 text-green-700"
+                      }`}
+                      style={{
+                        fontSize: `${Math.min(st.fontSize, 14)}px`,
+                        fontFamily: st.fontFamily || "serif",
+                        fontWeight: st.fontWeight || undefined,
+                        fontStyle: st.fontStyle || undefined,
+                        textAlign: st.textAlign,
+                      }}
+                    >
+                      {st.content}
+                    </div>
+                    {isSelected && (
+                      <>
+                        {(["top-left", "top-right", "bottom-left", "bottom-right"] as const).map((handle) => (
+                          <div
+                            key={handle}
+                            className="absolute z-30"
+                            style={{
+                              width: "8px",
+                              height: "8px",
+                              background: "#16a34a",
+                              border: "1px solid white",
+                              ...(handle.includes("top") ? { top: "-4px" } : { bottom: "-4px" }),
+                              ...(handle.includes("left") ? { left: "-4px" } : { right: "-4px" }),
+                              cursor: handle === "top-left" || handle === "bottom-right" ? "nwse-resize" : "nesw-resize",
+                            }}
+                          />
+                        ))}
+                        {(["top", "bottom", "left", "right"] as const).map((handle) => (
+                          <div
+                            key={handle}
+                            className="absolute z-30"
+                            style={{
+                              background: "#16a34a",
+                              border: "1px solid white",
+                              ...(handle === "top"
+                                ? { top: "-4px", left: "50%", transform: "translateX(-50%)", width: "20px", height: "6px", cursor: "ns-resize" }
+                                : handle === "bottom"
+                                ? { bottom: "-4px", left: "50%", transform: "translateX(-50%)", width: "20px", height: "6px", cursor: "ns-resize" }
+                                : handle === "left"
+                                ? { left: "-4px", top: "50%", transform: "translateY(-50%)", width: "6px", height: "20px", cursor: "ew-resize" }
+                                : { right: "-4px", top: "50%", transform: "translateY(-50%)", width: "6px", height: "20px", cursor: "ew-resize" })
+                            }}
+                          />
+                        ))}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+
               {/* Table region markers */}
               {tableRegions.map((region, i) => (
                 <div
@@ -1194,12 +1379,14 @@ function TemplateEditor({
                         className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px]"
                       >
                         <option value="">Default</option>
-                        <option value="serif">Serif</option>
-                        <option value="Georgia">Georgia</option>
-                        <option value="Times New Roman">Times New Roman</option>
-                        <option value="Arial">Arial</option>
-                        <option value="Inter, sans-serif">Inter</option>
-                        <option value="Courier New, monospace">Courier New</option>
+                        <option value="Inter, sans-serif">Inter (Sans)</option>
+                        <option value="Arial, sans-serif">Arial (Sans)</option>
+                        <option value="Georgia, serif">Georgia (Serif)</option>
+                        <option value="Times New Roman, serif">Times New Roman (Serif)</option>
+                        <option value="Merriweather, serif">Merriweather (Serif)</option>
+                        <option value="Playfair Display, serif">Playfair Display (Formal)</option>
+                        <option value="Crimson Pro, serif">Crimson Pro (Serif)</option>
+                        <option value="Courier New, monospace">Courier New (Mono)</option>
                       </select>
                     </label>
                     <label className="text-[10px] text-zinc-500">
@@ -1244,6 +1431,177 @@ function TemplateEditor({
                 });
               })()}
             </div>
+
+            {/* Static Text Labels */}
+            {staticTexts.length > 0 && (
+              <>
+                <h3 className="mb-3 mt-4 text-xs font-semibold uppercase text-zinc-500">
+                  Text Labels
+                </h3>
+                <div className="space-y-2">
+                  {staticTexts.map((st, i) => (
+                    <div
+                      key={`stp-${i}`}
+                      className={`border p-2 ${selectedStaticIdx === i ? "border-green-500 bg-green-50" : "border-zinc-200"}`}
+                      onClick={() => setSelectedStaticIdx(i)}
+                    >
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="text-[11px] font-medium text-green-700">
+                          Label {i + 1}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setStaticTexts((prev) => prev.filter((_, idx) => idx !== i));
+                            if (selectedStaticIdx === i) setSelectedStaticIdx(null);
+                          }}
+                          className="text-[10px] text-red-500 hover:text-red-700"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <textarea
+                        value={st.content}
+                        onChange={(e) => {
+                          const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, content: e.target.value } : s);
+                          setStaticTexts(newSTs);
+                        }}
+                        className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px]"
+                        rows={2}
+                      />
+                      <div className="mt-1 grid grid-cols-2 gap-1">
+                        <label className="text-[10px] text-zinc-500">
+                          X%
+                          <input type="number" value={Math.round(st.xPercent * 10) / 10}
+                            onChange={(e) => {
+                              const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, xPercent: parseFloat(e.target.value) || 0 } : s);
+                              setStaticTexts(newSTs);
+                            }}
+                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                            min={0} max={100} step={0.5}
+                          />
+                        </label>
+                        <label className="text-[10px] text-zinc-500">
+                          Y%
+                          <input type="number" value={Math.round(st.yPercent * 10) / 10}
+                            onChange={(e) => {
+                              const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, yPercent: parseFloat(e.target.value) || 0 } : s);
+                              setStaticTexts(newSTs);
+                            }}
+                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                            min={0} max={100} step={0.5}
+                          />
+                        </label>
+                        <label className="text-[10px] text-zinc-500">
+                          Width%
+                          <input type="number" value={st.widthPercent != null ? Math.round(st.widthPercent * 10) / 10 : ""}
+                            placeholder="auto"
+                            onChange={(e) => {
+                              const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, widthPercent: e.target.value === "" ? null : parseFloat(e.target.value) || null } : s);
+                              setStaticTexts(newSTs);
+                            }}
+                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                            min={2} max={80} step={0.5}
+                          />
+                        </label>
+                        <label className="text-[10px] text-zinc-500">
+                          Height%
+                          <input type="number" value={st.heightPercent != null ? Math.round(st.heightPercent * 10) / 10 : ""}
+                            placeholder="auto"
+                            onChange={(e) => {
+                              const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, heightPercent: e.target.value === "" ? null : parseFloat(e.target.value) || null } : s);
+                              setStaticTexts(newSTs);
+                            }}
+                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                            min={1} max={50} step={0.5}
+                          />
+                        </label>
+                      </div>
+                      {/* Font + Size + Align */}
+                      <div className="mt-1 grid grid-cols-3 gap-1">
+                        <label className="text-[10px] text-zinc-500">
+                          Font
+                          <select value={st.fontFamily}
+                            onChange={(e) => {
+                              const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, fontFamily: e.target.value } : s);
+                              setStaticTexts(newSTs);
+                            }}
+                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px]"
+                          >
+                            <option value="">Default</option>
+                            <option value="Inter, sans-serif">Inter (Sans)</option>
+                            <option value="Arial, sans-serif">Arial (Sans)</option>
+                            <option value="Georgia, serif">Georgia (Serif)</option>
+                            <option value="Times New Roman, serif">Times New Roman (Serif)</option>
+                            <option value="Merriweather, serif">Merriweather (Serif)</option>
+                            <option value="Playfair Display, serif">Playfair Display (Formal)</option>
+                            <option value="Crimson Pro, serif">Crimson Pro (Serif)</option>
+                            <option value="Courier New, monospace">Courier New (Mono)</option>
+                          </select>
+                        </label>
+                        <label className="text-[10px] text-zinc-500">
+                          Size
+                          <input type="number" value={st.fontSize}
+                            onChange={(e) => {
+                              const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, fontSize: parseInt(e.target.value) || 12 } : s);
+                              setStaticTexts(newSTs);
+                            }}
+                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                            min={6} max={72}
+                          />
+                        </label>
+                        <label className="text-[10px] text-zinc-500">
+                          Align
+                          <select value={st.textAlign}
+                            onChange={(e) => {
+                              const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, textAlign: e.target.value as any } : s);
+                              setStaticTexts(newSTs);
+                            }}
+                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px]"
+                          >
+                            <option value="left">Left</option>
+                            <option value="center">Center</option>
+                            <option value="right">Right</option>
+                          </select>
+                        </label>
+                      </div>
+                      <div className="mt-1 flex gap-1">
+                        <button type="button"
+                          onClick={() => {
+                            const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, fontWeight: s.fontWeight === "bold" ? "" : "bold" } : s);
+                            setStaticTexts(newSTs);
+                          }}
+                          className={`border px-1.5 py-0.5 text-[11px] font-bold ${st.fontWeight === "bold" ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"}`}
+                        >B</button>
+                        <button type="button"
+                          onClick={() => {
+                            const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, fontStyle: s.fontStyle === "italic" ? "" : "italic" } : s);
+                            setStaticTexts(newSTs);
+                          }}
+                          className={`border px-1.5 py-0.5 text-[11px] italic ${st.fontStyle === "italic" ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"}`}
+                        >I</button>
+                        <button type="button"
+                          onClick={() => {
+                            const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, textDecoration: s.textDecoration === "underline" ? "" : "underline" } : s);
+                            setStaticTexts(newSTs);
+                          }}
+                          className={`border px-1.5 py-0.5 text-[11px] underline ${st.textDecoration === "underline" ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"}`}
+                        >U</button>
+                        <label className="text-[10px] text-zinc-500 ml-2">
+                          Color
+                          <input type="color" value={st.fontColor || "#000000"}
+                            onChange={(e) => {
+                              const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, fontColor: e.target.value } : s);
+                              setStaticTexts(newSTs);
+                            }}
+                            className="mt-0.5 block h-5 w-8 border border-zinc-300 px-0.5 py-0"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
             {tableRegions.length > 0 && (
               <>

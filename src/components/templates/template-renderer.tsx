@@ -58,9 +58,26 @@ function validateColumns(columns: unknown): Array<{ fieldKey: string; xPercent: 
     : null;
 }
 
+interface StaticText {
+  id: string;
+  content: string;
+  xPercent: number;
+  yPercent: number;
+  widthPercent?: number | null;
+  heightPercent?: number | null;
+  fontSize: number;
+  fontFamily?: string | null;
+  fontColor?: string | null;
+  fontWeight?: string | null;
+  fontStyle?: string | null;
+  textDecoration?: string | null;
+  textAlign: string;
+}
+
 interface TemplateData {
   backgroundImageUrl: string;
   fields: TemplateField[];
+  staticTexts?: StaticText[];
   tableRegions: TemplateTableRegion[];
 }
 
@@ -101,6 +118,43 @@ export function TemplateRenderer({
         className="pointer-events-none absolute inset-0 h-full w-full object-contain"
         draggable={false}
       />
+
+      {/* Static text labels */}
+      {(template.staticTexts ?? []).map((st) => {
+        const hasExplicitSize = st.widthPercent != null && st.heightPercent != null;
+
+        return (
+          <div
+            key={`st-${st.id}`}
+            className="absolute"
+            style={{
+              left: `${st.xPercent}%`,
+              top: `${st.yPercent}%`,
+              ...(hasExplicitSize
+                ? {
+                    width: `${st.widthPercent}%`,
+                    height: `${st.heightPercent}%`,
+                    transform: "translate(-50%, -50%)",
+                  }
+                : {
+                    transform: "translate(-50%, -50%)",
+                  }),
+              fontSize: `${st.fontSize}px`,
+              fontFamily: st.fontFamily || "inherit",
+              fontWeight: (st.fontWeight as React.CSSProperties['fontWeight']) || undefined,
+              fontStyle: (st.fontStyle as React.CSSProperties['fontStyle']) || undefined,
+              textDecoration: (st.textDecoration as React.CSSProperties['textDecoration']) || undefined,
+              textAlign: st.textAlign as "left" | "center" | "right",
+              lineHeight: 1.2,
+              color: st.fontColor || "#000",
+              whiteSpace: "pre-wrap",
+              overflow: "hidden",
+            }}
+          >
+            {st.content}
+          </div>
+        );
+      })}
 
       {/* Single field values */}
       {template.fields.map((field) => {

@@ -70,7 +70,7 @@ export default async function PrintCertificatePage({
     if (certificate.templateId) {
       template = await prisma.documentTemplate.findUnique({
         where: { id: certificate.templateId },
-        include: { fields: true, tableRegions: true },
+        include: { fields: true, staticTexts: true, tableRegions: true },
       });
     }
     if (!template) {
@@ -79,7 +79,7 @@ export default async function PrintCertificatePage({
         : "CHARACTER_CERTIFICATE";
       template = await prisma.documentTemplate.findFirst({
         where: { type: templateType as any, isActive: true },
-        include: { fields: true, tableRegions: true },
+        include: { fields: true, staticTexts: true, tableRegions: true },
       });
     }
   } catch {
@@ -140,6 +140,21 @@ export default async function PrintCertificatePage({
             fontStyle: f.fontStyle,
             textDecoration: f.textDecoration,
             textAlign: f.textAlign,
+          })),
+          staticTexts: (template.staticTexts ?? []).map((st) => ({
+            id: st.id,
+            content: st.content,
+            xPercent: st.xPercent,
+            yPercent: st.yPercent,
+            widthPercent: st.widthPercent,
+            heightPercent: st.heightPercent,
+            fontSize: st.fontSize,
+            fontFamily: st.fontFamily,
+            fontColor: st.fontColor,
+            fontWeight: st.fontWeight,
+            fontStyle: st.fontStyle,
+            textDecoration: st.textDecoration,
+            textAlign: st.textAlign,
           })),
           tableRegions: template.tableRegions.map((tr) => ({
             id: tr.id,

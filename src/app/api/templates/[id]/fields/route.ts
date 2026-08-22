@@ -33,8 +33,24 @@ const tableRegionSchema = z.object({
   columns: z.array(columnSchema).min(1),
 });
 
+const staticTextSchema = z.object({
+  content: z.string().min(1).max(500),
+  xPercent: z.number().min(0).max(100),
+  yPercent: z.number().min(0).max(100),
+  widthPercent: z.number().min(0).max(100).nullable().optional(),
+  heightPercent: z.number().min(0).max(100).nullable().optional(),
+  fontSize: z.number().min(6).max(72),
+  fontFamily: z.string().max(100).nullable().optional(),
+  fontColor: z.string().max(20).nullable().optional(),
+  fontWeight: z.enum(["normal", "bold"]).nullable().optional(),
+  fontStyle: z.enum(["normal", "italic"]).nullable().optional(),
+  textDecoration: z.enum(["none", "underline"]).nullable().optional(),
+  textAlign: z.enum(["left", "center", "right"]).default("left"),
+});
+
 const saveFieldsSchema = z.object({
   fields: z.array(fieldSchema),
+  staticTexts: z.array(staticTextSchema).optional().default([]),
   tableRegions: z.array(tableRegionSchema),
 });
 
@@ -58,6 +74,7 @@ export async function GET(
       where: { id },
       include: {
         fields: true,
+        staticTexts: true,
         tableRegions: true,
       },
     });
@@ -72,6 +89,7 @@ export async function GET(
     return NextResponse.json({
       data: {
         fields: template.fields,
+        staticTexts: template.staticTexts,
         tableRegions: template.tableRegions,
       },
     });
@@ -108,10 +126,11 @@ export async function POST(
       );
     }
 
-    // Replace all fields and table regions atomically
+    // Replace all fields, static texts, and table regions atomically
     await prisma.$transaction([
       // Delete existing
       prisma.templateField.deleteMany({ where: { templateId: id } }),
+      prisma.templateStaticText.deleteMany({ where: { templateId: id } }),
       prisma.templateTableRegion.deleteMany({ where: { templateId: id } }),
       // Insert new fields
       ...body.fields.map((f) =>
@@ -133,6 +152,26 @@ export async function POST(
           },
         }),
       ),
+      // Insert new static texts
+      ...body.staticTexts.map((st) =>
+        prisma.templateStaticText.create({
+          data: {
+            templateId: id,
+            content: st.content,
+            xPercent: st.xPercent,
+            yPercent: st.yPercent,
+            widthPercent: st.widthPercent ?? null,
+            heightPercent: st.heightPercent ?? null,
+            fontSize: st.fontSize,
+            fontFamily: st.fontFamily ?? null,
+            fontColor: st.fontColor ?? null,
+            fontWeight: st.fontWeight ?? null,
+            fontStyle: st.fontStyle ?? null,
+            textDecoration: st.textDecoration ?? null,
+            textAlign: st.textAlign,
+          },
+        }),
+      ),
       // Insert new table regions
       ...body.tableRegions.map((tr) =>
         prisma.templateTableRegion.create({
@@ -150,7 +189,7 @@ export async function POST(
     // Return the updated template
     const updated = await prisma.documentTemplate.findUnique({
       where: { id },
-      include: { fields: true, tableRegions: true },
+      include: { fields: true, staticTexts: true, tableRegions: true },
     });
 
     return NextResponse.json({ data: updated });

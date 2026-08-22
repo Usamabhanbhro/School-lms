@@ -39,6 +39,7 @@ export async function GET(request: Request) {
       where,
       include: {
         fields: true,
+        staticTexts: true,
         tableRegions: true,
         _count: {
           select: {

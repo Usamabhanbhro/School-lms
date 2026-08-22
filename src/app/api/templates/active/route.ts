@@ -42,6 +42,7 @@ export async function GET(request: Request) {
       },
       include: {
         fields: true,
+        staticTexts: true,
         tableRegions: true,
       },
     });

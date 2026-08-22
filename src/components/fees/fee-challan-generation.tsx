@@ -61,6 +61,8 @@ export function FeeChallanGeneration() {
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [lineItems, setLineItems] = useState<Array<{ description: string; amount: number }>>([
     { description: "Base Fee", amount: 0 },
+    { description: "Arrears", amount: 0 },
+    { description: "Late Fee", amount: 0 },
   ]);
   const [saving, setSaving] = useState(false);
   const [historyStudentId, setHistoryStudentId] = useState<string | null>(null);
@@ -159,7 +161,11 @@ export function FeeChallanGeneration() {
 
       addToast("success", "Fee challan saved successfully");
       setSelectedStudentId("");
-      setLineItems([{ description: "Base Fee", amount: 0 }]);
+      setLineItems([
+        { description: "Base Fee", amount: 0 },
+        { description: "Arrears", amount: 0 },
+        { description: "Late Fee", amount: 0 },
+      ]);
       fetchData();
 
       // Open print view
@@ -300,7 +306,11 @@ export function FeeChallanGeneration() {
                 variant="secondary"
                 onClick={() => {
                   setSelectedStudentId("");
-                  setLineItems([{ description: "Base Fee", amount: 0 }]);
+                  setLineItems([
+        { description: "Base Fee", amount: 0 },
+        { description: "Arrears", amount: 0 },
+        { description: "Late Fee", amount: 0 },
+      ]);
                   setHistoryStudentId(null);
                 }}
               >

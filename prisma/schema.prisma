@@ -524,6 +524,7 @@ model DocumentTemplate {
   isActive           Boolean  @default(false)
 
   fields          TemplateField[]
+  staticTexts     TemplateStaticText[]
   tableRegions    TemplateTableRegion[]
   certificates    Certificate[]
   reportCards     ReportCard[]
@@ -551,6 +552,30 @@ model TemplateField {
   fontWeight  String?   // CSS font weight — 'normal', 'bold'
   fontStyle   String?   // CSS font style — 'normal', 'italic'
   textDecoration String? // CSS text decoration — 'none', 'underline'
+  textAlign  String @default("left")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([templateId])
+}
+
+/// Static text label on a template — decorative/label text not tied to student data.
+model TemplateStaticText {
+  id         String @id @default(cuid())
+  templateId String
+  template   DocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  content    String              // the literal text to display
+  xPercent   Float
+  yPercent   Float
+  widthPercent  Float?           // nullable — when null, auto-sizes
+  heightPercent Float?           // nullable — when null, auto-sizes
+  fontSize   Int
+  fontFamily String?             // CSS font family
+  fontColor  String?             // CSS color
+  fontWeight String?             // 'normal' or 'bold'
+  fontStyle  String?             // 'normal' or 'italic'
+  textDecoration String?         // 'none' or 'underline'
   textAlign  String @default("left")
 
   createdAt DateTime @default(now())
