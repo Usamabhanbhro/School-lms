@@ -1,6 +1,6 @@
 # School LMS — Software Requirements Specification (SRS)
 
-**Status: Draft v7 — attendance audit, student IDs, teacher unassignment.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
+**Status: Draft v8 — attendance audit, student IDs, teacher unassignment, daily agenda.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
 
 ---
 
@@ -123,6 +123,14 @@ Admin (and Academics — see §1A) generate a fee challan by selecting a student
 
 Once saved, a challan is treated as an immutable historical record — regenerating for the same student creates a new challan rather than editing the old one. The template version used at generation time is recorded on the challan.
 
+### 1.10 Daily Agenda Oversight
+
+Admin has read-only visibility into all daily agenda entries across all teachers, classes, subjects, and dates — same oversight pattern as attendance (§1.5), marks (§1.6), and report cards (§1.6).
+
+**Filters:** Admin can filter by teacher, class+subject, and date range. The admin agenda view is read-only — no write actions, no edit buttons, no ability to modify or delete any entry.
+
+**Scope note:** Academics does **NOT** have access to the Daily Agenda feature — neither read-only oversight nor write access. This is a deliberate scope decision, not an oversight. The Daily Agenda is a teacher-admin communication channel (lesson logs for principal oversight), which is outside Academics' delegated scope of certificate/challan generation and attendance editing. Adding Academics access would require a separate product decision and is not part of this feature.
+
 ---
 
 ## 1A. Academics
@@ -148,6 +156,7 @@ Academics **cannot**:
 - Edit teacher attendance (Admin-only per §1.4)
 - Create tests, enter marks, or generate report cards
 - View the attendance audit trail (Admin-only per §7)
+- Access the Daily Agenda feature (neither read nor write — see §1.10 and §2.5)
 
 ### 1A.3 Account Management
 
@@ -186,6 +195,24 @@ Report card print output uses a **template** configured by Admin (see §3). The 
 - **Table Region:** a variable-length area for test rows. Columns: subject, testTitle, marksObtained, maxMarks. Admin places the table region once (anchor position + row height + column x-positions); the renderer lays out N rows starting at the anchor, incrementing y by rowHeight per row.
 
 The teacher's generation flow (term, test selection) is unchanged — only the print/output step uses the template renderer.
+
+### 2.5 Daily Agenda
+
+A per-teacher, per-class+subject, per-day log. Teachers write agenda entries describing what was covered in a lesson; Admin has read-only visibility across all teachers.
+
+**Granularity:** One agenda entry per teacher, per class+subject, per day. A teacher teaching Math to Grade 5-A and Science to Grade 6-B writes two separate entries on the same date. This matches the SubjectTeacherAssignment model — each entry is scoped to exactly one (teacher, classSection, subject, date) tuple.
+
+**Permission model:** Only the Subject Teacher assigned to that class+subject combination can create or edit an entry — same permission model as Tests & Marks (§2.2). Verified via `SubjectTeacherAssignment` lookup, identical to `requireSubjectTeacher()`.
+
+**Date-based locking (no manual lock):** An entry is editable if its date is today or in the future. It becomes read-only automatically once its date is in the past. There is no confirm/lock action and no stored lock flag — this is enforced server-side by comparing the entry's date against the current date on every write attempt (POST create and PATCH update). Teachers can write entries for future dates (planning ahead) as well as today. Any past entry can be read (by the teacher who wrote it, and by Admin) but not edited once its date has passed.
+
+**Timezone:** "Today" is computed using `Asia/Karachi` (PKT, UTC+5) as the school's local timezone. The helper `getTodayLocal()` in `lib/timezone.ts` returns today's date string in `YYYY-MM-DD` format using this fixed offset, regardless of the server's system timezone. This prevents date-boundary bugs where a server in UTC would "lose" an extra hour and potentially lock entries prematurely. The school's local timezone is hardcoded rather than configurable because this is a single-school-per-deployment system and all existing date-handling code uses server-local `new Date()` which already has similar implicit assumptions — this makes the behavior explicit and testable.
+
+**Content:** Free-text field (up to 5,000 characters). No structured curriculum mapping — this is a quick lesson log, not a formal syllabus tracker.
+
+**Uniqueness:** A database unique constraint on (teacherId, classSectionId, subjectId, date) prevents duplicate entries. Writing again for an existing date updates the existing row, not creating a new one.
+
+**Implementation note:** One shared server-side helper `isDateLocked(dateStr: string): boolean` enforces the locking rule. This helper is called by both the create (POST) and update (PATCH) routes, so the "is this locked" rule cannot drift between the two code paths.
 
 ---
 

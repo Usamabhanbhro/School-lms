@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   ClipboardCheck,
+  CalendarDays,
   FileSpreadsheet,
   Award,
   ArrowRight,
@@ -22,6 +23,7 @@ const quickActions = [
   { label: "Mark Attendance", href: "/teacher/attendance", icon: ClipboardCheck },
   { label: "Tests & Marks", href: "/teacher/tests", icon: FileSpreadsheet },
   { label: "Report Cards", href: "/teacher/report-cards", icon: Award },
+  { label: "Daily Agenda", href: "/teacher/agenda", icon: CalendarDays },
 ];
 
 export default async function TeacherPage() {

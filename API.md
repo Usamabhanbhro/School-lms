@@ -2,8 +2,8 @@
 
 Living document. Every API route must be added here when created — see `CONVENTIONS.md` and `AGENTS.md`.
 
-**Status: reconciled with SRS.md v5.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
-Phase 1–6 routes are implemented. Admin provisioning, school settings, and admin self-recovery added.
+**Status: reconciled with SRS.md v8.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
+Phase 1–6 routes are implemented. Admin provisioning, school settings, admin self-recovery, and daily agenda routes added.
 
 ## Conventions Recap
 
@@ -441,6 +441,33 @@ NextAuth handler — login/logout/session. Credentials provider only.
 **Purpose:** Get the active template for a document type, with its field positions
 **Query params:** `type` (required — LEAVING_CERTIFICATE, CHARACTER_CERTIFICATE, REPORT_CARD, FEE_CHALLAN)
 **Response:** `{ data: { template, fields, tableRegions } }` or 404 if no active template
+**Status:** implemented
+
+---
+
+## Daily Agenda
+
+### GET /api/agenda
+**Role required:** Teacher (own entries only, scoped to assigned class+subject combinations); Admin (all entries, read-only)
+**Purpose:** Fetch daily agenda entries. Teacher sees only entries they authored, scoped to their SubjectTeacherAssignment combinations. Admin sees all entries across all teachers.
+**Query params (all optional):** `classSectionId`, `subjectId`, `date`, `from` (date range start), `to` (date range end), `teacherId` (Admin only)
+**Response:** `{ data: [{ id, content, date, isLocked, teacher: { id, name }, classSection: { id, className, sectionName }, subject: { id, name }, createdAt, updatedAt }] }`
+**Notes:** `isLocked` is derived server-side: `true` if the entry's date is before today (Asia/Karachi timezone), `false` otherwise. Not stored in the database.
+**Status:** implemented
+
+### POST /api/agenda
+**Role required:** Teacher (must hold a SubjectTeacherAssignment for the given classSectionId + subjectId)
+**Purpose:** Create or update a daily agenda entry. Upserts by (teacherId, classSectionId, subjectId, date) — if an entry already exists for that combination, it updates instead of creating a duplicate.
+**Request body:** `{ classSectionId, subjectId, date, content }`
+**Validation:** Server rejects if `date` is in the past (before today in Asia/Karachi timezone). Content must be 1–5000 characters.
+**Response (200/201):** `{ data: { id, content, date, isLocked: false, ... } }`
+**Status:** implemented
+
+### PATCH /api/agenda/:id
+**Role required:** Teacher (must be the author of the entry, i.e. same teacherId)
+**Purpose:** Update an existing agenda entry's content. Server rejects if the entry's date is in the past (same `isDateLocked()` helper as POST — one shared function, not duplicated).
+**Request body:** `{ content }`
+**Response (200):** `{ data: { id, content, date, isLocked, ... } }`
 **Status:** implemented
 
 ---

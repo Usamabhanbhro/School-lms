@@ -2,7 +2,7 @@
 
 Plain-English companion to `prisma/schema.prisma`. Every model in Prisma should have a matching entry here explaining *why* it exists and how it relates to others.
 
-**Status: reconciled with SRS.md v5.** Three login roles: Admin (single account), Academics (multiple), and Teacher (multiple). Students are data records, not logins. No Parent access.
+**Status: reconciled with SRS.md v8.** Three login roles: Admin (single account), Academics (multiple), and Teacher (multiple). Students are data records, not logins. No Parent access.
 
 ## Conventions
 
@@ -23,7 +23,7 @@ Login identity. Exactly one row with `role = ADMIN` should ever exist (enforced 
 ### TeacherProfile
 Teacher-specific fields, kept separate from `User` so `User` stays a clean auth/identity table.
 - Fields: `name`, `fatherOrSpouseName`, `cnic` (format `xxxxx-xxxxxxx-x`, validated), `phone` (format `03xx-xxxxxxx`, validated), `email`
-- Relationships: belongs to one `User`; has many `ClassTeacherAssignment`, many `SubjectTeacherAssignment`, many `TeacherAttendance` records (as the subject)
+- Relationships: belongs to one `User`; has many `ClassTeacherAssignment`, many `SubjectTeacherAssignment`, many `TeacherAttendance` records (as the subject), many `DailyAgenda` entries (as author)
 
 ### AcademicsProfile
 Academics-specific fields, kept separate from `User` (mirrors `TeacherProfile` pattern).
@@ -33,7 +33,7 @@ Academics-specific fields, kept separate from `User` (mirrors `TeacherProfile` p
 ### ClassSection
 A specific class + section (e.g. "Grade 5 - A"). Created by Admin.
 - Fields: `className` (e.g. "Grade 5"), `sectionName` (e.g. "A")
-- Relationships: has many `Student` (enrolled), has one `ClassTeacherAssignment` (at most one active class teacher at a time), has many `SubjectTeacherAssignment`
+- Relationships: has many `Student` (enrolled), has one `ClassTeacherAssignment` (at most one active class teacher at a time), has many `SubjectTeacherAssignment`, has many `DailyAgenda` entries
 
 ### Subject
 Created by Admin (e.g. "Mathematics"). Global to the school, not per-class — a `SubjectTeacherAssignment` is what ties a Subject to a specific ClassSection + Teacher.
@@ -184,6 +184,16 @@ Immutable audit record for ADMIN/ACADEMICS attendance edits. Every edit by Admin
 - Constraints: `@@unique([studentAttendanceId])` — one audit entry per edit; `@@index([studentAttendanceId])` for efficient queries
 - Access: ADMIN only can view audit history. ACADEMICS can edit attendance but must NOT view audit history. Teachers cannot view or edit audit logs.
 
+### DailyAgenda
+Per-teacher, per-class+subject, per-day lesson log. Teachers write entries for their assigned subjects; Admin has read-only visibility. Academics has no access.
+- Fields: `teacherId` (FK to TeacherProfile), `classSectionId` (FK to ClassSection), `subjectId` (FK to Subject), `date` (date only, not datetime), `content` (text, up to 5000 chars), `createdAt`, `updatedAt`
+- Relationships: belongs to one TeacherProfile, one ClassSection, one Subject
+- Constraint: `@@unique([teacherId, classSectionId, subjectId, date])` — one entry per teacher per class+subject per day; writing again for an existing date updates, not duplicates
+- Locking: no stored lock flag. Server-side check compares `date` against current date using `Asia/Karoshi` (PKT) timezone via `getTodayLocal()` helper. Editable if date is today or future; read-only if past.
+- Permission: only the Subject Teacher assigned to the (classSectionId, subjectId) combination can create/edit — enforced via `SubjectTeacherAssignment` lookup, same as Tests
+- Admin access: read-only across all teachers/classes/subjects/dates
+- Academics access: explicitly excluded (see SRS §1A.2)
+
 ## Not Yet Modeled
 
 - None — all models documented above are implemented
@@ -198,4 +208,5 @@ Immutable audit record for ADMIN/ACADEMICS attendance edits. Every edit by Admin
 - **Migration `20260821100000_add_student_id_roll_number_and_audit_trail`**: Adds `studentId` (unique, nullable) and `rollNumber` (nullable) to Student for Admin/ACADEMICS-assigned identifiers; creates `AttendanceAuditLog` table for immutable audit trail of attendance edits by Admin/Academics
 - **Migration `20260821140000_add_template_field_rich_formatting`**: Adds `fontFamily`, `fontColor`, `fontWeight`, `fontStyle`, `textDecoration` columns to TemplateField for rich text formatting in the template editor. All nullable for backward compatibility with existing templates.
 - **Migration `20260821150000_add_template_field_dimensions`**: Adds `widthPercent` and `heightPercent` columns to TemplateField for resizable fields in the template editor. Nullable for backward compatibility — null means auto-size to content.
-- The full chain (12 migrations) was validated from an empty database with `prisma migrate reset --force`
+- **Migration `20260822000000_add_daily_agenda`**: Creates DailyAgenda model for per-teacher, per-class+subject, per-day lesson logs. Unique constraint on (teacherId, classSectionId, subjectId, date). References TeacherProfile, ClassSection, Subject.
+- The full chain (13 migrations) was validated from an empty database with `prisma migrate reset --force`

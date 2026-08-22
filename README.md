@@ -114,6 +114,7 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/admin/teacher-attendance` | ADMIN | Teacher attendance management |
 | `/admin/tests` | ADMIN, ACADEMICS | Tests & marks oversight (read-only) |
 | `/admin/report-cards` | ADMIN, ACADEMICS | Report cards list (read-only) |
+| `/admin/agenda` | ADMIN | Daily agenda overview (read-only) |
 | `/admin/certificates` | ADMIN, ACADEMICS | Certificate generation |
 | `/admin/fees` | ADMIN, ACADEMICS | Fee challan generation |
 | `/admin/templates` | ADMIN | Document template management (upload, visual editor, activate) |
@@ -121,6 +122,7 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/teacher/attendance` | TEACHER | Student attendance marking (draft → lock) |
 | `/teacher/tests` | TEACHER | Tests & marks entry |
 | `/teacher/report-cards` | TEACHER | Report card generation |
+| `/teacher/agenda` | TEACHER | Daily agenda entry (write/edit per class+subject) |
 | `/print/certificates/[id]` | ADMIN, ACADEMICS | Certificate print view (Leaving + Character) |
 | `/print/fee-challans/[id]` | ADMIN, ACADEMICS | Fee Challan print view (3 copies: Bank/Student/School) |
 | `/print/report-cards/[id]` | ADMIN, ACADEMICS | Report Card print view |
@@ -149,6 +151,8 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/api/tests/:id/marks` | TEACHER (Subject Teacher) | Enter/update marks |
 | `/api/terms` | TEACHER | Create a Term label on the fly |
 | `/api/report-cards` | TEACHER (Class Teacher, write), ADMIN + ACADEMICS (read) | Report card generation |
+| `/api/agenda` | TEACHER (Subject Teacher, write), ADMIN (read) | Daily agenda entries |
+| `/api/agenda/:id` | TEACHER (owner, write) | Update agenda entry |
 | `/api/certificates` | ADMIN, ACADEMICS | Certificate generation |
 | `/api/settings/bank` | ADMIN (write), ACADEMICS (read) | Bank settings for challans |
 | `/api/students/:id/fee-challans` | ADMIN, ACADEMICS | Generate/list fee challans for a student |

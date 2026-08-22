@@ -45,6 +45,7 @@ const adminNav: NavItem[] = [
   { label: "Teacher Attendance", href: "/admin/teacher-attendance", icon: ClipboardCheck },
   { label: "Tests & Marks", href: "/admin/tests", icon: FileSpreadsheet },
   { label: "Report Cards", href: "/admin/report-cards", icon: Award },
+  { label: "Daily Agenda", href: "/admin/agenda", icon: CalendarDays },
   { label: "Certificates", href: "/admin/certificates", icon: FileText },
   { label: "Fees", href: "/admin/fees", icon: Banknote },
   { label: "Templates", href: "/admin/templates", icon: LayoutTemplate },
@@ -55,6 +56,7 @@ const teacherNav: NavItem[] = [
   { label: "Attendance", href: "/teacher/attendance", icon: ClipboardCheck },
   { label: "Tests & Marks", href: "/teacher/tests", icon: FileSpreadsheet },
   { label: "Report Cards", href: "/teacher/report-cards", icon: Award },
+  { label: "Daily Agenda", href: "/teacher/agenda", icon: CalendarDays },
 ];
 
 /**

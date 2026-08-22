@@ -1,4 +1,4 @@
-// School LMS — database schema (SRS v5).
+// School LMS — database schema (SRS v8).
 // Three login roles: ADMIN (single account), TEACHER (multiple), ACADEMICS (multiple).
 // Students are data records, not logins. No Parent access.
 // See SCHEMA.md for entity rationale and relationships.
@@ -132,6 +132,7 @@ model TeacherProfile {
 
   classTeacherAssignments ClassTeacherAssignment[]
   subjectTeacherAssignments SubjectTeacherAssignment[]
+  dailyAgendas DailyAgenda[]
 
   // Attendance records this teacher has marked (as class teacher)
   studentAttendanceMarked StudentAttendance[]
@@ -156,6 +157,7 @@ model ClassSection {
   studentAttendance    StudentAttendance[]
   tests                Test[]
   reportCards          ReportCard[]
+  dailyAgendas         DailyAgenda[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -169,6 +171,7 @@ model Subject {
 
   subjectTeacherAssignments SubjectTeacherAssignment[]
   tests                     Test[]
+  dailyAgendas              DailyAgenda[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -238,6 +241,28 @@ model Student {
   updatedAt DateTime @updatedAt
 
   @@unique([classSectionId, rollNumber], name: "Student_classSection_rollNumber_unique")
+}
+
+// ─── Daily Agenda ─────────────────────────────────────────────────────
+
+/// Per-teacher, per-class+subject, per-day lesson log./// Teachers write entries for their assigned subjects; Admin has read-only visibility.
+/// Academics has no access.
+model DailyAgenda {
+  id             String      @id @default(cuid())
+  teacherId      String
+  teacher        TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  classSectionId String
+  classSection   ClassSection @relation(fields: [classSectionId], references: [id], onDelete: Cascade)
+  subjectId      String
+  subject        Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  date           DateTime    @db.Date
+  content        String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teacherId, classSectionId, subjectId, date])
+  @@index([classSectionId, date])
 }
 
 // ─── Attendance ──────────────────────────────────────────────────────
