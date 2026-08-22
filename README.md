@@ -214,6 +214,10 @@ On a fresh deployment, default placeholder values are used until the Admin confi
 
 Deployed via Vercel, git-push deploy from `main`. Database hosted on Neon. File uploads (school logo) use Vercel Blob storage. See `ARCHITECTURE.md` for free-tier constraints (Neon cold-start, Vercel function time limits). Set `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, and `BLOB_READ_WRITE_TOKEN` in production, and run `bun run db:deploy` after deploying.
 
+## Support
+
+Full Admin lockout recovery (lost both password and recovery code) is a paid service performed by the developer via direct database access. See `RECOVERY.md` for the internal runbook.
+
 ## Credits
 
 Developed by Usama Bhanbhro.

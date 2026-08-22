@@ -82,7 +82,7 @@ Since there is exactly one Admin and no one above them, Admin cannot rely on "so
 3. On successful recovery, the old code is invalidated and a new one is generated and shown once — so a leaked-but-unused code can't be reused, and the admin always has exactly one valid recovery code.
 4. Admin can also manually regenerate their recovery code at any time from the panel (e.g. if they suspect it's been seen by someone else).
 
-**Known tradeoff:** if both the password and the recovery code are lost, there is no further self-service recovery path — this is the accepted cost of removing vendor/developer involvement from password recovery. This should be called out clearly in onboarding material for each school.
+**Known tradeoff:** if both the password and the recovery code are lost, there is no further self-service recovery path — this is the accepted cost of removing vendor/developer involvement from password recovery. This is an **unrecoverable-by-self-service state by design**: full lockout requires paid manual intervention via direct database access (see `RECOVERY.md` for the developer runbook). This should be called out clearly in onboarding material for each school.
 
 ### 1.8 Certificates — Template-Based Generation
 

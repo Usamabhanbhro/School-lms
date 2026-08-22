@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Copy, KeyRound, RefreshCw } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Copy, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -28,9 +28,6 @@ export function AdminRecoverForm() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [showCodeGenerator, setShowCodeGenerator] = useState(false);
-  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
-  const [generatingCode, setGeneratingCode] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // ─── Recovery handler ───────────────────────────────────────
@@ -77,34 +74,6 @@ export function AdminRecoverForm() {
 
   // ─── New recovery code after password reset ────────────────
   const [newRecoveryCodeAfterReset, setNewRecoveryCodeAfterReset] = useState<string | null>(null);
-
-  // ─── Code generation handler ─────────────────────────────────
-  async function handleGenerateCode() {
-    setGeneratingCode(true);
-    setError(null);
-    setGeneratedCode(null);
-
-    try {
-      const res = await fetch("/api/admin/recover/code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ usernameOrEmail }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error?.message ?? "Failed to generate recovery code.");
-        return;
-      }
-
-      setGeneratedCode(data.data.recoveryCode);
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setGeneratingCode(false);
-    }
-  }
 
   // ─── Copy to clipboard ─────────────────────────────────────
   async function copyToClipboard(text: string) {
@@ -210,57 +179,6 @@ export function AdminRecoverForm() {
     );
   }
 
-  // ─── Generated code display ──────────────────────────────────
-  if (generatedCode) {
-    return (
-      <div className="border border-border bg-bg p-8">
-        <h1 className="text-xl font-bold">New Recovery Code</h1>
-        <div className="mt-4 border border-success/30 bg-success/5 p-4">
-          <p className="text-sm font-semibold text-success">
-            Save your recovery code — you will not see it again.
-          </p>
-          <div className="mt-3 flex items-center gap-2">
-            <p className="flex-1 font-mono text-lg font-bold break-all select-all">
-              {generatedCode}
-            </p>
-            <button
-              type="button"
-              onClick={() => copyToClipboard(generatedCode)}
-              className="shrink-0 border border-border bg-surface p-2 text-text/60 transition-colors hover:bg-border hover:text-text"
-              title="Copy recovery code"
-            >
-              <Copy className="size-4" aria-hidden="true" />
-            </button>
-          </div>
-          {copied && (
-            <p className="mt-1 text-xs text-success">Copied to clipboard.</p>
-          )}
-          <p className="mt-2 text-xs text-text/60">
-            Your previous recovery code is no longer valid. This code expires in 24 hours.
-          </p>
-        </div>
-        <div className="mt-6 space-y-3">
-          <Button
-            onClick={() => {
-              setGeneratedCode(null);
-              setShowCodeGenerator(false);
-              setRecoveryCode("");
-            }}
-            className="w-full"
-          >
-            Use this code to recover
-          </Button>
-          <Link
-            href="/login"
-            className="inline-flex h-10 w-full items-center justify-center gap-2 border border-border bg-bg px-4 text-sm font-medium text-text transition-colors duration-150 ease-out hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            Sign in instead
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   // ─── Main form ───────────────────────────────────────────────
   return (
     <div className="border border-border bg-bg p-8">
@@ -349,41 +267,23 @@ export function AdminRecoverForm() {
         </Button>
       </form>
 
-      {/* Code generation section */}
+      {/* Full lockout notice — replacing the vulnerable code generation button */}
       <div className="mt-6 border-t border-border pt-6">
-        {!showCodeGenerator ? (
-          <Button
-            variant="ghost"
-            onClick={() => setShowCodeGenerator(true)}
-            className="w-full text-text/60"
-          >
-            <RefreshCw className="size-4" aria-hidden="true" />
-            Need a new recovery code?
-          </Button>
-        ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-text/60">
-              Generate a new recovery code if your current code has expired, been
-              used, or you need a fresh one. Your previous code will no longer be
-              valid.
-            </p>
-            <Button
-              variant="secondary"
-              onClick={handleGenerateCode}
-              disabled={generatingCode || !usernameOrEmail}
-              className="w-full"
-            >
-              {generatingCode ? (
-                "Generating…"
-              ) : (
-                <>
-                  <KeyRound className="size-4" aria-hidden="true" />
-                  Generate new recovery code
-                </>
-              )}
-            </Button>
+        <div className="border border-border bg-surface p-4">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="mt-0.5 size-5 shrink-0 text-text/50" aria-hidden="true" />
+            <div>
+              <p className="text-sm font-semibold">Lost your recovery code?</p>
+              <p className="mt-1 text-sm text-text/60">
+                If you no longer have your recovery code, self-service recovery
+                is not available for security reasons. Recovery codes can only be
+                regenerated by an already-signed-in Admin from Settings. If you
+                are fully locked out, this requires direct database access —
+                contact support.
+              </p>
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
       <p className="mt-6 text-center text-sm text-text/50">
