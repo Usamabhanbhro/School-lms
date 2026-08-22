@@ -11,6 +11,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { buttonClasses } from "@/components/ui/button";
+import { getSchoolSettings } from "@/lib/school-settings";
 
 const modules = [
   {
@@ -50,7 +51,11 @@ const roles = [
   { icon: UserCheck, name: "Teacher", body: "Attendance, tests, marks, and report cards — scoped to assigned classes." },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const school = await getSchoolSettings();
+  const schoolName = school.schoolName && school.schoolName !== "[SCHOOL NAME]" ? school.schoolName : null;
+  const logoPath = school.logoPath;
+
   return (
     <div className="flex min-h-screen flex-col">
       {/* Header */}
@@ -58,9 +63,13 @@ export default function HomePage() {
         <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-4 md:px-8">
           <span className="flex items-center gap-2 text-sm font-semibold">
             <span className="flex size-8 items-center justify-center border border-border bg-surface">
-              <GraduationCap className="size-4" aria-hidden="true" />
+              {logoPath ? (
+                <img src={logoPath} alt="" className="size-4 object-contain" />
+              ) : (
+                <GraduationCap className="size-4" aria-hidden="true" />
+              )}
             </span>
-            School LMS
+            {schoolName || "School LMS"}
           </span>
           <Link href="/login" className={buttonClasses("secondary")}>
             Sign in
@@ -155,7 +164,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t border-border">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-6 text-xs text-text/40 md:px-8">
-          <span>School LMS</span>
+          <span>{schoolName || "School LMS"}</span>
           <span>Developed by Usama Bhanbhro</span>
         </div>
       </footer>

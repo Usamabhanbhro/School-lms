@@ -15,11 +15,17 @@ import { getSchoolSettings } from "@/lib/school-settings";
  * interactive controls are hidden during printing.
  */
 export default async function PrintLayout({ children }: { children: ReactNode }) {
-  const session = await getServerSession(authOptions);
+  let session;
+  try {
+    session = await getServerSession(authOptions);
+  } catch {
+    redirect("/login");
+  }
   if (!session?.user) {
     redirect("/login");
   }
 
+  // getSchoolSettings() has its own error handling and returns defaults on failure
   const school = await getSchoolSettings();
 
   return (

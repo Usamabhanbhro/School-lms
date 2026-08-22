@@ -38,8 +38,7 @@ interface NavItem {
 
 const adminNav: NavItem[] = [
   { label: "Students", href: "/admin/students", icon: Users },
-  { label: "Teachers", href: "/admin/teachers", icon: UserCheck },
-  { label: "Academics", href: "/admin/academics", icon: Users },
+  { label: "Users", href: "/admin/teachers", icon: UserCheck },
   { label: "Classes", href: "/admin/classes", icon: School },
   { label: "Subjects", href: "/admin/subjects", icon: BookMarked },
   { label: "Attendance", href: "/admin/attendance", icon: ClipboardCheck },
@@ -101,9 +100,13 @@ function isActive(href: string, pathname: string): boolean {
 export function Sidebar({
   role,
   name,
+  schoolName,
+  logoPath,
 }: {
   role: Role;
   name: string;
+  schoolName: string;
+  logoPath: string | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -134,10 +137,14 @@ export function Sidebar({
         onClick={() => setMobileOpen(false)}
       >
         <span className="flex size-8 shrink-0 items-center justify-center border border-border bg-surface">
-          <GraduationCap className="size-4" aria-hidden="true" />
+          {logoPath ? (
+            <img src={logoPath} alt="" className="size-4 object-contain" />
+          ) : (
+            <GraduationCap className="size-4" aria-hidden="true" />
+          )}
         </span>
         <span className="text-sm font-semibold leading-tight">
-          School LMS
+          {schoolName || "School LMS"}
         </span>
       </Link>
 
@@ -234,9 +241,13 @@ export function Sidebar({
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-bg px-4 py-3 md:hidden">
         <Link href={home} className="flex items-center gap-2 text-sm font-semibold">
           <span className="flex size-8 items-center justify-center border border-border bg-surface">
-            <GraduationCap className="size-4" aria-hidden="true" />
+            {logoPath ? (
+              <img src={logoPath} alt="" className="size-4 object-contain" />
+            ) : (
+              <GraduationCap className="size-4" aria-hidden="true" />
+            )}
           </span>
-          School LMS
+          {schoolName || "School LMS"}
         </Link>
         <button
           type="button"

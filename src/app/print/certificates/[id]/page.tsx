@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSchoolSettings } from "@/lib/school-settings";
-import { TemplateRenderer, NoTemplateFallback } from "@/components/templates/template-renderer";
+import { TemplateRenderer } from "@/components/templates/template-renderer";
 
 /**
  * /print/certificates/:id
@@ -19,29 +19,44 @@ export default async function PrintCertificatePage({
 }) {
   const { id } = await params;
 
-  const [certificate, school] = await Promise.all([
-    prisma.certificate.findUnique({
-      where: { id },
-      include: {
-        student: {
-          select: {
-            id: true,
-            name: true,
-            guardianName: true,
-            dateOfBirth: true,
-            admissionDate: true,
-            classSection: {
-              select: { className: true, sectionName: true },
+  let certificate;
+  let school;
+  try {
+    [certificate, school] = await Promise.all([
+      prisma.certificate.findUnique({
+        where: { id },
+        include: {
+          student: {
+            select: {
+              id: true,
+              name: true,
+              guardianName: true,
+              dateOfBirth: true,
+              admissionDate: true,
+              classSection: {
+                select: { className: true, sectionName: true },
+              },
             },
           },
+          generatedByUser: {
+            select: { id: true, name: true },
+          },
         },
-        generatedByUser: {
-          select: { id: true, name: true },
-        },
-      },
-    }),
-    getSchoolSettings(),
-  ]);
+      }),
+      getSchoolSettings(),
+    ]);
+  } catch {
+    // Database connection issue — render a clean error page instead of crashing
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="text-center">
+          <p className="text-sm text-text/60">
+            Unable to load certificate. Please try again.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!certificate) {
     notFound();

@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { UserManagement } from "@/components/admin/user-management";
 
 export const metadata: Metadata = {
-  title: "Teachers — Admin",
+  title: "Users — Admin",
 };
 
 export default async function AdminTeachersPage() {

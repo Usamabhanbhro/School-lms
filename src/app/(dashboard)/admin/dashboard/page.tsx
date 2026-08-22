@@ -50,10 +50,12 @@ export default async function AdminDashboardPage() {
     prisma.user.count({ where: { role: "TEACHER", isActive: true } }),
   ]);
 
+  const totalUsers = totalTeachers + totalAcademics;
+
   // Quick action links
   const quickActions = [
     { label: "Add Student", href: "/admin/students", icon: Users },
-    { label: "Add Teacher", href: "/admin/teachers", icon: UserCheck },
+    { label: "Manage Users", href: "/admin/teachers", icon: UserCheck },
     { label: "Manage Classes", href: "/admin/classes", icon: School },
     { label: "Mark Attendance", href: "/admin/attendance", icon: ClipboardCheck },
     { label: "School Settings", href: "/admin/settings", icon: School },
@@ -76,16 +78,10 @@ export default async function AdminDashboardPage() {
         />
         <StatCard
           icon={UserCheck}
-          label="Teachers"
-          value={totalTeachers}
-          detail={`${activeTeachers} active`}
+          label="Users"
+          value={totalUsers}
+          detail={`${totalTeachers} teachers, ${totalAcademics} academics`}
           href="/admin/teachers"
-        />
-        <StatCard
-          icon={Users}
-          label="Academics Staff"
-          value={totalAcademics}
-          href="/admin/academics"
         />
         <StatCard
           icon={School}
@@ -116,7 +112,7 @@ export default async function AdminDashboardPage() {
         {quickActions.map(({ label, href, icon: Icon }) => (
           <Link key={href} href={href}>
             <Card className="flex items-center gap-3 p-4 transition-colors hover:bg-surface">
-              <span className="flex size-9 shrink-0 items-center justify-center border border-border bg-surface">
+              <span className="flex size-10 shrink-0 items-center justify-center border border-border bg-surface">
                 <Icon className="size-4 text-text/60" aria-hidden="true" />
               </span>
               <span className="flex-1 text-sm font-medium">{label}</span>
