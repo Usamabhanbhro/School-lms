@@ -2,7 +2,7 @@
 
 Plain-English companion to `prisma/schema.prisma`. Every model in Prisma should have a matching entry here explaining *why* it exists and how it relates to others.
 
-**Status: reconciled with SRS.md v8.** Three login roles: Admin (single account), Academics (multiple), and Teacher (multiple). Students are data records, not logins. No Parent access.
+**Status: reconciled with SRS.md v9.** Three login roles: Admin (single account), Academics (multiple), and Teacher (multiple). Students are data records, not logins. No Parent access.
 
 ## Conventions
 
@@ -10,7 +10,7 @@ Plain-English companion to `prisma/schema.prisma`. Every model in Prisma should 
 - Foreign keys: `<entity>Id` (e.g. `studentId`, `classSectionId`)
 - Timestamps: every model gets `createdAt` and `updatedAt`
 - Soft delete via `isActive` flag for anything with historical records attached (Teacher, Student) — never hard-delete rows that attendance/marks/certificates reference
-- Enums over free-text strings for fixed sets: `Role`, `AttendanceStatus`, `CertificateType`
+- Enums over free-text strings for fixed sets: `Role`, `AttendanceStatus`, `CertificateType`, `BloodGroup`
 
 ## Models
 
@@ -23,6 +23,10 @@ Login identity. Exactly one row with `role = ADMIN` should ever exist (enforced 
 ### TeacherProfile
 Teacher-specific fields, kept separate from `User` so `User` stays a clean auth/identity table.
 - Fields: `name`, `fatherOrSpouseName`, `cnic` (format `xxxxx-xxxxxxx-x`, validated), `phone` (format `03xx-xxxxxxx`, validated), `email`
+- **Schedule fields** (all nullable text, stored as `HH:MM:SS` strings):
+  - `reportingTime` — expected arrival time
+  - `offTime` — expected departure time
+  - `lateThreshold` — arrival time after which the teacher is auto-marked Late
 - Relationships: belongs to one `User`; has many `ClassTeacherAssignment`, many `SubjectTeacherAssignment`, many `TeacherAttendance` records (as the subject), many `DailyAgenda` entries (as author)
 
 ### AcademicsProfile
@@ -49,12 +53,16 @@ A teacher assigned to teach one Subject within one ClassSection — holds rights
 - Fields: `classSectionId`, `subjectId`, `teacherId`
 - A teacher can hold many of these across different classes/subjects; a ClassSection can have many (one per subject, generally)
 
+### BloodGroup
+Enum for student blood groups: `A_PLUS`, `A_MINUS`, `B_PLUS`, `B_MINUS`, `AB_PLUS`, `AB_MINUS`, `O_PLUS`, `O_MINUS`. Used by the `Student.bloodGroup` field.
+
 ### Student
 Created by Admin, allotted to a ClassSection. **Not a login** — pure data record.
-- Fields: `name`, `guardianName` (father/guardian), `guardianCnic` (format `xxxxx-xxxxxxx-x`), `dateOfBirth`, `admissionDate`, `classSectionId`
+- Fields: `name`, `guardianName` (father/guardian), `guardianCnic` (format `xxxxx-xxxxxxx-x`), `dateOfBirth`, `admissionDate`, `placeOfBirth` (required), `bloodGroup` (optional, enum `BloodGroup`), `guardianContact` (phone, format `03xx-xxxxxxx`), `address` (required), `classSectionId`
 - `studentId` (nullable, unique) — Admin/ACADEMICS-assigned student identifier (e.g. `STD-2026-001`). Auto-suggested on creation, editable before save. Globally unique across all students.
 - `rollNumber` (nullable) — Admin/ACADEMICS-assigned roll number, unique within the class section. Auto-suggested based on existing roll numbers in the class. Editable before save.
 - No CNIC field for the student themselves (confirmed in SRS)
+- `guardianContact` reuses the same `03xx-xxxxxxx` phone validation as TeacherProfile.phone
 - Relationships: has many `StudentAttendance`, many `Mark`, many `ReportCard`, many `Certificate`, many `FeeChallan`
 - Constraints: `@@unique([classSectionId, rollNumber])` (partial — only enforced when rollNumber is not null)
 
@@ -67,7 +75,10 @@ One record per student per class per day. Class Teacher can create/edit drafts. 
 
 ### TeacherAttendance
 One record per teacher per day, marked directly by Admin — no draft/confirm lock (Admin already has full edit rights).
-- Fields: `teacherId`, `date`, `status` (enum: `PRESENT`, `ABSENT`, `LEAVE`)
+- Fields: `teacherId`, `date`, `status` (enum: `PRESENT`, `ABSENT`, `LEAVE`, `LATE`)
+- `actualReportingTime` (nullable text, e.g. `"08:25:00"`) — actual time the teacher reported, entered by Admin. Null for ABSENT/LEAVE.
+- `actualOffTime` (nullable text, e.g. `"16:10:00"`) — actual off time, entered by Admin. Null for ABSENT/LEAVE.
+- **Status auto-derivation**: When Admin marks a teacher PRESENT with an `actualReportingTime`, the server compares it against the teacher's configured `lateThreshold` (on TeacherProfile). If the actual time is after the threshold, the stored status automatically becomes `LATE` instead of `PRESENT`. This derivation happens server-side in the API route, not just in the UI.
 
 ### Test
 Created by a Subject Teacher, scoped to one ClassSection + Subject.

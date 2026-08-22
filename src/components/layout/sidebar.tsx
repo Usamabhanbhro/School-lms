@@ -135,17 +135,17 @@ export function Sidebar({
       {/* Masthead */}
       <Link
         href={home}
-        className="flex items-center gap-2 border-b border-border px-4 py-4"
+        className="flex items-center gap-3 border-b border-border px-4 py-4"
         onClick={() => setMobileOpen(false)}
       >
-        <span className="flex size-9 shrink-0 items-center justify-center border border-border bg-surface">
+        <span className="flex size-12 shrink-0 items-center justify-center border border-border bg-surface overflow-hidden">
           {logoPath ? (
-            <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-7 object-contain" />
+            <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-11 object-contain" />
           ) : (
-            <GraduationCap className="size-5" aria-hidden="true" />
+            <GraduationCap className="size-6" aria-hidden="true" />
           )}
         </span>
-        <span className="text-sm font-semibold leading-tight">
+        <span className="min-w-0 text-sm font-semibold leading-tight">
           {schoolName || "School LMS"}
         </span>
       </Link>
@@ -242,11 +242,11 @@ export function Sidebar({
       {/* ─── Mobile header ─────────────────────────────────────── */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-bg px-4 py-3 md:hidden">
         <Link href={home} className="flex items-center gap-2 text-sm font-semibold">
-          <span className="flex size-8 items-center justify-center border border-border bg-surface">
+          <span className="flex size-10 shrink-0 items-center justify-center border border-border bg-surface overflow-hidden">
             {logoPath ? (
-              <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-6 object-contain" />
+              <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-9 object-contain" />
             ) : (
-              <GraduationCap className="size-4" aria-hidden="true" />
+              <GraduationCap className="size-5" aria-hidden="true" />
             )}
           </span>
           {schoolName || "School LMS"}

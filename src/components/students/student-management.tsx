@@ -19,6 +19,17 @@ import { ToastContainer, useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { cnicRegex, phoneRegex } from "@/lib/validations";
 
+const BLOOD_GROUP_OPTIONS = [
+  { value: "A_PLUS", label: "A+" },
+  { value: "A_MINUS", label: "A-" },
+  { value: "B_PLUS", label: "B+" },
+  { value: "B_MINUS", label: "B-" },
+  { value: "AB_PLUS", label: "AB+" },
+  { value: "AB_MINUS", label: "AB-" },
+  { value: "O_PLUS", label: "O+" },
+  { value: "O_MINUS", label: "O-" },
+] as const;
+
 // ─── Types ──────────────────────────────────────────────────────────
 
 interface ClassSection {
@@ -34,6 +45,10 @@ interface Student {
   guardianCnic: string;
   dateOfBirth: string;
   admissionDate: string;
+  placeOfBirth: string;
+  bloodGroup: string | null;
+  guardianContact: string;
+  address: string;
   classSectionId: string;
   classSection: { id: string; className: string; sectionName: string };
   studentId: string | null;
@@ -50,6 +65,10 @@ interface StudentForm {
   guardianCnic: string;
   dateOfBirth: string;
   admissionDate: string;
+  placeOfBirth: string;
+  bloodGroup: string;
+  guardianContact: string;
+  address: string;
   classSectionId: string;
   studentId: string;
   rollNumber: string;
@@ -67,6 +86,10 @@ function emptyForm(): StudentForm {
     guardianCnic: "",
     dateOfBirth: "",
     admissionDate: "",
+    placeOfBirth: "",
+    bloodGroup: "",
+    guardianContact: "",
+    address: "",
     classSectionId: "",
     studentId: "",
     rollNumber: "",
@@ -115,6 +138,12 @@ function validateDate(value: string, label: string): string | null {
   if (!value) return `${label} is required.`;
   const d = new Date(value);
   if (isNaN(d.getTime())) return `${label} must be a valid date.`;
+  return null;
+}
+
+function validatePhone(value: string): string | null {
+  if (!value) return "Guardian contact is required.";
+  if (!phoneRegex.test(value)) return "Must be in format 03xx-xxxxxxx (e.g. 0321-1234567).";
   return null;
 }
 
@@ -180,6 +209,10 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
       guardianCnic: item.guardianCnic,
       dateOfBirth: item.dateOfBirth.split("T")[0],
       admissionDate: item.admissionDate.split("T")[0],
+      placeOfBirth: item.placeOfBirth ?? "",
+      bloodGroup: item.bloodGroup ?? "",
+      guardianContact: item.guardianContact ?? "",
+      address: item.address ?? "",
       classSectionId: item.classSectionId,
       studentId: item.studentId ?? "",
       rollNumber: item.rollNumber ?? "",
@@ -209,6 +242,15 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
 
     const classErr = validateRequired(form.classSectionId, "Class section");
     if (classErr) errors.classSectionId = classErr;
+
+    const placeErr = validateRequired(form.placeOfBirth, "Place of birth");
+    if (placeErr) errors.placeOfBirth = placeErr;
+
+    const contactErr = validatePhone(form.guardianContact);
+    if (contactErr) errors.guardianContact = contactErr;
+
+    const addrErr = validateRequired(form.address, "Address");
+    if (addrErr) errors.address = addrErr;
 
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -445,6 +487,70 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
               />
               {fieldErrors.admissionDate && <p id="adm-error" className="mt-1 text-xs text-danger">{fieldErrors.admissionDate}</p>}
             </div>
+
+            {/* Place of Birth */}
+            <div>
+              <label htmlFor="placeOfBirth" className="mb-1 block text-xs font-medium text-text/60">
+                Place of Birth *
+              </label>
+              <Input
+                id="placeOfBirth"
+                value={form.placeOfBirth}
+                onChange={(e) => setForm((f) => ({ ...f, placeOfBirth: e.target.value }))}
+                aria-invalid={!!fieldErrors.placeOfBirth}
+                aria-describedby={fieldErrors.placeOfBirth ? "pob-error" : undefined}
+              />
+              {fieldErrors.placeOfBirth && <p id="pob-error" className="mt-1 text-xs text-danger">{fieldErrors.placeOfBirth}</p>}
+            </div>
+
+            {/* Blood Group */}
+            <div>
+              <label htmlFor="bloodGroup" className="mb-1 block text-xs font-medium text-text/60">
+                Blood Group (optional)
+              </label>
+              <select
+                id="bloodGroup"
+                value={form.bloodGroup}
+                onChange={(e) => setForm((f) => ({ ...f, bloodGroup: e.target.value }))}
+                className="h-10 w-full border border-border bg-bg px-4 text-sm text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                <option value="">Select…</option>
+                {BLOOD_GROUP_OPTIONS.map((bg) => (
+                  <option key={bg.value} value={bg.value}>{bg.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Guardian Contact */}
+            <div>
+              <label htmlFor="guardianContact" className="mb-1 block text-xs font-medium text-text/60">
+                Guardian Contact *
+              </label>
+              <Input
+                id="guardianContact"
+                placeholder="03xx-xxxxxxx"
+                value={form.guardianContact}
+                onChange={(e) => setForm((f) => ({ ...f, guardianContact: e.target.value }))}
+                aria-invalid={!!fieldErrors.guardianContact}
+                aria-describedby={fieldErrors.guardianContact ? "contact-error" : undefined}
+              />
+              {fieldErrors.guardianContact && <p id="contact-error" className="mt-1 text-xs text-danger">{fieldErrors.guardianContact}</p>}
+            </div>
+
+            {/* Address */}
+            <div>
+              <label htmlFor="address" className="mb-1 block text-xs font-medium text-text/60">
+                Address *
+              </label>
+              <Input
+                id="address"
+                value={form.address}
+                onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                aria-invalid={!!fieldErrors.address}
+                aria-describedby={fieldErrors.address ? "addr-error" : undefined}
+              />
+              {fieldErrors.address && <p id="addr-error" className="mt-1 text-xs text-danger">{fieldErrors.address}</p>}
+            </div>
           </div>
 
           <div className="mt-6 flex gap-3">
@@ -492,6 +598,7 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
                       <TH>Student ID</TH>
                       <TH>Roll #</TH>
                       <TH>Guardian</TH>
+                      <TH>Contact</TH>
                       <TH>Class</TH>
                       <TH>DOB</TH>
                       <TH>Admission</TH>
@@ -505,6 +612,7 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
                         <TD className="tabular-nums">{s.studentId ?? "—"}</TD>
                         <TD className="tabular-nums">{s.rollNumber ?? "—"}</TD>
                         <TD>{s.guardianName}</TD>
+                        <TD className="tabular-nums">{s.guardianContact || "—"}</TD>
                         <TD>{classLabel(s.classSection)}</TD>
                         <TD className="tabular-nums">{formatDate(s.dateOfBirth)}</TD>
                         <TD className="tabular-nums">{formatDate(s.admissionDate)}</TD>

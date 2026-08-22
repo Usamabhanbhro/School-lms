@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
 import { getScopedClassSectionIds } from "@/lib/teacher-scope";
-import { cnicField } from "@/lib/validations";
+import { cnicField, phoneField } from "@/lib/validations";
 
 /**
  * GET /api/students
@@ -48,6 +48,10 @@ const createStudentSchema = z.object({
   guardianCnic: cnicField,
   dateOfBirth: z.string().min(1), // ISO date string, validated as Date by Prisma
   admissionDate: z.string().min(1),
+  placeOfBirth: z.string().min(1).max(200),
+  bloodGroup: z.enum(["A_PLUS", "A_MINUS", "B_PLUS", "B_MINUS", "AB_PLUS", "AB_MINUS", "O_PLUS", "O_MINUS"]).optional(),
+  guardianContact: phoneField,
+  address: z.string().min(1).max(500),
   classSectionId: z.string().min(1),
   studentId: z.string().max(50).optional(),
   rollNumber: z.string().max(20).optional(),
@@ -104,6 +108,10 @@ export async function POST(request: Request) {
         guardianCnic: body.guardianCnic,
         dateOfBirth: new Date(body.dateOfBirth),
         admissionDate: new Date(body.admissionDate),
+        placeOfBirth: body.placeOfBirth,
+        bloodGroup: body.bloodGroup || null,
+        guardianContact: body.guardianContact,
+        address: body.address,
         classSectionId: body.classSectionId,
         studentId: body.studentId || null,
         rollNumber: body.rollNumber || null,

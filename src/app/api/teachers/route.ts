@@ -24,6 +24,9 @@ const createTeacherSchema = z.object({
       value === "" || value === undefined ? undefined : value.trim().toLowerCase(),
     ),
   password: z.string().min(8).max(100),
+  reportingTime: z.string().optional(),
+  offTime: z.string().optional(),
+  lateThreshold: z.string().optional(),
 });
 
 const teacherSelect = {
@@ -33,6 +36,9 @@ const teacherSelect = {
   cnic: true,
   phone: true,
   email: true,
+  reportingTime: true,
+  offTime: true,
+  lateThreshold: true,
   userId: true,
   createdAt: true,
   updatedAt: true,
@@ -93,6 +99,9 @@ export async function POST(request: Request) {
           cnic: body.cnic,
           phone: body.phone,
           email: body.email,
+          reportingTime: body.reportingTime || null,
+          offTime: body.offTime || null,
+          lateThreshold: body.lateThreshold || null,
           userId: user.id,
         },
         select: teacherSelect,

@@ -71,8 +71,22 @@ All animations respect `prefers-reduced-motion` via the global CSS rule that set
 
 - **Sidebar**: persistent, left-aligned.
   - Masthead: school logo, top of sidebar, tasteful sizing (not oversized/hero-style).
-  - Nav below masthead, styled like binder-tab dividers, role-aware (nav items differ per role: Admin/Teacher/Student/Parent).
+  - Nav below masthead, styled like binder-tab dividers, role-aware (nav items differ per role: Admin/Teacher/Academics).
   - Footer of sidebar (or app footer): "Developed by Usama Bhanbhro" — small, muted text, not competing with content.
+
+### Responsive Logo Sizing
+
+The school logo must be legible and proportionate across all viewports. The following sizing rules apply to both the sidebar masthead and the mobile header:
+
+| Context | Container | Logo | Notes |
+|---|---|---|---|
+| **Sidebar (desktop)** | `size-12` (48×48) | `size-11` (44×44) | `object-contain` preserves aspect ratio. `overflow-hidden` on container prevents overflow from tall crests. |
+| **Mobile header** | `size-10` (40×40) | `size-9` (36×36) | Same `object-contain` + `overflow-hidden` pattern. |
+| **Sign-in screen** | `size-16` (64×64) | `size-14` (56×56) | Larger, centered. No container border. |
+
+**Aspect ratio rule:** Always use `object-contain` on the `<img>` element. Never use `object-cover` or fixed aspect ratios — the logo container is square, and `object-contain` ensures a tall crest/seal or a wide horizontal logo both display correctly without cropping. The `overflow-hidden` on the square container prevents any visual bleed from odd-shaped logos.
+
+**Spacing:** The masthead container uses `gap-3` (12px) spacing between logo and school name text, within the standard 8px spacing scale.
 - **Content area**: card/table hybrid, ruled-table style with hairline dividers (ledger/roll-call feel), consistent with the industrial direction.
 
 ## Tables
@@ -98,6 +112,7 @@ Status must **never** rely on color alone — pair color with a shape or icon:
 | Present | `CheckCircle2` | success |
 | Absent | `XCircle` | danger |
 | Leave | `Minus` | primary |
+| Late | `Clock` | orange (use `text-orange-600` / `border-orange-300 bg-orange-50`) |
 | Locked | `Lock` | success |
 | Unlocked / Draft | `Unlock` | neutral |
 

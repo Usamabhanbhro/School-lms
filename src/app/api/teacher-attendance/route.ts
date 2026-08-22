@@ -41,7 +41,24 @@ export async function GET(request: Request) {
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     });
 
-    return NextResponse.json({ data: records });
+    // Also fetch teacher schedule info for the UI
+    const teacherIds = [...new Set(records.map((r) => r.teacherId))];
+    const teacherProfiles = await prisma.teacherProfile.findMany({
+      where: { id: { in: teacherIds } },
+      select: { id: true, reportingTime: true, offTime: true, lateThreshold: true },
+    });
+    const profileMap = new Map(teacherProfiles.map((p) => [p.id, p]));
+
+    // Attach schedule info to each record for the frontend
+    const recordsWithSchedule = records.map((r) => ({
+      ...r,
+      teacher: {
+        ...r.teacher,
+        ...profileMap.get(r.teacherId),
+      },
+    }));
+
+    return NextResponse.json({ data: recordsWithSchedule });
   } catch (error) {
     return handleError(error);
   }
@@ -58,6 +75,8 @@ const upsertTeacherAttendanceSchema = z.object({
   teacherId: z.string().min(1),
   date: z.string().min(1), // ISO date string
   status: z.enum(["PRESENT", "ABSENT", "LEAVE"]),
+  actualReportingTime: z.string().optional(), // HH:MM or HH:MM:SS — only for PRESENT/LATE
+  actualOffTime: z.string().optional(), // HH:MM or HH:MM:SS — only for PRESENT/LATE
 });
 
 export async function POST(request: Request) {
@@ -78,6 +97,35 @@ export async function POST(request: Request) {
       );
     }
 
+    // Auto-derive LATE: if status is PRESENT and actualReportingTime is provided,
+    // compare against the teacher's configured lateThreshold. If the actual time
+    // is after the threshold, store status as LATE instead of PRESENT.
+    let finalStatus: "PRESENT" | "ABSENT" | "LEAVE" | "LATE" = body.status;
+    let finalReportingTime: string | null = null;
+    let finalOffTime: string | null = null;
+
+    if (body.status === "PRESENT" || body.status === "LEAVE") {
+      finalReportingTime = body.actualReportingTime || null;
+      finalOffTime = body.actualOffTime || null;
+    }
+
+    if (body.status === "PRESENT" && body.actualReportingTime) {
+      const teacherProfile = await prisma.teacherProfile.findUnique({
+        where: { id: body.teacherId },
+        select: { lateThreshold: true },
+      });
+      if (teacherProfile?.lateThreshold) {
+        // Compare times as strings (HH:MM:SS format is lexicographically sortable)
+        const actualTime = body.actualReportingTime.length === 5
+          ? body.actualReportingTime + ":00"
+          : body.actualReportingTime;
+        const threshold = teacherProfile.lateThreshold;
+        if (actualTime > threshold) {
+          finalStatus = "LATE";
+        }
+      }
+    }
+
     // Upsert: create or update for this teacher+date
     const record = await prisma.teacherAttendance.upsert({
       where: {
@@ -87,13 +135,17 @@ export async function POST(request: Request) {
         },
       },
       update: {
-        status: body.status,
+        status: finalStatus,
+        actualReportingTime: finalReportingTime,
+        actualOffTime: finalOffTime,
         markedById: authedSession.user.id,
       },
       create: {
         teacherId: body.teacherId,
         date: new Date(body.date),
-        status: body.status,
+        status: finalStatus,
+        actualReportingTime: finalReportingTime,
+        actualOffTime: finalOffTime,
         markedById: authedSession.user.id,
       },
       include: {

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
-import { cnicField } from "@/lib/validations";
+import { cnicField, phoneField } from "@/lib/validations";
 
 /**
  * PATCH /api/students/:id — edit student fields or reallot to a different class/section. Admin only.
@@ -15,6 +15,10 @@ const editStudentSchema = z.object({
   guardianCnic: cnicField.optional(),
   dateOfBirth: z.string().min(1).optional(),
   admissionDate: z.string().min(1).optional(),
+  placeOfBirth: z.string().min(1).max(200).optional(),
+  bloodGroup: z.enum(["A_PLUS", "A_MINUS", "B_PLUS", "B_MINUS", "AB_PLUS", "AB_MINUS", "O_PLUS", "O_MINUS"]).optional(),
+  guardianContact: phoneField.optional(),
+  address: z.string().min(1).max(500).optional(),
   classSectionId: z.string().min(1).optional(),
   studentId: z.string().max(50).optional(),
   rollNumber: z.string().max(20).optional(),
@@ -59,6 +63,10 @@ export async function PATCH(
     if (body.guardianCnic !== undefined) updateData.guardianCnic = body.guardianCnic;
     if (body.dateOfBirth !== undefined) updateData.dateOfBirth = new Date(body.dateOfBirth);
     if (body.admissionDate !== undefined) updateData.admissionDate = new Date(body.admissionDate);
+    if (body.placeOfBirth !== undefined) updateData.placeOfBirth = body.placeOfBirth;
+    if (body.bloodGroup !== undefined) updateData.bloodGroup = body.bloodGroup || null;
+    if (body.guardianContact !== undefined) updateData.guardianContact = body.guardianContact;
+    if (body.address !== undefined) updateData.address = body.address;
     if (body.classSectionId !== undefined) updateData.classSectionId = body.classSectionId;
     if (body.studentId !== undefined) updateData.studentId = body.studentId || null;
     if (body.rollNumber !== undefined) updateData.rollNumber = body.rollNumber || null;

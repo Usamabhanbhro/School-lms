@@ -1,6 +1,6 @@
 # School LMS — Software Requirements Specification (SRS)
 
-**Status: Draft v8 — attendance audit, student IDs, teacher unassignment, daily agenda.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
+**Status: Draft v9 — student admission fields, teacher schedule + late auto-derivation, responsive logo.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
 
 ---
 
@@ -40,6 +40,12 @@ Admin creates Student records and allots each student to a class+section. Requir
 - Father/guardian CNIC — format `xxxxx-xxxxxxx-x` (student does not have their own CNIC on file)
 - Date of birth
 - Admission date
+- Place of birth
+- Guardian contact (phone) — format `03xx-xxxxxxx`, same validation as TeacherProfile.phone
+- Address
+
+**Optional fields:**
+- **Blood Group** — fixed enum: A+, A-, B+, B-, AB+, AB-, O+, O-. Select/dropdown, marked "(optional)". Not free text — enum ensures data quality.
 
 **Optional fields (Admin/ACADEMICS-assigned):**
 - **Student ID** — a unique identifier assigned by Admin or Academics (e.g. `STD-2026-001`). Auto-suggested on creation based on existing records, but the value is **editable** before save. Globally unique across all students. Nullable for existing records — not retroactively generated.
@@ -53,12 +59,29 @@ Teachers only see students within the class(es) they're assigned to (as class te
 
 Admin marks teacher attendance directly (Present/Absent/Leave). No draft/confirm lock — Admin has direct edit access at all times, since Admin is already the top authority.
 
+**Configured schedule per teacher** (set at creation, editable later via the existing teacher edit flow):
+- `reportingTime` — expected arrival time (stored as `HH:MM:SS` text, using Prisma's consistent string representation for time-of-day)
+- `offTime` — expected departure time
+- `lateThreshold` — arrival time after which the teacher is auto-marked LATE
+
+All three are nullable — not every teacher needs a configured schedule.
+
+**Daily actual-time logging** (entered by Admin each time attendance is marked):
+- `actualReportingTime` — the teacher's actual arrival time, entered by Admin when marking PRESENT/LATE
+- `actualOffTime` — the teacher's actual departure time, entered by Admin
+- Both nullable — null for ABSENT/LEAVE records
+
+**Status auto-derivation rule** (implemented server-side, documented explicitly here):
+When Admin marks a teacher PRESENT and enters an `actualReportingTime`, the server compares it against that teacher's configured `lateThreshold`. If the actual time is after the threshold, the stored status automatically becomes **LATE** instead of PRESENT. This is server-side logic in the API route, not a UI-only display choice — the database stores LATE as the canonical status.
+
+Admin retains full direct edit rights on TeacherAttendance records — can change status, actual times, or both at any time.
+
 **Teacher Attendance CSV Export:** Admin can download teacher attendance records as CSV. The export supports filtering by:
 - All teachers (no teacher filter)
 - A specific teacher (by teacher ID)
 - Date range (from/to)
 
-The CSV includes school metadata as header rows (see §8).
+The CSV includes columns: Teacher Name, Phone, Date, Status, Reporting Time, Off Time. The CSV includes school metadata as header rows (see §8).
 
 ### 1.5 Student Attendance Oversight
 

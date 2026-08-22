@@ -2,7 +2,7 @@
 
 Living document. Every API route must be added here when created — see `CONVENTIONS.md` and `AGENTS.md`.
 
-**Status: reconciled with SRS.md v8.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
+**Status: reconciled with SRS.md v9.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
 Phase 1–6 routes are implemented. Admin provisioning, school settings, admin self-recovery, and daily agenda routes added.
 
 ## Conventions Recap
@@ -62,14 +62,14 @@ NextAuth handler — login/logout/session. Credentials provider only.
 ### POST /api/teachers
 **Role required:** Admin
 **Purpose:** Create a teacher account (User + TeacherProfile in transaction)
-**Request body:** `{ name, fatherOrSpouseName, cnic, phone, email, password }`
-**Notes:** validates CNIC (`xxxxx-xxxxxxx-x`) and phone (`03xx-xxxxxxx`) formats server-side; derives username from email prefix or CNIC
+**Request body:** `{ name, fatherOrSpouseName, cnic, phone, email, password, reportingTime?, offTime?, lateThreshold? }`
+**Notes:** validates CNIC (`xxxxx-xxxxxxx-x`) and phone (`03xx-xxxxxxx`) formats server-side; derives username from email prefix or CNIC. Schedule fields are optional text strings (e.g. `"08:30:00"`).
 **Status:** implemented
 
 ### PATCH /api/teachers/:id
 **Role required:** Admin
 **Purpose:** Edit teacher fields, or set `isActive: false` to revoke
-**Request body:** partial `{ name, fatherOrSpouseName, cnic, phone, email, isActive }`
+**Request body:** partial `{ name, fatherOrSpouseName, cnic, phone, email, reportingTime, offTime, lateThreshold, isActive }`
 **Status:** implemented
 
 ### DELETE /api/teachers/:id
@@ -157,14 +157,14 @@ NextAuth handler — login/logout/session. Credentials provider only.
 ### POST /api/students
 **Role required:** Admin
 **Purpose:** Create a student record and allot to a class/section
-**Request body:** `{ name, guardianName, guardianCnic, dateOfBirth, admissionDate, classSectionId, studentId?, rollNumber? }`
-**Notes:** validates guardian CNIC format server-side; validates studentId uniqueness globally and rollNumber uniqueness within class section
+**Request body:** `{ name, guardianName, guardianCnic, dateOfBirth, admissionDate, placeOfBirth, bloodGroup?, guardianContact, address, classSectionId, studentId?, rollNumber? }`
+**Notes:** validates guardian CNIC and guardianContact phone formats server-side; validates studentId uniqueness globally and rollNumber uniqueness within class section. `bloodGroup` is optional (enum: A_PLUS, A_MINUS, B_PLUS, B_MINUS, AB_PLUS, AB_MINUS, O_PLUS, O_MINUS).
 **Status:** implemented
 
 ### PATCH /api/students/:id
 **Role required:** Admin
 **Purpose:** Edit student fields or reallot to a different class/section
-**Request body:** partial `{ name, guardianName, guardianCnic, dateOfBirth, admissionDate, classSectionId, studentId, rollNumber }`
+**Request body:** partial `{ name, guardianName, guardianCnic, dateOfBirth, admissionDate, placeOfBirth, bloodGroup, guardianContact, address, classSectionId, studentId, rollNumber }`
 **Status:** implemented
 
 ---
@@ -180,7 +180,9 @@ NextAuth handler — login/logout/session. Credentials provider only.
 ### POST /api/teacher-attendance
 **Role required:** Admin
 **Purpose:** Mark or directly edit a teacher's attendance for a date — upsert by teacherId+date, no lock/confirm step
-**Request body:** `{ teacherId, date, status }`
+**Request body:** `{ teacherId, date, status, actualReportingTime?, actualOffTime? }`
+**Status auto-derivation (behavior change):** When `status` is `PRESENT` and `actualReportingTime` is provided, the server compares it against the teacher's configured `lateThreshold` (from TeacherProfile). If the actual time is after the threshold, the stored status is automatically changed to `LATE` instead of `PRESENT`. This is server-side logic — the database records LATE as the canonical status.
+**Notes:** `actualReportingTime` and `actualOffTime` are nullable text strings (e.g. `"08:25:00"`). Only populated for PRESENT/LATE records; null for ABSENT/LEAVE.
 **Status:** implemented
 
 ### GET /api/teacher-attendance/export

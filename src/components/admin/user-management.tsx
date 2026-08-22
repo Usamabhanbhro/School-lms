@@ -97,6 +97,9 @@ interface UserForm {
   phone: string;
   email: string;
   password: string; // create only
+  reportingTime: string; // teacher schedule
+  offTime: string; // teacher schedule
+  lateThreshold: string; // teacher schedule
 }
 
 function emptyForm(): UserForm {
@@ -107,6 +110,9 @@ function emptyForm(): UserForm {
     phone: "",
     email: "",
     password: "",
+    reportingTime: "",
+    offTime: "",
+    lateThreshold: "",
   };
 }
 
@@ -192,6 +198,9 @@ export function UserManagement() {
       phone: user.phone,
       email: user.email ?? "",
       password: "",
+      reportingTime: (user as any).reportingTime ?? "",
+      offTime: (user as any).offTime ?? "",
+      lateThreshold: (user as any).lateThreshold ?? "",
     });
     setEditingUser(user);
     setFieldErrors({});
@@ -247,6 +256,11 @@ export function UserManagement() {
     };
     if (form.email) payload.email = form.email;
     if (tab === "teachers") payload.fatherOrSpouseName = form.fatherOrSpouseName;
+    if (tab === "teachers") {
+      if (form.reportingTime) payload.reportingTime = form.reportingTime;
+      if (form.offTime) payload.offTime = form.offTime;
+      if (form.lateThreshold) payload.lateThreshold = form.lateThreshold;
+    }
 
     try {
       const res = await fetch(endpoint, {
@@ -291,6 +305,11 @@ export function UserManagement() {
     };
     if (form.email) payload.email = form.email;
     if (tab === "teachers") payload.fatherOrSpouseName = form.fatherOrSpouseName;
+    if (tab === "teachers") {
+      payload.reportingTime = form.reportingTime || "";
+      payload.offTime = form.offTime || "";
+      payload.lateThreshold = form.lateThreshold || "";
+    }
 
     try {
       const res = await fetch(endpoint, {
@@ -628,6 +647,58 @@ export function UserManagement() {
               </div>
             )}
           </div>
+
+          {/* Teacher schedule fields (teachers only) */}
+          {tab === "teachers" && (
+            <>
+              <div className="mt-4 border-t border-border pt-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase text-text/50">
+                  Schedule
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <label htmlFor="reportingTime" className="mb-1 block text-xs font-medium text-text/60">
+                      Reporting Time
+                    </label>
+                    <input
+                      id="reportingTime"
+                      type="time"
+                      value={form.reportingTime}
+                      onChange={(e) => setForm((f) => ({ ...f, reportingTime: e.target.value }))}
+                      className="h-10 w-full border border-border bg-bg px-4 text-sm text-text"
+                    />
+                    <p className="mt-1 text-xs text-text/40">Expected arrival time</p>
+                  </div>
+                  <div>
+                    <label htmlFor="offTime" className="mb-1 block text-xs font-medium text-text/60">
+                      Off Time
+                    </label>
+                    <input
+                      id="offTime"
+                      type="time"
+                      value={form.offTime}
+                      onChange={(e) => setForm((f) => ({ ...f, offTime: e.target.value }))}
+                      className="h-10 w-full border border-border bg-bg px-4 text-sm text-text"
+                    />
+                    <p className="mt-1 text-xs text-text/40">Expected departure time</p>
+                  </div>
+                  <div>
+                    <label htmlFor="lateThreshold" className="mb-1 block text-xs font-medium text-text/60">
+                      Late Threshold
+                    </label>
+                    <input
+                      id="lateThreshold"
+                      type="time"
+                      value={form.lateThreshold}
+                      onChange={(e) => setForm((f) => ({ ...f, lateThreshold: e.target.value }))}
+                      className="h-10 w-full border border-border bg-bg px-4 text-sm text-text"
+                    />
+                    <p className="mt-1 text-xs text-text/40">Arrivals after this are auto-marked Late</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Actions */}
           <div className="mt-6 flex gap-3">

@@ -24,6 +24,18 @@ enum AttendanceStatus {
   PRESENT
   ABSENT
   LEAVE
+  LATE
+}
+
+enum BloodGroup {
+  A_PLUS
+  A_MINUS
+  B_PLUS
+  B_MINUS
+  AB_PLUS
+  AB_MINUS
+  O_PLUS
+  O_MINUS
 }
 
 enum CertificateType {
@@ -130,6 +142,13 @@ model TeacherProfile {
   userId             String  @unique
   user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  /// Configured reporting time (HH:MM:SS), used for Late auto-derivation
+  reportingTime String?  // e.g. "08:30:00"
+  /// Configured off time (HH:MM:SS)
+  offTime String?  // e.g. "16:00:00"
+  /// Threshold after which a teacher is marked Late instead of Present
+  lateThreshold String?  // e.g. "08:45:00"
+
   classTeacherAssignments ClassTeacherAssignment[]
   subjectTeacherAssignments SubjectTeacherAssignment[]
   dailyAgendas DailyAgenda[]
@@ -223,6 +242,10 @@ model Student {
   guardianCnic    String      // format: xxxxx-xxxxxxx-x (student has no CNIC of their own)
   dateOfBirth     DateTime    @db.Date
   admissionDate   DateTime    @db.Date
+  placeOfBirth    String
+  bloodGroup      BloodGroup?
+  guardianContact String
+  address         String
   classSectionId  String
   classSection    ClassSection @relation(fields: [classSectionId], references: [id], onDelete: Restrict)
 
@@ -302,6 +325,11 @@ model TeacherAttendance {
   teacher   TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   date      DateTime @db.Date
   status    AttendanceStatus
+
+  /// Actual reporting time entered by Admin when marking PRESENT/LATE (nullable — null for ABSENT/LEAVE)
+  actualReportingTime String?  // e.g. "08:25:00"
+  /// Actual off time entered by Admin (nullable — null for ABSENT/LEAVE)
+  actualOffTime String?  // e.g. "16:10:00"
 
   /// The Admin user who marked/edited this record (nullable for historical data)
   markedById String?

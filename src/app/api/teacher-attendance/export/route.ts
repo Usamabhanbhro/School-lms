@@ -68,8 +68,8 @@ export async function GET(request: Request) {
     lines.push(`Generated At: ${new Date().toISOString().replace("T", " ").slice(0, 19)}`);
     lines.push("");
 
-    // Data header
-    lines.push("Teacher Name,Phone,Date,Status");
+    // Data header — includes new time-tracking columns
+    lines.push("Teacher Name,Phone,Date,Status,Reporting Time,Off Time");
 
     // Data rows
     for (const record of records) {
@@ -77,7 +77,9 @@ export async function GET(request: Request) {
       const phone = escapeCsvField(record.teacher.phone);
       const date = new Date(record.date).toISOString().split("T")[0];
       const status = record.status;
-      lines.push(`${name},${phone},${date},${status}`);
+      const reportingTime = record.actualReportingTime ?? "";
+      const offTime = record.actualOffTime ?? "";
+      lines.push(`${name},${phone},${date},${status},${reportingTime},${offTime}`);
     }
 
     const csv = lines.join("\n");

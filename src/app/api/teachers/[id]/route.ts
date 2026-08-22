@@ -22,6 +22,9 @@ const editTeacherSchema = z.object({
     .transform((value) =>
       value === "" || value === undefined ? undefined : value.trim().toLowerCase(),
     ),
+  reportingTime: z.string().optional(),
+  offTime: z.string().optional(),
+  lateThreshold: z.string().optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -32,6 +35,9 @@ const teacherSelect = {
   cnic: true,
   phone: true,
   email: true,
+  reportingTime: true,
+  offTime: true,
+  lateThreshold: true,
   userId: true,
   createdAt: true,
   updatedAt: true,
@@ -76,6 +82,9 @@ export async function PATCH(
     if (body.cnic !== undefined) profileData.cnic = body.cnic;
     if (body.phone !== undefined) profileData.phone = body.phone;
     if (body.email !== undefined) profileData.email = body.email;
+    if (body.reportingTime !== undefined) profileData.reportingTime = body.reportingTime || null;
+    if (body.offTime !== undefined) profileData.offTime = body.offTime || null;
+    if (body.lateThreshold !== undefined) profileData.lateThreshold = body.lateThreshold || null;
 
     const userData: Record<string, unknown> = {};
     if (body.name !== undefined) userData.name = body.name;
