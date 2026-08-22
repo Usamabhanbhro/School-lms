@@ -140,6 +140,7 @@ The full chain (9 migrations) was validated with `prisma migrate reset --force` 
 - `(print)` route group returned 404 in Next.js 16.3.1/Turbopack — fixed by renaming from route group `(print)` to literal directory `print`, making URLs resolve to `/print/certificates/[id]` etc.
 - Attendance routes have `[classSectionId]` and `[id]` at the same path level, causing a Next.js conflict. Fixed by moving confirm endpoint to `/api/attendance/confirm` with query params.
 - Stale `.next` build cache had to be cleared after the print route rename to resolve TS2307 module resolution errors.
+- **Print page template lookups must be wrapped in try/catch** — each Prisma call (certificate query, school settings, template lookup) is a separate DB connection that can fail independently (Neon cold start). The initial fix wrapped only the first two queries; the template lookups at lines 70–83 were unprotected and crashed the page. All three print pages (certificates, fee-challans, report-cards) were affected. Fixed in commit `f0e28c2`.
 
 ## Not in Any Phase (explicitly out of scope for SRS v5)
 

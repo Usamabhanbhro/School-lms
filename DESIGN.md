@@ -52,6 +52,21 @@ One icon library only: **Lucide** (thin stroke, geometric, pairs with the square
 - Consistent timing function across the entire app — this consistency matters more than the specific values.
 - Respect `prefers-reduced-motion`.
 
+**Applied timing patterns:**
+
+| Interaction | Animation | Duration | Easing |
+|---|---|---|---|
+| Mobile drawer open | `translateX(100%)` → `translateX(0)` | 200ms | ease-out |
+| Mobile drawer close | `translateX(0)` → `translateX(100%)` | 150ms | ease-in |
+| Drawer scrim | `opacity 0` → `1` | 150ms | ease-out |
+| Confirm dialog overlay | `opacity 0` → `1` | 150ms | ease-out |
+| Confirm dialog card | `scale(0.95) translateY(4px)` → `scale(1) translateY(0)` | 200ms | ease-out |
+| User menu dropdown | `opacity 0 translateY(-4px)` → `opacity 1 translateY(0)` | 150ms | ease-out |
+| Dashboard mount (sign-in transition) | `opacity 0 translateY(8px)` → `opacity 1 translateY(0)` | 200ms | ease-out |
+| Toast progress bar | `scaleX(1)` → `scaleX(0)` | 4000ms | linear |
+
+All animations respect `prefers-reduced-motion` via the global CSS rule that sets `animation-duration: 0.01ms` when reduced motion is preferred.
+
 ## Layout
 
 - **Sidebar**: persistent, left-aligned.

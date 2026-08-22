@@ -62,22 +62,29 @@ export default async function PrintCertificatePage({
     notFound();
   }
 
-  // Try to load template: first from snapshot, then active for this type
+  // Try to load template: first from snapshot, then active for this type.
+  // Wrapped in try/catch because these are separate DB calls that can fail
+  // independently (e.g. Neon cold start on the second connection).
   let template = null;
-  if (certificate.templateId) {
-    template = await prisma.documentTemplate.findUnique({
-      where: { id: certificate.templateId },
-      include: { fields: true, tableRegions: true },
-    });
-  }
-  if (!template) {
-    const templateType = certificate.type === "LEAVING"
-      ? "LEAVING_CERTIFICATE"
-      : "CHARACTER_CERTIFICATE";
-    template = await prisma.documentTemplate.findFirst({
-      where: { type: templateType as any, isActive: true },
-      include: { fields: true, tableRegions: true },
-    });
+  try {
+    if (certificate.templateId) {
+      template = await prisma.documentTemplate.findUnique({
+        where: { id: certificate.templateId },
+        include: { fields: true, tableRegions: true },
+      });
+    }
+    if (!template) {
+      const templateType = certificate.type === "LEAVING"
+        ? "LEAVING_CERTIFICATE"
+        : "CHARACTER_CERTIFICATE";
+      template = await prisma.documentTemplate.findFirst({
+        where: { type: templateType as any, isActive: true },
+        include: { fields: true, tableRegions: true },
+      });
+    }
+  } catch {
+    // Template lookup failed — fall back to coded layout
+    template = null;
   }
 
   const isLeaving = certificate.type === "LEAVING";
@@ -124,7 +131,14 @@ export default async function PrintCertificatePage({
             fieldKey: f.fieldKey,
             xPercent: f.xPercent,
             yPercent: f.yPercent,
+            widthPercent: f.widthPercent,
+            heightPercent: f.heightPercent,
             fontSize: f.fontSize,
+            fontFamily: f.fontFamily,
+            fontColor: f.fontColor,
+            fontWeight: f.fontWeight,
+            fontStyle: f.fontStyle,
+            textDecoration: f.textDecoration,
             textAlign: f.textAlign,
           })),
           tableRegions: template.tableRegions.map((tr) => ({

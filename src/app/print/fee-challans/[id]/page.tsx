@@ -47,19 +47,24 @@ export default async function PrintFeeChallanPage({
     day: "numeric",
   });
 
-  // Try to load template
+  // Try to load template — wrapped in try/catch because these are
+  // separate DB calls that can fail independently.
   let template = null;
-  if (challan.templateId) {
-    template = await prisma.documentTemplate.findUnique({
-      where: { id: challan.templateId },
-      include: { fields: true, tableRegions: true },
-    });
-  }
-  if (!template) {
-    template = await prisma.documentTemplate.findFirst({
-      where: { type: "FEE_CHALLAN" as any, isActive: true },
-      include: { fields: true, tableRegions: true },
-    });
+  try {
+    if (challan.templateId) {
+      template = await prisma.documentTemplate.findUnique({
+        where: { id: challan.templateId },
+        include: { fields: true, tableRegions: true },
+      });
+    }
+    if (!template) {
+      template = await prisma.documentTemplate.findFirst({
+        where: { type: "FEE_CHALLAN" as any, isActive: true },
+        include: { fields: true, tableRegions: true },
+      });
+    }
+  } catch {
+    template = null;
   }
 
   // If template exists, use template-based rendering
@@ -90,7 +95,14 @@ export default async function PrintFeeChallanPage({
             fieldKey: f.fieldKey,
             xPercent: f.xPercent,
             yPercent: f.yPercent,
+            widthPercent: f.widthPercent,
+            heightPercent: f.heightPercent,
             fontSize: f.fontSize,
+            fontFamily: f.fontFamily,
+            fontColor: f.fontColor,
+            fontWeight: f.fontWeight,
+            fontStyle: f.fontStyle,
+            textDecoration: f.textDecoration,
             textAlign: f.textAlign,
           })),
           tableRegions: template.tableRegions.map((tr) => ({

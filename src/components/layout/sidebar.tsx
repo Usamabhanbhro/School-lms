@@ -213,7 +213,7 @@ export function Sidebar({
                 className="fixed inset-0 z-40"
                 onClick={() => setUserMenuOpen(false)}
               />
-              <div className="absolute bottom-full left-2 right-2 z-50 mb-1 border border-border bg-bg shadow-sm">
+              <div className="absolute bottom-full left-2 right-2 z-50 mb-1 border border-border bg-bg shadow-sm" style={{ animation: "dropdown-fade-in 150ms ease-out both" }}>
                 <button
                   type="button"
                   onClick={handleSignOut}
