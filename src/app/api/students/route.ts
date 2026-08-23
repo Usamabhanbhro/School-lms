@@ -11,14 +11,21 @@ import { cnicField, phoneField } from "@/lib/validations";
  * GET /api/students
  * Admin: all students. Teacher: only students in classes they're assigned to.
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     const authedSession = requireRole(session, ["ADMIN", "TEACHER", "ACADEMICS"]);
 
     const scopedIds = await getScopedClassSectionIds(authedSession);
 
-    const where = scopedIds ? { classSectionId: { in: scopedIds } } : {};
+    // Support ?status=PAST for archived students (Admin + Academics only)
+    const { searchParams } = new URL(request.url);
+    const statusParam = searchParams.get("status");
+    const isPAST = statusParam === "PAST";
+
+    // Default: active students only. PAST: archived only.
+    const where: Record<string, unknown> = { isActive: !isPAST };
+    if (scopedIds) where.classSectionId = { in: scopedIds };
 
     const students = await prisma.student.findMany({
       where,
@@ -55,6 +62,8 @@ const createStudentSchema = z.object({
   classSectionId: z.string().min(1),
   studentId: z.string().max(50).optional(),
   rollNumber: z.string().max(20).optional(),
+  grNumber: z.string().max(50).optional(),
+  previousSchool: z.string().max(200).optional(),
 });
 
 export async function POST(request: Request) {
@@ -75,10 +84,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate uniqueness of studentId if provided
+    // Validate uniqueness of studentId if provided (active students only —
+    // archived students' IDs are freed for reuse)
     if (body.studentId) {
       const existing = await prisma.student.findFirst({
-        where: { studentId: body.studentId },
+        where: { studentId: body.studentId, isActive: true },
       });
       if (existing) {
         return NextResponse.json(
@@ -88,10 +98,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // Validate uniqueness of rollNumber within class section if provided
+    // Validate uniqueness of rollNumber within class section if provided (active only)
     if (body.rollNumber) {
       const existing = await prisma.student.findFirst({
-        where: { classSectionId: body.classSectionId, rollNumber: body.rollNumber },
+        where: { classSectionId: body.classSectionId, rollNumber: body.rollNumber, isActive: true },
       });
       if (existing) {
         return NextResponse.json(
@@ -115,6 +125,8 @@ export async function POST(request: Request) {
         classSectionId: body.classSectionId,
         studentId: body.studentId || null,
         rollNumber: body.rollNumber || null,
+        grNumber: body.grNumber || null,
+        previousSchool: body.previousSchool || null,
       },
       include: {
         classSection: {

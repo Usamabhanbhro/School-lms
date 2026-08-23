@@ -7,7 +7,8 @@ import { ApiError, requireRole } from "@/lib/rbac";
 /**
  * GET /api/teacher-attendance/export
  *
- * Admin only. Download teacher attendance records as CSV.
+ * Admin + Academics (full parity with the teacher-attendance marking surface).
+ * Download teacher attendance records as CSV.
  *
  * Query params (all optional):
  *   - teacherId: filter to a specific teacher
@@ -18,7 +19,7 @@ import { ApiError, requireRole } from "@/lib/rbac";
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    requireRole(session, ["ADMIN"]);
+    requireRole(session, ["ADMIN", "ACADEMICS"]);
 
     const { searchParams } = new URL(request.url);
     const teacherId = searchParams.get("teacherId");

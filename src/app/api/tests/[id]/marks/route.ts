@@ -81,12 +81,13 @@ export async function POST(
       );
     }
 
-    // Verify all students belong to the test's class section
+    // Verify all students are active and belong to the test's class section
     const studentIds = body.records.map((r) => r.studentId);
     const validStudents = await prisma.student.findMany({
       where: {
         id: { in: studentIds },
         classSectionId: test.classSectionId,
+        isActive: true,
       },
       select: { id: true },
     });

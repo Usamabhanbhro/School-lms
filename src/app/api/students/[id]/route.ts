@@ -22,6 +22,8 @@ const editStudentSchema = z.object({
   classSectionId: z.string().min(1).optional(),
   studentId: z.string().max(50).optional(),
   rollNumber: z.string().max(20).optional(),
+  grNumber: z.string().max(50).optional(),
+  previousSchool: z.string().max(200).optional(),
 });
 
 export async function PATCH(
@@ -70,11 +72,13 @@ export async function PATCH(
     if (body.classSectionId !== undefined) updateData.classSectionId = body.classSectionId;
     if (body.studentId !== undefined) updateData.studentId = body.studentId || null;
     if (body.rollNumber !== undefined) updateData.rollNumber = body.rollNumber || null;
+    if (body.grNumber !== undefined) updateData.grNumber = body.grNumber || null;
+    if (body.previousSchool !== undefined) updateData.previousSchool = body.previousSchool || null;
 
-    // Validate studentId uniqueness if changing
+    // Validate studentId uniqueness if changing (active students only)
     if (body.studentId) {
       const dup = await prisma.student.findFirst({
-        where: { studentId: body.studentId, id: { not: id } },
+        where: { studentId: body.studentId, id: { not: id }, isActive: true },
       });
       if (dup) {
         return NextResponse.json(
@@ -84,11 +88,11 @@ export async function PATCH(
       }
     }
 
-    // Validate rollNumber uniqueness within class section if changing
+    // Validate rollNumber uniqueness within class section if changing (active only)
     if (body.rollNumber) {
       const targetClassId = body.classSectionId ?? existing.classSectionId;
       const dup = await prisma.student.findFirst({
-        where: { classSectionId: targetClassId, rollNumber: body.rollNumber, id: { not: id } },
+        where: { classSectionId: targetClassId, rollNumber: body.rollNumber, id: { not: id }, isActive: true },
       });
       if (dup) {
         return NextResponse.json(
@@ -132,6 +136,85 @@ export async function PATCH(
       return NextResponse.json(
         { error: { message: "A student with that CNIC already exists.", code: "CONFLICT" } },
         { status: 409 },
+      );
+    }
+    console.error(error);
+    return NextResponse.json(
+      { error: { message: "An internal error occurred.", code: "INTERNAL_ERROR" } },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * DELETE /api/students/:id — delete a student record.
+ * Admin only. Blocks if historical records exist (attendance, marks, certificates, fee challans).
+ * Without the block, the onDelete: Cascade FKs would silently wipe academic history.
+ */
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    requireRole(session, ["ADMIN"]);
+
+    const { id } = await params;
+
+    const existing = await prisma.student.findUnique({ where: { id }, select: { id: true } });
+    if (!existing) {
+      return NextResponse.json(
+        { error: { message: "Student not found.", code: "NOT_FOUND" } },
+        { status: 404 },
+      );
+    }
+
+    // Check for historical references — if any exist, refuse to delete
+    const [attendanceCount, markCount, reportCardCount, certificateCount, feeChallanCount] =
+      await Promise.all([
+        prisma.studentAttendance.count({ where: { studentId: id } }),
+        prisma.mark.count({ where: { studentId: id } }),
+        prisma.reportCard.count({ where: { studentId: id } }),
+        prisma.certificate.count({ where: { studentId: id } }),
+        prisma.feeChallan.count({ where: { studentId: id } }),
+      ]);
+
+    const totalRecords = attendanceCount + markCount + reportCardCount + certificateCount + feeChallanCount;
+
+    if (totalRecords > 0) {
+      // Has historical records — archive instead of deleting.
+      // The student's record is preserved in full; their Student ID/Roll Number
+      // become available for reuse by a new student (partial unique indexes
+      // only enforce uniqueness among active students).
+      await prisma.student.update({
+        where: { id },
+        data: { isActive: false },
+      });
+
+      return NextResponse.json({
+        data: {
+          id,
+          archived: true,
+          message: "Student archived to Past Students. Their records are preserved but they have been removed from active rosters.",
+        },
+      });
+    }
+
+    // No historical records — safe to hard delete
+    await prisma.student.delete({ where: { id } });
+
+    return NextResponse.json({ data: { id, deleted: true } });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(
+        { error: { message: error.message, code: error.code } },
+        { status: error.status },
+      );
+    }
+    if ((error as { code?: string }).code === "P2025") {
+      return NextResponse.json(
+        { error: { message: "Student not found.", code: "NOT_FOUND" } },
+        { status: 404 },
       );
     }
     console.error(error);

@@ -48,6 +48,7 @@ const adminNav: NavItem[] = [
   { label: "Daily Agenda", href: "/admin/agenda", icon: CalendarDays },
   { label: "Certificates", href: "/admin/certificates", icon: FileText },
   { label: "Fees", href: "/admin/fees", icon: Banknote },
+  { label: "Salary Slips", href: "/admin/salary-slips", icon: Banknote },
   { label: "Templates", href: "/admin/templates", icon: LayoutTemplate },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
@@ -67,8 +68,10 @@ const teacherNav: NavItem[] = [
 const academicsNav: NavItem[] = [
   { label: "Certificates", href: "/admin/certificates", icon: FileText },
   { label: "Fees", href: "/admin/fees", icon: Banknote },
+  { label: "Salary Slips", href: "/admin/salary-slips", icon: Banknote },
   { label: "Students", href: "/admin/students", icon: Users },
   { label: "Attendance", href: "/admin/attendance", icon: ClipboardCheck },
+  { label: "Teacher Attendance", href: "/admin/teacher-attendance", icon: ClipboardCheck },
   { label: "Tests & Marks", href: "/admin/tests", icon: FileSpreadsheet },
   { label: "Report Cards", href: "/admin/report-cards", icon: Award },
 ];
@@ -138,11 +141,11 @@ export function Sidebar({
         className="flex items-center gap-3 border-b border-border px-4 py-4"
         onClick={() => setMobileOpen(false)}
       >
-        <span className="flex size-12 shrink-0 items-center justify-center border border-border bg-surface overflow-hidden">
+        <span className="flex size-16 shrink-0 items-center justify-center border border-border bg-surface overflow-hidden">
           {logoPath ? (
-            <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-11 object-contain" />
+            <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-14 object-contain" />
           ) : (
-            <GraduationCap className="size-6" aria-hidden="true" />
+            <GraduationCap className="size-8" aria-hidden="true" />
           )}
         </span>
         <span className="min-w-0 text-sm font-semibold leading-tight">
@@ -242,11 +245,11 @@ export function Sidebar({
       {/* ─── Mobile header ─────────────────────────────────────── */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-bg px-4 py-3 md:hidden">
         <Link href={home} className="flex items-center gap-2 text-sm font-semibold">
-          <span className="flex size-10 shrink-0 items-center justify-center border border-border bg-surface overflow-hidden">
+          <span className="flex size-12 shrink-0 items-center justify-center border border-border bg-surface overflow-hidden">
             {logoPath ? (
-              <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-9 object-contain" />
+              <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-10 object-contain" />
             ) : (
-              <GraduationCap className="size-5" aria-hidden="true" />
+              <GraduationCap className="size-6" aria-hidden="true" />
             )}
           </span>
           {schoolName || "School LMS"}

@@ -130,11 +130,12 @@ export async function POST(request: Request) {
     // This is the authoritative authorization: not Subject Teacher, not any assignment.
     await requireActiveClassTeacher(profile.id, body.classSectionId);
 
-    // Verify student exists and belongs to the class section
+    // Verify student is active and belongs to the class section
     const student = await prisma.student.findFirst({
       where: {
         id: body.studentId,
         classSectionId: body.classSectionId,
+        isActive: true,
       },
       select: { id: true },
     });

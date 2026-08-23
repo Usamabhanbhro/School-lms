@@ -6,7 +6,9 @@ import {
   Edit3,
   Loader2,
   Plus,
+  Trash2,
   Users,
+  Archive,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ToastContainer, useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { cnicRegex, phoneRegex } from "@/lib/validations";
@@ -53,11 +56,15 @@ interface Student {
   classSection: { id: string; className: string; sectionName: string };
   studentId: string | null;
   rollNumber: string | null;
+  grNumber: string | null;
+  previousSchool: string | null;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 type View = "list" | "create" | "edit";
+type Tab = "active" | "past";
 
 interface StudentForm {
   name: string;
@@ -72,6 +79,8 @@ interface StudentForm {
   classSectionId: string;
   studentId: string;
   rollNumber: string;
+  grNumber: string;
+  previousSchool: string;
 }
 
 function todayStr(): string {
@@ -93,6 +102,8 @@ function emptyForm(): StudentForm {
     classSectionId: "",
     studentId: "",
     rollNumber: "",
+    grNumber: "",
+    previousSchool: "",
   };
 }
 
@@ -161,11 +172,20 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
+  // Tab state
+  const [tab, setTab] = useState<Tab>("active");
+  const [pastStudents, setPastStudents] = useState<Student[]>([]);
+  const [loadingPast, setLoadingPast] = useState(false);
+
+  // Delete/Archive state
+  const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   const { toasts, addToast, dismissToast } = useToast();
 
   // ─── Data Fetching ──────────────────────────────────────────────
 
-  const fetchAll = useCallback(async () => {
+  const fetchActive = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -187,9 +207,58 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
     }
   }, []);
 
+  const fetchPast = useCallback(async () => {
+    setLoadingPast(true);
+    try {
+      const res = await fetch("/api/students?status=PAST");
+      if (!res.ok) throw new Error("Failed to fetch past students");
+      const json = await res.json();
+      setPastStudents(json.data ?? []);
+    } catch {
+      setError("Failed to load past students.");
+    } finally {
+      setLoadingPast(false);
+    }
+  }, []);
+
   useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+    fetchActive();
+  }, [fetchActive]);
+
+  useEffect(() => {
+    if (tab === "past") fetchPast();
+  }, [tab, fetchPast]);
+
+  // ─── Delete/Archive ──────────────────────────────────────────
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/students/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        addToast("error", json.error?.message ?? "Failed to remove student.");
+        setDeleting(false);
+        setDeleteTarget(null);
+        return;
+      }
+      if (json.data?.archived) {
+        addToast("success", "Student archived to Past Students.");
+      } else {
+        addToast("success", "Student deleted.");
+      }
+      setDeleteTarget(null);
+      await fetchActive();
+      if (tab === "past") await fetchPast();
+    } catch {
+      addToast("error", "Network error.");
+    } finally {
+      setDeleting(false);
+    }
+  }, [deleteTarget, addToast, fetchActive, fetchPast, tab]);
 
   // ─── Create/Edit ────────────────────────────────────────────────
 
@@ -216,6 +285,8 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
       classSectionId: item.classSectionId,
       studentId: item.studentId ?? "",
       rollNumber: item.rollNumber ?? "",
+      grNumber: item.grNumber ?? "",
+      previousSchool: item.previousSchool ?? "",
     });
     setEditingItem(item);
     setFieldErrors({});
@@ -275,13 +346,13 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
       addToast("success", "Student created.");
       setView("list");
       setForm(emptyForm());
-      await fetchAll();
+      await fetchActive();
     } catch {
       setFieldErrors({ _submit: "Network error." });
     } finally {
       setSubmitting(false);
     }
-  }, [form, validateForm, addToast, fetchAll]);
+  }, [form, validateForm, addToast, fetchActive]);
 
   const handleEdit = useCallback(async () => {
     if (!editingItem) return;
@@ -304,13 +375,17 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
       setView("list");
       setEditingItem(null);
       setForm(emptyForm());
-      await fetchAll();
+      await fetchActive();
     } catch {
       setFieldErrors({ _submit: "Network error." });
     } finally {
       setSubmitting(false);
     }
-  }, [editingItem, form, validateForm, addToast, fetchAll]);
+  }, [editingItem, form, validateForm, addToast, fetchActive]);
+
+  // ─── Derived data ────────────────────────────────────────────
+
+  const displayStudents = tab === "active" ? students : pastStudents;
 
   // ─── Helpers ────────────────────────────────────────────────────
 
@@ -454,6 +529,32 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
               <p className="mt-1 text-xs text-text/40">Unique within the class section. Leave blank to skip.</p>
             </div>
 
+            {/* GR Number (optional) */}
+            <div>
+              <label htmlFor="grNumber" className="mb-1 block text-xs font-medium text-text/60">
+                GR Number (optional)
+              </label>
+              <Input
+                id="grNumber"
+                value={form.grNumber}
+                onChange={(e) => setForm((f) => ({ ...f, grNumber: e.target.value }))}
+              />
+              <p className="mt-1 text-xs text-text/40">General register / admission registration number.</p>
+            </div>
+
+            {/* Previous School (optional) */}
+            <div>
+              <label htmlFor="previousSchool" className="mb-1 block text-xs font-medium text-text/60">
+                Previous School (optional)
+              </label>
+              <Input
+                id="previousSchool"
+                value={form.previousSchool}
+                onChange={(e) => setForm((f) => ({ ...f, previousSchool: e.target.value }))}
+              />
+              <p className="mt-1 text-xs text-text/40">School attended before admission, if any.</p>
+            </div>
+
             {/* Date of Birth */}
             <div>
               <label htmlFor="dateOfBirth" className="mb-1 block text-xs font-medium text-text/60">
@@ -565,10 +666,40 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
         </Card>
       )}
 
+      {/* Active / Past tabs */}
+      {view === "list" && !readOnly && (
+        <div className="mb-4 flex gap-1 border-b border-border">
+          <button
+            type="button"
+            onClick={() => setTab("active")}
+            className={cn(
+              "border-b-2 px-4 py-2 text-sm font-medium transition-colors",
+              tab === "active"
+                ? "border-primary text-primary"
+                : "border-transparent text-text/50 hover:text-text",
+            )}
+          >
+            Active Students
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("past")}
+            className={cn(
+              "border-b-2 px-4 py-2 text-sm font-medium transition-colors",
+              tab === "past"
+                ? "border-primary text-primary"
+                : "border-transparent text-text/50 hover:text-text",
+            )}
+          >
+            Past Students
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       {view === "list" && (
         <>
-          {loading ? (
+          {(tab === "active" ? loading : loadingPast) ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-14 w-full" />
@@ -579,13 +710,13 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
               icon={AlertTriangle}
               title="Error loading students"
               description={error}
-              action={<Button variant="secondary" onClick={fetchAll}>Retry</Button>}
+              action={<Button variant="secondary" onClick={fetchActive}>Retry</Button>}
             />
-          ) : students.length === 0 ? (
+          ) : displayStudents.length === 0 ? (
             <EmptyState
-              icon={Users}
-              title="No students yet"
-              description="Create the first student record to get started."
+              icon={tab === "past" ? Archive : Users}
+              title={tab === "past" ? "No past students" : "No students yet"}
+              description={tab === "past" ? "Archived students will appear here." : "Create the first student record to get started."}
               action={!readOnly ? <Button onClick={openCreate}><Plus className="size-4" aria-hidden="true" />Add Student</Button> : undefined}
             />
           ) : (
@@ -606,8 +737,8 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
                     </TR>
                   </THead>
                   <TBody>
-                    {students.map((s) => (
-                      <TR key={s.id}>
+                    {displayStudents.map((s) => (
+                      <TR key={s.id} className={!s.isActive ? "bg-surface/50" : undefined}>
                         <TD className="font-medium">{s.name}</TD>
                         <TD className="tabular-nums">{s.studentId ?? "—"}</TD>
                         <TD className="tabular-nums">{s.rollNumber ?? "—"}</TD>
@@ -618,15 +749,32 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
                         <TD className="tabular-nums">{formatDate(s.admissionDate)}</TD>
                         {!readOnly && (
                           <TD>
-                            <button
-                              type="button"
-                              onClick={() => openEdit(s)}
-                              className="inline-flex size-8 items-center justify-center border border-transparent text-text/50 hover:bg-surface hover:text-text"
-                              title="Edit"
-                              aria-label={`Edit ${s.name}`}
-                            >
-                              <Edit3 className="size-3.5" aria-hidden="true" />
-                            </button>
+                            <div className="flex gap-1">
+                              {s.isActive && (
+                                <button
+                                  type="button"
+                                  onClick={() => openEdit(s)}
+                                  className="inline-flex size-8 items-center justify-center border border-transparent text-text/50 hover:bg-surface hover:text-text"
+                                  title="Edit"
+                                  aria-label={`Edit ${s.name}`}
+                                >
+                                  <Edit3 className="size-3.5" aria-hidden="true" />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setDeleteTarget(s)}
+                                className="inline-flex size-8 items-center justify-center border border-transparent text-text/50 hover:bg-danger/10 hover:text-danger"
+                                title={s.isActive ? "Archive student" : "Delete student"}
+                                aria-label={s.isActive ? `Archive ${s.name}` : `Delete ${s.name}`}
+                              >
+                                {s.isActive ? (
+                                  <Archive className="size-3.5" aria-hidden="true" />
+                                ) : (
+                                  <Trash2 className="size-3.5" aria-hidden="true" />
+                                )}
+                              </button>
+                            </div>
                           </TD>
                         )}
                       </TR>
@@ -637,6 +785,25 @@ export function StudentManagement({ readOnly = false }: { readOnly?: boolean } =
             </Card>
           )}
         </>
+      )}
+
+      {/* Delete / Archive Confirm Dialog */}
+      {deleteTarget && (
+        <ConfirmDialog
+          open={!!deleteTarget}
+          onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+          icon={deleteTarget.isActive ? Archive : Trash2}
+          title={deleteTarget.isActive ? "Archive Student" : "Delete Student"}
+          description={
+            deleteTarget.isActive
+              ? `Archive ${deleteTarget.name} to Past Students? Their historical records will be preserved and their Student ID / Roll Number will become available for reuse. They will be removed from active rosters.`
+              : `Permanently delete ${deleteTarget.name}? This cannot be undone.`
+          }
+          confirmLabel={deleteTarget.isActive ? "Archive" : "Delete"}
+          confirmVariant="danger"
+          loading={deleting}
+          onConfirm={handleDelete}
+        />
       )}
     </>
   );

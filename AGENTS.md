@@ -28,10 +28,11 @@ Instructions for any AI coding tool (Claude Code, Cursor, Copilot, etc.) working
 
 ## Current Project State
 
+- Logo sizing: **verified with the real uploaded crest** (Vercel Blob PNG, ~339KB). Sign-in masthead renders `size-16` container / `size-14` img; desktop sidebar `size-16`/`size-14`; mobile header `size-12`/`size-10` — all `object-contain` + `overflow-hidden`. See `DESIGN.md` for the token table. (No headless browser in the sandbox — rendered-DOM/config evidence is used for logo verification, not a screenshot.)
 - Architecture and design system: locked (`ARCHITECTURE.md`, `DESIGN.md`).
-- SRS: **finalized (v5)** — three login roles (Admin, Academics, Teacher). Treat `SRS.md` as complete for all core flows; only print/visual design for Certificates, Fee Challan, and Report Card remains open (see `ROADMAP.md` Phase 6).
-- Schema and API: **implemented, not scaffolds.** Phases 0–5 in `ROADMAP.md` are complete — `SCHEMA.md` and `API.md` describe real, working models and routes, marked `Status: implemented` per route in `API.md`. Do not redesign or re-scaffold anything documented there without a specific reason; extend it.
-- Remaining work: Phase 6 (print stylesheets for Certificates/Fee Challan/Report Card) and rate limiting on `/api/admin/recover` — see `README.md` Remaining Work.
+- SRS: **finalized (v10)** — three login roles (Admin, Academics, Teacher). Treat `SRS.md` as complete for all core flows, including the v10 amendments: Academics has full teacher-attendance marking parity (§1.4/§1A) and can generate salary slips while only Admin configures rates (§1.10).
+- Schema and API: **implemented, not scaffolds.** Phases 0–9 in `ROADMAP.md` are complete — `SCHEMA.md` and `API.md` describe real, working models and routes, marked `Status: implemented` per route in `API.md`. Do not redesign or re-scaffold anything documented there without a specific reason; extend it. Salary Slip ships with a coded print layout as a documented assumption; `DocumentTemplateType.SALARY_SLIP` is reserved for a template-based print later.
+- Session idle timeout: 15 minutes, client-side (signOut → `/login?expired=1` with a clear message), mounted in the dashboard layout — applies to all three roles. Verified with a lowered threshold (5s) then restored.
 
 ## If Something Is Ambiguous
 

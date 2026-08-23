@@ -25,6 +25,9 @@ const editTeacherSchema = z.object({
   reportingTime: z.string().optional(),
   offTime: z.string().optional(),
   lateThreshold: z.string().optional(),
+  perDaySalary: z.coerce.number().int().min(0).optional(),
+  lateDeductionType: z.enum(["AMOUNT", "PERCENTAGE"]).optional(),
+  lateDeductionValue: z.coerce.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -38,6 +41,9 @@ const teacherSelect = {
   reportingTime: true,
   offTime: true,
   lateThreshold: true,
+  perDaySalary: true,
+  lateDeductionType: true,
+  lateDeductionValue: true,
   userId: true,
   createdAt: true,
   updatedAt: true,
@@ -85,6 +91,9 @@ export async function PATCH(
     if (body.reportingTime !== undefined) profileData.reportingTime = body.reportingTime || null;
     if (body.offTime !== undefined) profileData.offTime = body.offTime || null;
     if (body.lateThreshold !== undefined) profileData.lateThreshold = body.lateThreshold || null;
+    if (body.perDaySalary !== undefined) profileData.perDaySalary = body.perDaySalary ?? null;
+    if (body.lateDeductionType !== undefined) profileData.lateDeductionType = body.lateDeductionType ?? null;
+    if (body.lateDeductionValue !== undefined) profileData.lateDeductionValue = body.lateDeductionValue ?? null;
 
     const userData: Record<string, unknown> = {};
     if (body.name !== undefined) userData.name = body.name;

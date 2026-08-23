@@ -2,7 +2,7 @@
 
 Build order for reconciling and implementing the SRS (v5). Each phase unlocks the next — don't skip ahead, since later phases read data/patterns established earlier.
 
-**Status: Phases 0–8 implemented and verified. Admin provisioning, school settings, hardened admin self-recovery, certificate/fee-challan generation UIs, and document template system added. Migration chain validated from empty database (9 migrations). See `API.md` for per-route status.**
+**Status: Phases 0–9 implemented and verified. Admin provisioning, school settings, hardened admin self-recovery, certificate/fee-challan generation UIs, document template system, teacher attendance rework (Admin + Academics), Teacher Salary Slips, student admission optional fields, student archive ("Past Students") with partial unique indexes, and session idle timeout added. Migration chain validated from empty database (17 migrations). See `API.md` for per-route status.**
 
 ## Phase 0 — Reconciliation ✅ Complete
 
@@ -125,6 +125,18 @@ Template-based document generation replacing hardcoded print layouts:
 - **Sidebar**: Templates link added to admin navigation.
 
 **Requires:** `BLOB_READ_WRITE_TOKEN` env var for Vercel Blob storage (template image uploads).
+
+## Phase 9 — Extended Operations ✅ Complete
+
+Operational round on top of the completed product (SRS v10):
+
+- **Student admission optional fields**: `grNumber` and `previousSchool` (nullable text) on Student — same optional-field pattern as Blood Group. Verified both-blank and both-filled create paths. Migration `20260823150011`.
+- **Teacher Attendance — Academics parity (scope amendment)**: Academics gets full marking rights (Present/Absent/Leave + reporting/off time), documented in SRS §1.4/§1A as an explicit amendment. UI reworked to a two-step flow — Present opens a reporting-time editor, "Log Off Time" appears only after reporting is logged, Absent/Leave rows never show time inputs. Monthly summary + threshold/Late auto-derivation preserved. Verified live: Admin/Academics 201, Teacher 403, page guard for Academics 200.
+- **Teacher Salary Slip**: `SalarySlip` + `SalarySlipDeduction` models; TeacherProfile salary config (`perDaySalary`, `lateDeductionType`, `lateDeductionValue`, Admin-only). `GET /api/salary-slips`, `POST /api/salary-slips/preview` (computed breakdown), `POST /api/salary-slips` (save with per-line waivers). Slip is immutable once saved — regenerating creates a new slip. Academics can generate; only Admin configures rates (verified 403 for Academics on rate fields). Math verified by hand: base = working days × per-day, Absent = full day, Late = AMOUNT or PERCENTAGE of per-day. Coded print at `/print/salary-slips/[id]` (assumption documented in SRS §1.10; `SALARY_SLIP` template type reserved). Migration `20260823151349`.
+- **Responsive logo, final pass**: sign-in `size-16`/`size-14`, desktop sidebar `size-16`/`size-14`, mobile header `size-12`/`size-10`, landing header matched. Verified against the real 339KB crest.
+- **Session idle timeout**: 15 minutes of inactivity (clicks/keystrokes/navigation) → session cleared client-side (NextAuth `signOut`) → redirect to `/login?expired=1` with the message "Session expired due to inactivity". Works across all three roles via the shared dashboard layout. Verified by lowering the threshold to 5s, then restored to 15 min.
+- **Landing page accuracy**: Modules section now lists only real modules (Attendance, Teacher Attendance, Tests & Marks, Report Cards, Certificates, Fee Challan, Daily Agenda, Templates, Salary Slips) — dummy Assignments/Timetables/Announcements removed.
+- **Student archive ("Past Students")**: Students with historical records (attendance, marks, report cards, certificates, fee challans) cannot be hard-deleted — they are archived (`isActive: false`), preserving all linked data while freeing their Student ID / Roll Number for reuse by new students. Students with zero historical records can still be hard-deleted. Partial unique indexes on `studentId` and `(classSectionId, rollNumber)` scoped to active students only (raw SQL migration — Prisma `@unique` does not support `WHERE`). `DELETE /api/students/:id` returns `archived: true` or `deleted: true` so the UI can show the right message. `GET /api/students?status=PAST` for listing archived students. All active-workflow queries (attendance, marks, report cards, class rosters, dashboard counts) filter to `isActive: true`. UI has Active/Past Students tabs with archive/delete action per row and ConfirmDialog. Migration `20260824000000`.
 
 ## Migration Reconciliation (Post-Phase 8)
 

@@ -100,6 +100,9 @@ interface UserForm {
   reportingTime: string; // teacher schedule
   offTime: string; // teacher schedule
   lateThreshold: string; // teacher schedule
+  perDaySalary: string; // salary config (Admin-only)
+  lateDeductionType: string;
+  lateDeductionValue: string;
 }
 
 function emptyForm(): UserForm {
@@ -113,6 +116,9 @@ function emptyForm(): UserForm {
     reportingTime: "",
     offTime: "",
     lateThreshold: "",
+    perDaySalary: "",
+    lateDeductionType: "",
+    lateDeductionValue: "",
   };
 }
 
@@ -201,6 +207,9 @@ export function UserManagement() {
       reportingTime: (user as any).reportingTime ?? "",
       offTime: (user as any).offTime ?? "",
       lateThreshold: (user as any).lateThreshold ?? "",
+      perDaySalary: (user as any).perDaySalary != null ? String((user as any).perDaySalary) : "",
+      lateDeductionType: (user as any).lateDeductionType ?? "",
+      lateDeductionValue: (user as any).lateDeductionValue != null ? String((user as any).lateDeductionValue) : "",
     });
     setEditingUser(user);
     setFieldErrors({});
@@ -260,6 +269,9 @@ export function UserManagement() {
       if (form.reportingTime) payload.reportingTime = form.reportingTime;
       if (form.offTime) payload.offTime = form.offTime;
       if (form.lateThreshold) payload.lateThreshold = form.lateThreshold;
+      if (form.perDaySalary) payload.perDaySalary = form.perDaySalary;
+      if (form.lateDeductionType) payload.lateDeductionType = form.lateDeductionType;
+      if (form.lateDeductionValue) payload.lateDeductionValue = form.lateDeductionValue;
     }
 
     try {
@@ -309,6 +321,9 @@ export function UserManagement() {
       payload.reportingTime = form.reportingTime || "";
       payload.offTime = form.offTime || "";
       payload.lateThreshold = form.lateThreshold || "";
+      if (form.perDaySalary) payload.perDaySalary = form.perDaySalary;
+      if (form.lateDeductionType) payload.lateDeductionType = form.lateDeductionType;
+      if (form.lateDeductionValue) payload.lateDeductionValue = form.lateDeductionValue;
     }
 
     try {
@@ -694,6 +709,59 @@ export function UserManagement() {
                       className="h-10 w-full border border-border bg-bg px-4 text-sm text-text"
                     />
                     <p className="mt-1 text-xs text-text/40">Arrivals after this are auto-marked Late</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Salary config — Admin-only. Academics never sees this (page is Admin-only). */}
+              <div className="mt-4 border-t border-border pt-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase text-text/50">
+                  Salary
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <label htmlFor="perDaySalary" className="mb-1 block text-xs font-medium text-text/60">
+                      Per Day Salary (Rs.)
+                    </label>
+                    <Input
+                      id="perDaySalary"
+                      type="number"
+                      min={0}
+                      value={form.perDaySalary}
+                      onChange={(e) => setForm((f) => ({ ...f, perDaySalary: e.target.value }))}
+                      placeholder="e.g. 2000"
+                    />
+                    <p className="mt-1 text-xs text-text/40">Used to compute salary slips</p>
+                  </div>
+                  <div>
+                    <label htmlFor="lateDeductionType" className="mb-1 block text-xs font-medium text-text/60">
+                      Late Deduction Type
+                    </label>
+                    <select
+                      id="lateDeductionType"
+                      value={form.lateDeductionType}
+                      onChange={(e) => setForm((f) => ({ ...f, lateDeductionType: e.target.value }))}
+                      className="h-10 w-full border border-border bg-bg px-4 text-sm text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      <option value="">None</option>
+                      <option value="AMOUNT">Amount (Rs.)</option>
+                      <option value="PERCENTAGE">Percentage of daily pay</option>
+                    </select>
+                    <p className="mt-1 text-xs text-text/40">How a Late day is deducted</p>
+                  </div>
+                  <div>
+                    <label htmlFor="lateDeductionValue" className="mb-1 block text-xs font-medium text-text/60">
+                      Late Deduction Value
+                    </label>
+                    <Input
+                      id="lateDeductionValue"
+                      type="number"
+                      min={0}
+                      value={form.lateDeductionValue}
+                      onChange={(e) => setForm((f) => ({ ...f, lateDeductionValue: e.target.value }))}
+                      placeholder="e.g. 500 or 50"
+                    />
+                    <p className="mt-1 text-xs text-text/40">Flat Rs. or % of per-day salary</p>
                   </div>
                 </div>
               </div>

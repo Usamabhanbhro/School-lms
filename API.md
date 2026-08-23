@@ -152,42 +152,55 @@ NextAuth handler — login/logout/session. Credentials provider only.
 ### GET /api/students
 **Role required:** Admin (all students); Teacher (only students in classes they're assigned to as Class Teacher or Subject Teacher); Academics (all students, read-only)
 **Purpose:** List students with class section info
+**Query params:** `status` (optional) — `PAST` returns archived students only; omit or any other value returns active students only
 **Status:** implemented
 
 ### POST /api/students
 **Role required:** Admin
 **Purpose:** Create a student record and allot to a class/section
-**Request body:** `{ name, guardianName, guardianCnic, dateOfBirth, admissionDate, placeOfBirth, bloodGroup?, guardianContact, address, classSectionId, studentId?, rollNumber? }`
-**Notes:** validates guardian CNIC and guardianContact phone formats server-side; validates studentId uniqueness globally and rollNumber uniqueness within class section. `bloodGroup` is optional (enum: A_PLUS, A_MINUS, B_PLUS, B_MINUS, AB_PLUS, AB_MINUS, O_PLUS, O_MINUS).
+**Request body:** `{ name, guardianName, guardianCnic, dateOfBirth, admissionDate, placeOfBirth, bloodGroup?, guardianContact, address, classSectionId, studentId?, rollNumber?, grNumber?, previousSchool? }`
+**Notes:** validates guardian CNIC and guardianContact phone formats server-side; validates studentId uniqueness globally and rollNumber uniqueness within class section. `bloodGroup` is optional (enum: A_PLUS, A_MINUS, B_PLUS, B_MINUS, AB_PLUS, AB_MINUS, O_PLUS, O_MINUS). `grNumber` and `previousSchool` are optional free text — omitted/blank values are stored as null. Verified: both-fields-blank and both-fields-filled create paths work.
 **Status:** implemented
 
 ### PATCH /api/students/:id
 **Role required:** Admin
 **Purpose:** Edit student fields or reallot to a different class/section
-**Request body:** partial `{ name, guardianName, guardianCnic, dateOfBirth, admissionDate, placeOfBirth, bloodGroup, guardianContact, address, classSectionId, studentId, rollNumber }`
+**Request body:** partial `{ name, guardianName, guardianCnic, dateOfBirth, admissionDate, placeOfBirth, bloodGroup, guardianContact, address, classSectionId, studentId, rollNumber, grNumber, previousSchool }`
+**Status:** implemented
+
+### DELETE /api/students/:id
+**Role required:** Admin
+**Purpose:** Delete or archive a student record. Checks for historical references (attendance, marks, report cards, certificates, fee challans). If any exist, the student is **archived** (`isActive: false`) rather than hard-deleted — their record is preserved, removed from active rosters, and their Student ID / Roll Number become available for reuse. If no historical records exist, the student is hard-deleted.
+**Response (archived):** `{ data: { id, archived: true, message: "Student archived to Past Students..." } }` — HTTP 200
+**Response (deleted):** `{ data: { id, deleted: true } }` — HTTP 200
 **Status:** implemented
 
 ---
 
-## Teacher Attendance (Admin-managed)
+## Teacher Attendance (Admin & Academics)
+
+> **Scope amendment (SRS v10):** Academics has **full parity** with Admin on
+> teacher attendance — marking Present/Absent/Leave, logging reporting time, and
+> logging off time. No narrow off-time-only carve-out; the main marking endpoint
+> is shared by both roles. Teachers remain denied.
 
 ### GET /api/teacher-attendance
-**Role required:** Admin
+**Role required:** Admin, Academics
 **Purpose:** Fetch teacher attendance records, filterable by teacherId and date range
 **Query params:** `teacherId`, `from`, `to` (all optional)
 **Status:** implemented
 
 ### POST /api/teacher-attendance
-**Role required:** Admin
-**Purpose:** Mark or directly edit a teacher's attendance for a date — upsert by teacherId+date, no lock/confirm step
+**Role required:** Admin, Academics
+**Purpose:** Mark or directly edit a teacher's attendance for a date — upsert by teacherId+date, no lock/confirm step. The same endpoint serves both the "mark present + reporting time" step and the "log off time" step (off time re-POSTs with the existing reporting time included).
 **Request body:** `{ teacherId, date, status, actualReportingTime?, actualOffTime? }`
 **Status auto-derivation (behavior change):** When `status` is `PRESENT` and `actualReportingTime` is provided, the server compares it against the teacher's configured `lateThreshold` (from TeacherProfile). If the actual time is after the threshold, the stored status is automatically changed to `LATE` instead of `PRESENT`. This is server-side logic — the database records LATE as the canonical status.
-**Notes:** `actualReportingTime` and `actualOffTime` are nullable text strings (e.g. `"08:25:00"`). Only populated for PRESENT/LATE records; null for ABSENT/LEAVE.
+**Notes:** `actualReportingTime` and `actualOffTime` are nullable text strings (e.g. `"08:25:00"`). Only populated for PRESENT/LATE records; null for ABSENT/LEAVE. Verified live: Admin + Academics 201, Teacher 403 on both GET and POST; off-time logged by Academics persists (`actualOffTime` round-trips).
 **Status:** implemented
 
 ### GET /api/teacher-attendance/export
-**Role required:** Admin
-**Purpose:** Download teacher attendance records as CSV with school metadata header
+**Role required:** Admin, Academics
+**Purpose:** Export teacher attendance CSV with school metadata header
 **Query params:** `teacherId` (optional), `from` (optional), `to` (optional)
 **Notes:** CSV includes school name, address, phone, generated by, role, and timestamp as header rows
 **Status:** implemented
@@ -443,6 +456,34 @@ NextAuth handler — login/logout/session. Credentials provider only.
 **Purpose:** Get the active template for a document type, with its field positions
 **Query params:** `type` (required — LEAVING_CERTIFICATE, CHARACTER_CERTIFICATE, REPORT_CARD, FEE_CHALLAN)
 **Response:** `{ data: { template, fields, tableRegions } }` or 404 if no active template
+**Status:** implemented
+
+---
+
+## Salary Slips (generation: Admin + Academics; rates: Admin-only)
+
+> **Scope (SRS §1.11):** Academics can generate salary slips (search, date range, review breakdown with waive toggles, generate & save) — same capability as Admin. Salary **rates** (`perDaySalary`, `lateDeductionType`, `lateDeductionValue`) are configured by **Admin only** via `POST/PATCH /api/teachers` (already ADMIN-only, enforced server-side — verified: Academics PATCH to a teacher's rate fields returns 403). A teacher with no configured rates yields `400 SALARY_NOT_CONFIGURED` — no silent default.
+
+### GET /api/salary-slips
+**Role required:** Admin, Academics
+**Purpose:** List saved salary slips, newest first
+**Query params (all optional):** `teacherId`, `from`, `to` (period range)
+**Response:** `{ data: [{ id, teacher: { id, name }, periodFrom, periodTo, perDaySalary, lateDeductionType, lateDeductionValue, baseAmount, netAmount, generatedByUser: { id, name }, issuedDate, deductions: [{ id, date, type, amount, waived }] }] }`
+**Status:** implemented
+
+### POST /api/salary-slips/preview
+**Role required:** Admin, Academics
+**Purpose:** Compute the salary breakdown for a teacher over a date range **without saving**. This is the "review then generate" step (same pattern as Fee Challan).
+**Request body:** `{ teacherId, from, to }` (ISO dates)
+**Response:** `{ data: { teacher: { id, name }, periodFrom, periodTo, perDaySalary, lateDeductionType, lateDeductionValue, workingDays, leaveDays, baseAmount, deductions: [{ lineId: "d-0", date, type: "LATE"|"ABSENT", amount, waived: false }], totalDeductions, netAmount } }`
+**Notes:** Deduction math: Absent = full `perDaySalary`; Late = `lateDeductionValue` (AMOUNT) or `round(perDaySalary × lateDeductionValue / 100)` (PERCENTAGE); Leave/Present = none; unmarked days are not counted as working days. Returns `400 SALARY_NOT_CONFIGURED` if the teacher has no rates. `lineId`s are stable identifiers used for waiver.
+**Status:** implemented
+
+### POST /api/salary-slips
+**Role required:** Admin, Academics
+**Purpose:** Generate + save a salary slip. Takes the reviewed breakdown and the per-line waiver decisions; only **non-waived** deduction lines are persisted.
+**Request body:** `{ teacherId, from, to, waivedIds?: ["d-0", …] }` (waivedIds = `lineId`s to exclude)
+**Notes:** Transaction creates the `SalarySlip` + its `SalarySlipDeduction` rows (net = base − non-waived deductions). Immutable once saved — regenerating the same period creates a new slip. Print view at `/print/salary-slips/[id]`.
 **Status:** implemented
 
 ---

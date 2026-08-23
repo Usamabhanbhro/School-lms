@@ -1,14 +1,17 @@
 import Link from "next/link";
 import {
-  BookOpen,
+  Award,
+  Banknote,
   CalendarDays,
   ClipboardCheck,
+  FileSpreadsheet,
   FileText,
   GraduationCap,
-  Megaphone,
+  LayoutTemplate,
   Printer,
   ShieldCheck,
   UserCheck,
+  Users,
 } from "lucide-react";
 import { buttonClasses } from "@/components/ui/button";
 import { getSchoolSettings } from "@/lib/school-settings";
@@ -20,35 +23,51 @@ const modules = [
     body: "Roll-call marking from any device — built for teachers marking attendance on the go.",
   },
   {
-    icon: BookOpen,
-    title: "Gradebooks",
-    body: "Scores by assignment, exam, and term, with report cards that print cleanly.",
+    icon: UserCheck,
+    title: "Teacher Attendance",
+    body: "Daily reporting and off times for staff, with monthly totals and late auto-derivation.",
+  },
+  {
+    icon: FileSpreadsheet,
+    title: "Tests & Marks",
+    body: "Subject teachers create tests and enter marks, scoped to their assigned classes.",
+  },
+  {
+    icon: Award,
+    title: "Report Cards",
+    body: "Class teachers aggregate tests into a term report card that prints cleanly.",
   },
   {
     icon: FileText,
-    title: "Assignments",
-    body: "Post work to a class, collect submissions, and grade them in one place.",
+    title: "Certificates",
+    body: "Leaving and Character certificates with admin-uploaded templates.",
+  },
+  {
+    icon: Banknote,
+    title: "Fee Challan",
+    body: "Three-copy challans with editable line items, snapshotted for history.",
   },
   {
     icon: CalendarDays,
-    title: "Timetables",
-    body: "Weekly schedules per class, subject, and teacher.",
+    title: "Daily Agenda",
+    body: "Per-class, per-subject lesson logs written by teachers, sight-checked by Admin.",
   },
   {
-    icon: Megaphone,
-    title: "Announcements",
-    body: "Notices scoped to the whole school or a single class.",
+    icon: LayoutTemplate,
+    title: "Templates",
+    body: "Visual document templates — place fields once, reuse for every document.",
   },
   {
     icon: Printer,
-    title: "Reports & print",
-    body: "Dedicated print stylesheets for attendance registers and report cards.",
+    title: "Salary Slips",
+    body: "Computed from attendance with per-line waivers, saved immutable and printable.",
   },
 ];
 
 const roles = [
-  { icon: ShieldCheck, name: "Admin", body: "School setup, teacher management, class/subject assignment, and reporting." },
-  { icon: UserCheck, name: "Teacher", body: "Attendance, tests, marks, and report cards — scoped to assigned classes." },
+  { icon: ShieldCheck, name: "Admin", body: "School setup, user and salary configuration, attendance oversight, and document templates." },
+  { icon: Users, name: "Academics", body: "Certificates, fee challans, salary slips, and teacher attendance — delegated generation." },
+  { icon: UserCheck, name: "Teacher", body: "Student attendance, tests, marks, report cards, and daily agenda — scoped to assignments." },
 ];
 
 export default async function HomePage() {
@@ -62,11 +81,11 @@ export default async function HomePage() {
       <header className="border-b border-border">
         <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-4 md:px-8">
           <span className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex size-9 items-center justify-center border border-border bg-surface">
+            <span className="flex size-12 items-center justify-center border border-border bg-surface overflow-hidden">
               {logoPath ? (
-                <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-7 object-contain" />
+                <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-10 object-contain" />
               ) : (
-                <GraduationCap className="size-5" aria-hidden="true" />
+                <GraduationCap className="size-6" aria-hidden="true" />
               )}
             </span>
             {schoolName || "School LMS"}
@@ -85,7 +104,7 @@ export default async function HomePage() {
               School operations platform
             </p>
             <h1 className="max-w-2xl text-3xl font-bold leading-tight md:text-5xl">
-              Attendance, grades, and timetables — one quiet system for your whole school.
+              Attendance, marks, and documents — one quiet system for your whole school.
             </h1>
             <p className="mt-4 max-w-xl text-base text-text/70 md:text-lg">
               A web-based learning management system for school admins and teachers.
@@ -107,8 +126,8 @@ export default async function HomePage() {
           <div className="mx-auto w-full max-w-5xl px-4 py-16 md:px-8">
             <h2 className="text-2xl font-bold">Modules</h2>
             <p className="mt-2 text-sm text-text/60">
-              Built incrementally on a shared skeleton — each module lands with its own
-              role-aware routes, API endpoints, and print support.
+              Every module below is live — each one with role-aware routes, server-side
+              RBAC, and printable output. No placeholders.
             </p>
             <div className="mt-8 grid gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
               {modules.map(({ icon: Icon, title, body }) => (
@@ -127,9 +146,10 @@ export default async function HomePage() {
         {/* Roles */}
         <section className="border-b border-border">
           <div className="mx-auto w-full max-w-5xl px-4 py-16 md:px-8">
-            <h2 className="text-2xl font-bold">Built for Admin &amp; Teacher</h2>
+            <h2 className="text-2xl font-bold">Built for Admin, Academics &amp; Teacher</h2>
             <p className="mt-2 text-sm text-text/60">
-              Role-based access control at every API boundary; navigation adapts per role.
+              Role-based access control at every API boundary — each role sees exactly its
+              navigation and nothing else.
             </p>
             <div className="mt-8 grid gap-px border border-border bg-border sm:grid-cols-2">
               {roles.map(({ icon: Icon, name, body }) => (

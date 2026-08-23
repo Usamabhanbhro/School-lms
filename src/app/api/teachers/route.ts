@@ -27,6 +27,9 @@ const createTeacherSchema = z.object({
   reportingTime: z.string().optional(),
   offTime: z.string().optional(),
   lateThreshold: z.string().optional(),
+  perDaySalary: z.coerce.number().int().min(0).optional(),
+  lateDeductionType: z.enum(["AMOUNT", "PERCENTAGE"]).optional(),
+  lateDeductionValue: z.coerce.number().int().min(0).optional(),
 });
 
 const teacherSelect = {
@@ -39,6 +42,9 @@ const teacherSelect = {
   reportingTime: true,
   offTime: true,
   lateThreshold: true,
+  perDaySalary: true,
+  lateDeductionType: true,
+  lateDeductionValue: true,
   userId: true,
   createdAt: true,
   updatedAt: true,
@@ -102,6 +108,9 @@ export async function POST(request: Request) {
           reportingTime: body.reportingTime || null,
           offTime: body.offTime || null,
           lateThreshold: body.lateThreshold || null,
+          perDaySalary: body.perDaySalary ?? null,
+          lateDeductionType: body.lateDeductionType ?? null,
+          lateDeductionValue: body.lateDeductionValue ?? null,
           userId: user.id,
         },
         select: teacherSelect,

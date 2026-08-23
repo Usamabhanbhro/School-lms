@@ -9,10 +9,12 @@ export const metadata: Metadata = {
   title: "Teacher Attendance — Admin",
 };
 
-export default async function AdminTeacherAttendancePage() {
+export default async function TeacherAttendancePage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect(roleHome(session.user.role));
+  // Admin + Academics (full parity per SRS amendment).
+  if (session.user.role !== "ADMIN" && session.user.role !== "ACADEMICS")
+    redirect(roleHome(session.user.role));
 
   return <AdminTeacherAttendance />;
 }

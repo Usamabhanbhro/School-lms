@@ -8,7 +8,9 @@ import {
   Clock,
   Download,
   Loader2,
+  LogOut,
   Minus,
+  X,
   XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,6 +57,13 @@ interface TeacherAttendanceRecord {
 
 type StatusOption = "PRESENT" | "ABSENT" | "LEAVE";
 
+/** Inline time editor — only one open per page, opened on demand. */
+interface TimeEditor {
+  teacherId: string;
+  kind: "reporting" | "off";
+  value: string;
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────
 
 function todayStr(): string {
@@ -62,9 +71,10 @@ function todayStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function currentMonthStr(): string {
+/** Current local time as HH:MM — default value for the time editors. */
+function nowTimeStr(): string {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 const STATUS_OPTIONS: {
@@ -80,7 +90,6 @@ const STATUS_OPTIONS: {
 
 function formatTime(time: string | null): string {
   if (!time) return "—";
-  // Handle both HH:MM and HH:MM:SS
   const parts = time.split(":");
   if (parts.length >= 2) {
     const h = parseInt(parts[0], 10);
@@ -90,12 +99,6 @@ function formatTime(time: string | null): string {
     return `${h12}:${m} ${ampm}`;
   }
   return time;
-}
-
-function formatMonth(yearMonth: string): string {
-  const [y, m] = yearMonth.split("-");
-  const date = new Date(parseInt(y), parseInt(m) - 1, 1);
-  return date.toLocaleDateString("en-US", { year: "numeric", month: "long" });
 }
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -110,8 +113,8 @@ export function AdminTeacherAttendance() {
   const [saving, setSaving] = useState<string | null>(null); // teacher id being saved
   const [error, setError] = useState<string | null>(null);
 
-  // Time inputs per teacher (optimistic, shown when marking Present)
-  const [timeInputs, setTimeInputs] = useState<Record<string, { reporting: string; off: string }>>({});
+  // Inline time editor (reporting or off) — shown only when open
+  const [timeEditor, setTimeEditor] = useState<TimeEditor | null>(null);
 
   // Monthly summary toggle
   const [showMonthly, setShowMonthly] = useState(false);
@@ -152,9 +155,7 @@ export function AdminTeacherAttendance() {
     setLoadingRecords(true);
     setError(null);
     try {
-      const res = await fetch(
-        `/api/teacher-attendance?from=${date}&to=${date}`,
-      );
+      const res = await fetch(`/api/teacher-attendance?from=${date}&to=${date}`);
       if (!res.ok) throw new Error("Failed to load teacher attendance");
       const json = await res.json();
       setRecords(json.data ?? []);
@@ -169,7 +170,7 @@ export function AdminTeacherAttendance() {
     loadRecords();
   }, [loadRecords]);
 
-  // ─── Load monthly records ────────────────────────────────────
+  // ─── Load monthly records ──────────────────────────────────
 
   const loadMonthly = useCallback(async () => {
     setLoadingMonthly(true);
@@ -187,7 +188,7 @@ export function AdminTeacherAttendance() {
     }
   }, [monthlyFrom, monthlyTo, addToast]);
 
-  // ─── Monthly totals (computed, not stored) ───────────────────
+  // ─── Monthly totals (computed, not stored) ─────────────────
 
   const monthlyTotals = useMemo(() => {
     const totals: Record<string, { present: number; absent: number; leave: number; late: number }> = {};
@@ -205,17 +206,19 @@ export function AdminTeacherAttendance() {
     return totals;
   }, [monthlyRecords]);
 
-  // ─── Save attendance ──────────────────────────────────────────
+  // ─── Save attendance ────────────────────────────────────────
 
+  /**
+   * Single save path used by both steps:
+   *  - Absent/Leave buttons save immediately with no times.
+   *  - Present saves with the time-editor reporting value.
+   *  - Off-time editor re-POSTs with actualOffTime set (status re-derived server-side).
+   */
   const handleSave = useCallback(
-    async (teacherId: string, status: StatusOption) => {
-      // Snapshot current state for rollback on failure
+    async (teacherId: string, status: StatusOption, times?: { reporting?: string; off?: string }) => {
       const previousRecords = records;
 
-      // Get time inputs for this teacher
-      const times = timeInputs[teacherId] || { reporting: "", off: "" };
-
-      // Optimistically update the local record immediately
+      // Optimistic update
       setRecords((prev) => {
         const existing = prev.find((r) => r.teacherId === teacherId);
         const updatedRecord = {
@@ -223,13 +226,13 @@ export function AdminTeacherAttendance() {
           teacherId,
           date,
           status: status as "PRESENT" | "ABSENT" | "LEAVE" | "LATE",
-          actualReportingTime: times.reporting || null,
-          actualOffTime: times.off || null,
+          actualReportingTime: times?.reporting ?? existing?.actualReportingTime ?? null,
+          actualOffTime: times?.off ?? existing?.actualOffTime ?? null,
           markedById: null,
           teacher: existing?.teacher ?? { id: teacherId, name: "", phone: "", reportingTime: null, offTime: null, lateThreshold: null },
         };
         if (existing) {
-          return prev.map((r) => r.teacherId === teacherId ? updatedRecord : r);
+          return prev.map((r) => (r.teacherId === teacherId ? updatedRecord : r));
         }
         return [...prev, updatedRecord];
       });
@@ -237,10 +240,8 @@ export function AdminTeacherAttendance() {
 
       try {
         const body: Record<string, string> = { teacherId, date, status };
-        if (status === "PRESENT" || status === "LEAVE") {
-          if (times.reporting) body.actualReportingTime = times.reporting;
-          if (times.off) body.actualOffTime = times.off;
-        }
+        if (times?.reporting) body.actualReportingTime = times.reporting;
+        if (times?.off) body.actualOffTime = times.off;
 
         const res = await fetch("/api/teacher-attendance", {
           method: "POST",
@@ -253,42 +254,37 @@ export function AdminTeacherAttendance() {
           setRecords(previousRecords);
           addToast("error", json.error?.message ?? "Failed to save attendance.");
           setSaving(null);
+          setTimeEditor(null);
           return;
         }
 
         const result = await res.json();
         const savedRecord = result.data as TeacherAttendanceRecord;
 
-        // If the server auto-derived LATE, show an indicator
         if (status === "PRESENT" && savedRecord.status === "LATE") {
-          addToast("success", `Marked Late — reported at ${formatTime(times.reporting)}, threshold is ${formatTime(savedRecord.teacher.lateThreshold)}`);
+          addToast("success", `Marked Late — reported at ${formatTime(times?.reporting ?? null)}, threshold is ${formatTime(savedRecord.teacher.lateThreshold)}`);
+        } else if (times?.off) {
+          addToast("success", `Off time logged at ${formatTime(times.off)}.`);
         } else {
           addToast("success", "Attendance saved.");
         }
 
-        // Reconcile with server
         await loadRecords();
-        // Clear time inputs after successful save
-        setTimeInputs((prev) => {
-          const next = { ...prev };
-          delete next[teacherId];
-          return next;
-        });
         setSaving(null);
+        setTimeEditor(null);
       } catch {
         setRecords(previousRecords);
         addToast("error", "Network error. Please try again.");
         setSaving(null);
+        setTimeEditor(null);
       }
     },
-    [date, records, timeInputs, addToast, loadRecords],
+    [date, records, addToast, loadRecords],
   );
 
-  // ─── Build lookup ─────────────────────────────────────────────
+  // ─── Build lookup ───────────────────────────────────────────
 
   const recordMap = new Map(records.map((r) => [r.teacherId, r]));
-
-  // ─── Render ────────────────────────────────────────────────────
 
   return (
     <>
@@ -296,7 +292,7 @@ export function AdminTeacherAttendance() {
 
       <PageHeader
         title="Teacher Attendance"
-        description="Mark teacher attendance directly. No draft or lock — changes save immediately. Status is auto-derived from actual time vs. configured threshold."
+        description="Mark teacher attendance directly — no draft or lock. Mark Present to log a reporting time; a 'Log Off Time' action appears once reported. Status is auto-derived from actual time vs. configured threshold."
         actions={
           <Button
             variant="secondary"
@@ -315,7 +311,7 @@ export function AdminTeacherAttendance() {
         }
       />
 
-      {/* Date selection */}
+      {/* Date selection + monthly toggle */}
       <Card className="mb-6 p-4">
         <div className="flex flex-wrap items-end gap-4">
           <div>
@@ -332,10 +328,7 @@ export function AdminTeacherAttendance() {
             />
           </div>
           <div>
-            <Button
-              variant="secondary"
-              onClick={() => setShowMonthly(!showMonthly)}
-            >
+            <Button variant="secondary" onClick={() => setShowMonthly(!showMonthly)}>
               <CalendarDays className="size-4" aria-hidden="true" />
               {showMonthly ? "Hide" : "Show"} Monthly Totals
             </Button>
@@ -355,7 +348,7 @@ export function AdminTeacherAttendance() {
                 type="date"
                 value={monthlyFrom}
                 onChange={(e) => setMonthlyFrom(e.target.value)}
-                className="h-10 border border-border bg-bg px-4 text-sm text-text"
+                className="h-9 border border-border bg-bg px-4 text-sm text-text"
               />
             </div>
             <div>
@@ -366,7 +359,7 @@ export function AdminTeacherAttendance() {
                 value={monthlyTo}
                 max={todayStr()}
                 onChange={(e) => setMonthlyTo(e.target.value)}
-                className="h-10 border border-border bg-bg px-4 text-sm text-text"
+                className="h-9 border border-border bg-bg px-4 text-sm text-text"
               />
             </div>
             <Button variant="secondary" onClick={loadMonthly} disabled={loadingMonthly}>
@@ -453,6 +446,12 @@ export function AdminTeacherAttendance() {
                   const record = recordMap.get(t.id);
                   const currentStatus = record?.status ?? null;
                   const teacherThreshold = record?.teacher?.lateThreshold ?? t.lateThreshold;
+                  const isLiveOrLate = currentStatus === "PRESENT" || currentStatus === "LATE";
+                  const isAbsentOrLeave = currentStatus === "ABSENT" || currentStatus === "LEAVE";
+                  const hasReporting = isLiveOrLate && !!record?.actualReportingTime;
+                  const hasOff = isLiveOrLate && !!record?.actualOffTime;
+                  const editor = timeEditor?.teacherId === t.id ? timeEditor : null;
+                  const savingThis = saving === t.id;
 
                   return (
                     <TR key={t.id}>
@@ -469,43 +468,50 @@ export function AdminTeacherAttendance() {
                       <TD className="tabular-nums text-text/60">{t.phone}</TD>
                       <TD className="tabular-nums text-text/50">{formatTime(teacherThreshold)}</TD>
                       <TD>
-                        {currentStatus === "LATE" && record?.actualReportingTime ? (
-                          <span className="text-xs text-orange-600">
-                            Reported {formatTime(record.actualReportingTime)}
-                            {record.actualOffTime && ` · Off ${formatTime(record.actualOffTime)}`}
+                        {hasReporting ? (
+                          <span className={cn("text-xs", currentStatus === "LATE" ? "text-orange-600" : "text-text/50")}>
+                            Reported {formatTime(record?.actualReportingTime)}
+                            {hasOff && ` · Off ${formatTime(record?.actualOffTime)}`}
                           </span>
-                        ) : currentStatus === "PRESENT" && record?.actualReportingTime ? (
-                          <span className="text-xs text-text/50">
-                            {formatTime(record.actualReportingTime)}
-                            {record.actualOffTime && ` · ${formatTime(record.actualOffTime)}`}
-                          </span>
-                        ) : (
+                        ) : isAbsentOrLeave ? (
                           <span className="text-xs text-text/30">—</span>
+                        ) : (
+                          <span className="text-xs text-text/30">Not logged yet</span>
                         )}
                       </TD>
                       <TD>
-                        <div className="flex flex-col items-center gap-1">
+                        <div className="flex flex-col items-center gap-1.5">
+                          {/* Step 0: status buttons */}
                           <div className="flex justify-center gap-1">
                             {STATUS_OPTIONS.map((opt) => {
                               const StatusIcon = opt.icon;
+                              const isCurrent =
+                                currentStatus === opt.value ||
+                                (opt.value === "PRESENT" && currentStatus === "LATE");
                               return (
                                 <button
                                   key={opt.value}
                                   type="button"
-                                  onClick={() => handleSave(t.id, opt.value)}
-                                  disabled={saving === t.id}
+                                  onClick={() => {
+                                    // Present opens the reporting-time editor; Absent/Leave save immediately
+                                    if (opt.value === "PRESENT") {
+                                      setTimeEditor({ teacherId: t.id, kind: "reporting", value: nowTimeStr() });
+                                    } else {
+                                      setTimeEditor(null);
+                                      handleSave(t.id, opt.value);
+                                    }
+                                  }}
+                                  disabled={savingThis}
                                   className={cn(
                                     "inline-flex h-8 w-8 items-center justify-center border",
-                                    currentStatus === opt.value
-                                      ? opt.color
-                                      : "border-border bg-bg text-text/30",
+                                    isCurrent ? opt.color : "border-border bg-bg text-text/30",
                                     "cursor-pointer hover:border-text/20",
-                                    saving === t.id && "opacity-50",
+                                    savingThis && "opacity-50",
                                   )}
                                   aria-label={`${t.name}: ${opt.label}`}
                                   title={`Mark ${opt.label}`}
                                 >
-                                  {saving === t.id ? (
+                                  {savingThis ? (
                                     <Loader2 className="size-3 animate-spin" />
                                   ) : (
                                     <StatusIcon className="size-4" aria-hidden="true" />
@@ -514,36 +520,111 @@ export function AdminTeacherAttendance() {
                               );
                             })}
                           </div>
-                          {/* Time inputs — shown for PRESENT/LEAVE status */}
-                          {(currentStatus === "PRESENT" || currentStatus === "LATE") && (
-                            <div className="flex gap-1">
+
+                          {/* Step 1: reporting-time editor (opened via Present) */}
+                          {editor?.kind === "reporting" && isLiveOrLate && (
+                            <div className="flex items-center gap-1">
                               <input
                                 type="time"
-                                value={timeInputs[t.id]?.reporting ?? record?.actualReportingTime ?? ""}
-                                onChange={(e) => setTimeInputs((prev) => ({
-                                  ...prev,
-                                  [t.id]: {
-                                    reporting: e.target.value,
-                                    off: prev[t.id]?.off ?? record?.actualOffTime ?? "",
-                                  },
-                                }))}
-                                className="h-6 w-20 border border-border bg-bg px-1 text-[10px] text-text"
-                                title="Actual reporting time"
+                                value={editor.value}
+                                onChange={(e) =>
+                                  setTimeEditor((prev) =>
+                                    prev && prev.teacherId === t.id && prev.kind === "reporting"
+                                      ? { ...prev, value: e.target.value }
+                                      : prev,
+                                  )
+                                }
+                                className="h-7 w-20 border border-border bg-bg px-1 text-[11px] text-text"
+                                aria-label="Reporting time"
                               />
-                              <input
-                                type="time"
-                                value={timeInputs[t.id]?.off ?? record?.actualOffTime ?? ""}
-                                onChange={(e) => setTimeInputs((prev) => ({
-                                  ...prev,
-                                  [t.id]: {
-                                    reporting: prev[t.id]?.reporting ?? record?.actualReportingTime ?? "",
-                                    off: e.target.value,
-                                  },
-                                }))}
-                                className="h-6 w-20 border border-border bg-bg px-1 text-[10px] text-text"
-                                title="Actual off time"
-                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSave(t.id, "PRESENT", { reporting: editor.value || undefined })}
+                                disabled={savingThis}
+                                className="inline-flex size-6 items-center justify-center border border-success/40 bg-success/10 text-success hover:bg-success/20"
+                                aria-label="Save reporting time"
+                                title="Save reporting time"
+                              >
+                                {savingThis ? <Loader2 className="size-3 animate-spin" /> : <CheckCircle2 className="size-3.5" aria-hidden="true" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setTimeEditor(null)}
+                                className="inline-flex size-6 items-center justify-center border border-border bg-bg text-text/40 hover:text-text"
+                                aria-label="Cancel"
+                                title="Cancel"
+                              >
+                                <X className="size-3.5" aria-hidden="true" />
+                              </button>
                             </div>
+                          )}
+
+                          {/* Step 2: off-time editor */}
+                          {editor?.kind === "off" && (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="time"
+                                value={editor.value}
+                                onChange={(e) =>
+                                  setTimeEditor((prev) =>
+                                    prev && prev.teacherId === t.id && prev.kind === "off"
+                                      ? { ...prev, value: e.target.value }
+                                      : prev,
+                                  )
+                                }
+                                className="h-7 w-20 border border-border bg-bg px-1 text-[11px] text-text"
+                                aria-label="Off time"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSave(t.id, "PRESENT", { reporting: record?.actualReportingTime ?? undefined, off: editor.value })}
+                                disabled={savingThis}
+                                className="inline-flex size-6 items-center justify-center border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+                                aria-label="Save off time"
+                                title="Save off time"
+                              >
+                                {savingThis ? <Loader2 className="size-3 animate-spin" /> : <CheckCircle2 className="size-3.5" aria-hidden="true" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setTimeEditor(null)}
+                                className="inline-flex size-6 items-center justify-center border border-border bg-bg text-text/40 hover:text-text"
+                                aria-label="Cancel"
+                                title="Cancel"
+                              >
+                                <X className="size-3.5" aria-hidden="true" />
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Step 2 trigger — only when reporting already logged, never for Absent/Leave */}
+                          {!editor && isLiveOrLate && hasReporting && (
+                            <button
+                              type="button"
+                              onClick={() => setTimeEditor({ teacherId: t.id, kind: "off", value: nowTimeStr() })}
+                              className={cn(
+                                "inline-flex items-center gap-1 border px-2 py-1 text-[11px] font-medium",
+                                hasOff
+                                  ? "border-border bg-bg text-text/50 hover:bg-surface"
+                                  : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20",
+                              )}
+                              title="Log the teacher's off (departure) time"
+                            >
+                              <LogOut className="size-3" aria-hidden="true" />
+                              {hasOff ? "Update Off Time" : "Log Off Time"}
+                            </button>
+                          )}
+
+                          {/* Present without a time logged yet */}
+                          {!editor && isLiveOrLate && !hasReporting && (
+                            <button
+                              type="button"
+                              onClick={() => setTimeEditor({ teacherId: t.id, kind: "reporting", value: nowTimeStr() })}
+                              className="inline-flex items-center gap-1 border border-border bg-bg px-2 py-1 text-[11px] font-medium text-text/50 hover:bg-surface"
+                            >
+                              <Clock className="size-3" aria-hidden="true" />
+                              Log reporting time
+                            </button>
                           )}
                         </div>
                       </TD>

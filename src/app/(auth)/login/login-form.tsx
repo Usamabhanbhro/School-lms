@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,8 @@ export function LoginForm() {
     rawReturnTo && rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//")
       ? rawReturnTo
       : "/dashboard";
+
+  const expired = searchParams.get("expired") === "1";
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,6 +52,16 @@ export function LoginForm() {
       <p className="mt-1 text-sm text-text/60">
         Use the credentials your school administrator gave you.
       </p>
+
+      {expired && (
+        <div
+          className="mt-4 flex items-center gap-2 border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-primary"
+          role="status"
+        >
+          <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
+          Session expired due to inactivity. Please sign in again.
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <div className="space-y-2">

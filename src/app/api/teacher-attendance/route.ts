@@ -7,7 +7,7 @@ import { ApiError, requireRole } from "@/lib/rbac";
 
 /**
  * GET /api/teacher-attendance
- * Admin only. Fetch teacher attendance records, optionally filterable.
+ * Admin + Academics. Fetch teacher attendance records, optionally filterable.
  *
  * Query params (all optional):
  *   - teacherId: filter to a specific teacher
@@ -16,7 +16,7 @@ import { ApiError, requireRole } from "@/lib/rbac";
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    requireRole(session, ["ADMIN"]);
+    requireRole(session, ["ADMIN", "ACADEMICS"]);
 
     const { searchParams } = new URL(request.url);
     const teacherId = searchParams.get("teacherId");
@@ -67,9 +67,11 @@ export async function GET(request: Request) {
 /**
  * POST /api/teacher-attendance
  * Admin only. Upsert teacher attendance for a teacher+date.
- * No draft/lock — Admin has direct edit access at all times.
+ * No draft/lock — direct edit access at all times.
+ * Admin + Academics (full parity — Academics has the same marking rights
+ * as Admin here, per the SRS scope amendment).
  *
- * Body: { teacherId, date, status }
+ * Body: { teacherId, date, status, actualReportingTime?, actualOffTime? }
  */
 const upsertTeacherAttendanceSchema = z.object({
   teacherId: z.string().min(1),
@@ -82,7 +84,7 @@ const upsertTeacherAttendanceSchema = z.object({
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    const authedSession = requireRole(session, ["ADMIN"]);
+    const authedSession = requireRole(session, ["ADMIN", "ACADEMICS"]);
 
     const body = upsertTeacherAttendanceSchema.parse(await request.json());
 

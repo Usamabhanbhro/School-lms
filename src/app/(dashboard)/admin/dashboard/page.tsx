@@ -42,7 +42,7 @@ export default async function AdminDashboardPage() {
     totalSubjects,
     activeTeachers,
   ] = await Promise.all([
-    prisma.student.count(),
+    prisma.student.count({ where: { isActive: true } }),
     prisma.user.count({ where: { role: "TEACHER" } }),
     prisma.user.count({ where: { role: "ACADEMICS" } }),
     prisma.classSection.count(),

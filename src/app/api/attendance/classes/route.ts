@@ -43,7 +43,7 @@ export async function GET() {
     const classSections = await prisma.classSection.findMany({
       where,
       include: {
-        _count: { select: { students: true } },
+        _count: { select: { students: { where: { isActive: true } } } },
       },
       orderBy: [{ className: "asc" }, { sectionName: "asc" }],
     });

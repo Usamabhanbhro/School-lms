@@ -80,9 +80,9 @@ The school logo must be legible and proportionate across all viewports. The foll
 
 | Context | Container | Logo | Notes |
 |---|---|---|---|
-| **Sidebar (desktop)** | `size-12` (48×48) | `size-11` (44×44) | `object-contain` preserves aspect ratio. `overflow-hidden` on container prevents overflow from tall crests. |
-| **Mobile header** | `size-10` (40×40) | `size-9` (36×36) | Same `object-contain` + `overflow-hidden` pattern. |
-| **Sign-in screen** | `size-16` (64×64) | `size-14` (56×56) | Larger, centered. No container border. |
+| **Sidebar (desktop)** | `size-16` (64×64) | `size-14` (56×56) | `object-contain` preserves aspect ratio. `overflow-hidden` on container prevents overflow from tall crests. |
+| **Mobile header** | `size-12` (48×48) | `size-10` (40×40) | Same `object-contain` + `overflow-hidden` pattern. |
+| **Sign-in screen** | `size-16` (64×64) | `size-14` (56×56) | Larger, centered. `overflow-hidden` too, so tall crests never bleed. |
 
 **Aspect ratio rule:** Always use `object-contain` on the `<img>` element. Never use `object-cover` or fixed aspect ratios — the logo container is square, and `object-contain` ensures a tall crest/seal or a wide horizontal logo both display correctly without cropping. The `overflow-hidden` on the square container prevents any visual bleed from odd-shaped logos.
 

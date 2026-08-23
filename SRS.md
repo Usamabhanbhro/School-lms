@@ -1,6 +1,6 @@
 # School LMS — Software Requirements Specification (SRS)
 
-**Status: Draft v9 — student admission fields, teacher schedule + late auto-derivation, responsive logo.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
+**Status: Draft v10 — student admission fields, teacher schedule + late auto-derivation, responsive logo, student archive ("Past Students") with partial unique indexes.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
 
 ---
 
@@ -53,11 +53,26 @@ Admin creates Student records and allots each student to a class+section. Requir
 
 Both fields are validated server-side for uniqueness. Duplicate values produce a clear error message. Moving a student to a different class section does not create uniqueness conflicts for roll number.
 
+**Optional fields (free text):**
+- **GR Number** — general-register / admission registration number. Optional free text (≤50 chars), no uniqueness requirement. Blank = not recorded.
+- **Previous School** — school attended before admission. Optional free text (≤200 chars), informational only.
+
+Both follow the same optional-field pattern as Blood Group: no validation error when left blank, stored as null when omitted. Verified both-blank and both-filled create paths.
+
+**Student archive ("Past Students"):**
+- A student with any historical records (attendance, marks, report cards, certificates, fee challans) **cannot be hard-deleted**. Instead, Admin archives them to "Past Students": the student record is preserved in full (all historical data stays linked and viewable), removed from active class rosters and any current-term workflows (attendance marking, marks entry no longer show them), but their Student ID / Roll Number becomes available for reuse by a new student.
+- A student with zero historical records can still be hard-deleted outright — nothing to preserve.
+- Past Students are listed in a dedicated "Past Students" tab on the Students page, read-only (no edit button), with historical records still accessible.
+- All active-workflow queries (attendance marking, marks entry, class rosters, report card generation, fee challan generation) filter to `isActive: true` only — archived students are invisible in those flows without any UI-level filtering.
+- Admin can hard-delete a Past Student (one with zero historical records) from the Past Students tab.
+
 Teachers only see students within the class(es) they're assigned to (as class teacher or subject teacher).
 
 ### 1.4 Teacher Attendance
 
-Admin marks teacher attendance directly (Present/Absent/Leave). No draft/confirm lock — Admin has direct edit access at all times, since Admin is already the top authority.
+**Admin and Academics** mark teacher attendance directly (Present/Absent/Leave), including logging reporting time and off time. No draft/confirm lock — direct edit access at all times, since Admin (and, by amendment, Academics) is already above the teacher being tracked.
+
+> **Scope amendment (v10):** Academics has **full parity** with Admin on teacher attendance — marking Present/Absent/Leave, logging reporting time, and logging off time. This deliberately replaces an earlier draft that only granted Academics an off-time-only carve-out; the final decision is full parity, and the main marking endpoint serves both roles. Academics does **not** gain any other admin powers through this — everything else in §1A.2 boundaries still applies. Teachers remain denied (they only mark *student* attendance for their own class).
 
 **Configured schedule per teacher** (set at creation, editable later via the existing teacher edit flow):
 - `reportingTime` — expected arrival time (stored as `HH:MM:SS` text, using Prisma's consistent string representation for time-of-day)
@@ -74,9 +89,9 @@ All three are nullable — not every teacher needs a configured schedule.
 **Status auto-derivation rule** (implemented server-side, documented explicitly here):
 When Admin marks a teacher PRESENT and enters an `actualReportingTime`, the server compares it against that teacher's configured `lateThreshold`. If the actual time is after the threshold, the stored status automatically becomes **LATE** instead of PRESENT. This is server-side logic in the API route, not a UI-only display choice — the database stores LATE as the canonical status.
 
-Admin retains full direct edit rights on TeacherAttendance records — can change status, actual times, or both at any time.
+Admin and Academics retain full direct edit rights on TeacherAttendance records — can change status, actual times, or both at any time. The UI is a two-step flow: marking Present opens a reporting-time input (defaults to current time, editable); once reporting time is logged, a distinct "Log Off Time" action appears. Absent/Leave rows never show time inputs.
 
-**Teacher Attendance CSV Export:** Admin can download teacher attendance records as CSV. The export supports filtering by:
+**Teacher Attendance CSV Export:** Admin and Academics can download teacher attendance records as CSV. The export supports filtering by:
 - All teachers (no teacher filter)
 - A specific teacher (by teacher ID)
 - Date range (from/to)
@@ -146,7 +161,30 @@ Admin (and Academics — see §1A) generate a fee challan by selecting a student
 
 Once saved, a challan is treated as an immutable historical record — regenerating for the same student creates a new challan rather than editing the old one. The template version used at generation time is recorded on the challan.
 
-### 1.10 Daily Agenda Oversight
+### 1.10 Teacher Salary Slip
+
+Admin configures, per teacher (in the Users → Teachers tab, at creation or edit):
+- `perDaySalary` — daily pay (Rs.)
+- `lateDeductionType` — `AMOUNT` or `PERCENTAGE` (which applies is picked per teacher)
+- `lateDeductionValue` — flat Rs. (AMOUNT) or % of per-day salary (PERCENTAGE)
+
+**Deduction rules (derived from teacher attendance in the selected period):**
+- Absent day → full day's pay deducted (unpaid), per-day salary, no separate configurable amount
+- Late day → deducted per the teacher's configured late-deduction setting
+- Leave day → fully paid, no deduction
+- A day with no attendance record is not counted as a working day
+
+**Waiver capability:** When generating, the system computes suggested deductions (one line per Late or Absent day). Before finalizing, the user can individually waive any specific deduction line (toggle per line) — waived lines don't reduce the net. This is a per-instance decision made at generation time, **not** a global setting.
+
+**Generation flow (review then generate & save, same pattern as Fee Challan):** user searches a teacher by name, selects a date range (default: current month), reviews the computed breakdown (base pay, itemized deductions with waive toggles, net total), and generates the slip. The slip is **immutable once saved** — regenerating for the same period creates a new slip, never edits the old one.
+
+**Role split (explicit):**
+- **Academics CAN generate** salary slips — full generation flow (search, date range, review, waive, generate & save) identical to Admin. This was a deliberate added capability.
+- **Only Admin CAN configure rates.** `perDaySalary`, `lateDeductionType`, `lateDeductionValue` are editable only in the Admin-only Users management; the rate-config routes (`POST/PATCH /api/teachers`) reject Academics with 403 (verified at API level, not just hidden in the UI). A teacher with no configured rates shows the clear message — "Salary rate not configured for this teacher — ask Admin to set it in Users" — instead of silently paying zero.
+
+**Assumption (documented):** Salary Slip is built with a **coded print layout** (`/print/salary-slips/[id]`) for the first pass, rather than as a fifth Document Template type. Rationale: the template system requires Admin to upload a background (none exist in current deployments), while the coded layout produces a usable slip immediately; the `SalarySlip` model already snapshots config and the `DocumentTemplateType` enum includes `SALARY_SLIP`, so a template-based print can be dropped in later without schema changes. If you want a branded template now, the template system is ready to extend.
+
+### 1.11 Daily Agenda Oversight
 
 Admin has read-only visibility into all daily agenda entries across all teachers, classes, subjects, and dates — same oversight pattern as attendance (§1.5), marks (§1.6), and report cards (§1.6).
 
@@ -166,7 +204,8 @@ Academics users can:
 - Generate **Leaving Certificates** and **Character Certificates** for students (same flow as Admin, see §1.8)
 - Generate **Fee Challans** for students, including adding fee line items and printing (same flow as Admin, see §1.9)
 - **Read and edit student attendance** — Academics can view any class's attendance and edit any attendance record (draft or locked). Every edit produces an immutable audit log entry (see §7). Academics **cannot** delete attendance records.
-- **Read-only oversight** of: student lists, attendance records, tests, marks, and report cards — to provide context when generating certificates and challans
+- **Mark and edit teacher attendance — full parity with Admin** (scope amendment v10): Academics can mark Present/Absent/Leave, log reporting time, and log off time via the same `/admin/teacher-attendance` page and `/api/teacher-attendance` endpoint as Admin. Verified: Academics 201 on mark + off-time, Teacher 403.
+- **Read-only oversight** of: student lists, attendance records, tests, marks, and report cards — to provide context when generating certificates and challans (unchanged)
 
 ### 1A.2 Boundaries
 
@@ -175,11 +214,10 @@ Academics **cannot**:
 - Create or edit classes, sections, or subjects
 - Assign or unassign Class Teachers or Subject Teachers
 - Edit global Bank Settings (Admin-only per §1.9)
-- Mark or confirm attendance (Teacher-specific action)
-- Edit teacher attendance (Admin-only per §1.4)
+- Mark or confirm **student** attendance (Teacher-specific action)
 - Create tests, enter marks, or generate report cards
 - View the attendance audit trail (Admin-only per §7)
-- Access the Daily Agenda feature (neither read nor write — see §1.10 and §2.5)
+- Access the Daily Agenda feature (neither read nor write — see §1.11 and §2.5)
 
 ### 1A.3 Account Management
 
@@ -351,7 +389,7 @@ The metadata is placed **above** the data table as separate rows. The data table
 | Export | Access | Filters |
 |---|---|---|
 | Student Attendance CSV | Admin, Academics, Teacher (own class) | classSectionId, date |
-| Teacher Attendance CSV | Admin | teacherId, from, to |
+| Teacher Attendance CSV | Admin, Academics | teacherId, from, to |
 
 Both exports respect the current filter selections in the UI.
 

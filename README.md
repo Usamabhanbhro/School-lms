@@ -4,9 +4,9 @@ A web-based Learning Management System for schools — attendance, marks/tests, 
 
 Full web app (no desktop client). Built to be usable from a phone browser, since class teachers need to mark attendance on the go.
 
-**Status: Phases 0–6 implemented. Admin provisioning, school settings, and hardened admin self-recovery added.** SRS finalized at v5 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
+**Status: Phases 0–9 implemented. Admin provisioning, school settings, hardened admin self-recovery, document templates, teacher attendance rework (Admin + Academics), Teacher Salary Slips, and session idle timeout added.** SRS current at v10 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, full teacher-attendance marking parity and delegated certificate/challan/salary-slip generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
 
-`SCHEMA.md` and `API.md` are current with SRS v5. Every route through Fee Challans is built and functional. Print layouts for Certificates, Fee Challans (three-copy), and Report Cards are implemented with database-backed school identity configuration.
+`SCHEMA.md` and `API.md` are current with SRS v10. Print layouts for Certificates, Fee Challans (three-copy), Report Cards, and Salary Slips are implemented with database-backed school identity configuration.
 
 ## Stack
 
@@ -31,9 +31,9 @@ Read these in order before making changes:
 |---|---|
 | `ARCHITECTURE.md` | System design, stack decisions, data layer overview |
 | `DESIGN.md` | Visual design system — colors, type, spacing, motion, components |
-| `SRS.md` | Feature scope — **finalized (v5)**, Admin/Academics/Teacher |
-| `SCHEMA.md` | Database entities, fields, relationships — current with SRS v5 |
-| `API.md` | API route list — current with SRS v5, Phases 0–6 marked implemented |
+| `SRS.md` | Feature scope — **finalized (v10)**, Admin/Academics/Teacher |
+| `SCHEMA.md` | Database entities, fields, relationships — current with SRS v10 |
+| `API.md` | API route list — current with SRS v10, all phases marked implemented, salary slips included |
 | `ROADMAP.md` | Phased implementation build order |
 | `CONVENTIONS.md` | Coding standards — naming, folder structure, styling, tooling |
 | `AGENTS.md` | Instructions for AI coding tools working in this repo |
@@ -86,7 +86,7 @@ No email/SMS/OAuth provider variables are required — Admin password recovery i
 Three login roles (per SRS v5):
 
 - **Admin** — the Principal, single account. Manages teachers, academics staff, classes/sections/subjects, students, teacher attendance; oversees all student attendance, marks, and report cards; overrides locked attendance; generates certificates and fee challans; edits bank settings; self-service password recovery via recovery code.
-- **Academics** — multiple accounts, delegated staff. Generates certificates and fee challans (line items + print). Read-only oversight of student lists, attendance records, tests, marks, and report cards for context. Cannot manage users, create/edit classes/subjects, assign teachers, or edit bank settings.
+- **Academics** — multiple accounts, delegated staff. Generates certificates and fee challans (line items + print), marks teacher attendance (full parity with Admin), edits attendance. Read-only oversight of student lists, tests, marks, and report cards for context. Cannot manage users, create/edit classes/subjects, assign teachers, or edit bank settings.
 - **Teacher** — multiple accounts, scoped to assignments:
   - **Class Teacher** (one active per class+section) — the only role that can mark/confirm student attendance for that class
   - **Subject Teacher** (per class+section+subject) — creates tests, enters marks; the active Class Teacher generates the report card, pulling from tests across any subject in the class
@@ -111,12 +111,13 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/admin/subjects` | ADMIN | Subject management |
 | `/admin/students` | ADMIN | Student management |
 | `/admin/attendance` | ADMIN | Attendance overview and overrides |
-| `/admin/teacher-attendance` | ADMIN | Teacher attendance management |
+| `/admin/teacher-attendance` | ADMIN, ACADEMICS | Teacher attendance management (full parity) |
 | `/admin/tests` | ADMIN, ACADEMICS | Tests & marks oversight (read-only) |
 | `/admin/report-cards` | ADMIN, ACADEMICS | Report cards list (read-only) |
 | `/admin/agenda` | ADMIN | Daily agenda overview (read-only) |
 | `/admin/certificates` | ADMIN, ACADEMICS | Certificate generation |
 | `/admin/fees` | ADMIN, ACADEMICS | Fee challan generation |
+| `/admin/salary-slips` | ADMIN, ACADEMICS | Salary slip generation (rates configured by Admin in Users) |
 | `/admin/templates` | ADMIN | Document template management (upload, visual editor, activate) |
 | `/teacher` | TEACHER | Teacher dashboard and quick actions |
 | `/teacher/attendance` | TEACHER | Student attendance marking (draft → lock) |
@@ -142,7 +143,7 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/api/class-sections/:id/subject-teachers` | ADMIN | Assign Subject Teacher |
 | `/api/subjects` | ADMIN (write), TEACHER + ACADEMICS (read) | Subject management |
 | `/api/students` | ADMIN (write), TEACHER (scoped read), ACADEMICS (read) | Student CRUD |
-| `/api/teacher-attendance` | ADMIN | Mark/edit teacher attendance directly |
+| `/api/teacher-attendance` | ADMIN, ACADEMICS | Mark/edit teacher attendance directly (full parity) |
 | `/api/attendance` | TEACHER (Class Teacher only, write), ADMIN + ACADEMICS (read) | Student attendance draft |
 | `/api/attendance/:classSectionId/:date/confirm` | TEACHER (Class Teacher) | Lock a draft attendance sheet |
 | `/api/attendance/:id` | ADMIN | Override a locked record |
@@ -157,6 +158,8 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/api/settings/bank` | ADMIN (write), ACADEMICS (read) | Bank settings for challans |
 | `/api/students/:id/fee-challans` | ADMIN, ACADEMICS | Generate/list fee challans for a student |
 | `/api/fee-challans/:id` | ADMIN, ACADEMICS | Retrieve a saved challan |
+| `/api/salary-slips` | ADMIN, ACADEMICS | List salary slips |
+| `/api/salary-slips/preview` | ADMIN, ACADEMICS | Compute salary breakdown (review step) |
 
 Full request/response shapes for every route above are in `API.md`.
 
@@ -170,7 +173,8 @@ Multi-tenant SaaS deployment is a planned future enhancement — not yet impleme
 
 ## Remaining Work
 
-- **Visual design for print documents** — Report Card, Leaving Certificate, Character Certificate, and Fee Challan layouts are structural placeholders. Final designs will be supplied later. The data/configuration layer is complete and flexible.
+- Nothing blocking. Optional next steps: branded document templates (Admin-uploaded backgrounds — the template system supports Certificates, Report Cards, Fee Challans, and Salary Slips), and a spawned Academics claims-salary-print is already covered.
+- 15-minute session idle timeout is client-side (NextAuth signOut + `?expired=1` message) — it clears the session in the browser; server-side JWT revocation remains out of scope (see SCHEMA.md JWT limitation).
 
 ## Admin Self-Recovery
 
@@ -198,7 +202,7 @@ The single Admin account uses a one-time recovery code for password reset. **The
 - **JWT session persistence**: Existing JWT sessions are not invalidated after a password change. The old password can no longer authenticate, but pre-existing session tokens remain valid until they expire (default 30 days). This is inherent to JWT-based auth without a token blocklist.
 - **In-memory rate limiting**: Rate limits are per serverless function instance on Vercel. Concurrent function invocations have separate counters. This is documented transparently rather than pretending it provides distributed protection.
 
-Not in scope at all under SRS v5: Assignments/Submissions, Timetables, Announcements, Notifications/messaging, OAuth/email-based password reset, Library module.
+Not in scope under SRS v10: Assignments/Submissions, Timetables, Announcements, Notifications/messaging, OAuth/email-based password reset, Library module.
 
 ## School Identity Configuration
 

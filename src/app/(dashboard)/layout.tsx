@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
+import { SessionIdleTimeout } from "@/components/layout/session-idle-timeout";
 import { MountAnimation } from "@/components/ui/mount-animation";
 import { authOptions } from "@/lib/auth";
 import { getSchoolSettings } from "@/lib/school-settings";
@@ -16,6 +17,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   return (
     <div className="min-h-screen bg-bg">
+      {/* Applies to every role: Admin, Academics, Teacher — 15-minute idle expiry */}
+      <SessionIdleTimeout />
       <Sidebar role={session.user.role} name={session.user.name ?? ""} schoolName={school.schoolName} logoPath={school.logoPath} />
       <main className="md:pl-64">
         <MountAnimation>

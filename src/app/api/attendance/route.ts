@@ -133,12 +133,13 @@ export async function POST(request: Request) {
     // Verify this teacher is the active Class Teacher for this section
     await requireActiveClassTeacher(profile.id, body.classSectionId);
 
-    // Validate that all submitted student IDs actually belong to this class section
+    // Validate that all submitted student IDs are active and belong to this class section
     const submittedStudentIds = body.records.map((r) => r.studentId);
     const validStudentCount = await prisma.student.count({
       where: {
         id: { in: submittedStudentIds },
         classSectionId: body.classSectionId,
+        isActive: true,
       },
     });
 
