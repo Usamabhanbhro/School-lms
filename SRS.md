@@ -1,6 +1,6 @@
 # School LMS — Software Requirements Specification (SRS)
 
-**Status: Draft v12 — adds the Admin-only on-demand JSON backup export after the Fee Ledger requirements.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
+**Status: Draft v13 — adds scoped global search after the Admin-only on-demand JSON backup export.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
 
 ---
 
@@ -201,6 +201,12 @@ Admin can download a complete, lossless backup of the LMS on demand from Setting
 The Admin-only `GET /api/backup/export` endpoint returns a file download with `Content-Disposition: attachment`, a stable `schemaVersion`, an `exportedAt` timestamp, and every meaningful application table required to restore school data, including users, profiles, classes, subjects, assignments, students, attendance, tests, marks, terms, report cards, certificates, templates, bank settings, fee challans, fee line items, fee payments, salary slips, salary deductions, daily agenda entries, and attendance audit logs. Password hashes and other authentication secrets are excluded from the export.
 
 The Settings page exposes one explicit **Download JSON Backup** action for Admin. Academics and Teachers must receive an authorization error and must not see or trigger the action. Exporting does not mutate application data, create a backup record, or require a background job.
+
+### 1.13 Global Search
+
+Admin and Academics receive one shared **Search school data** entry point in the dashboard shell. It opens a keyboard-accessible overlay with a debounced query field, loading state, error state, empty state, and links to matching records. The search result shows the real entity type, title, useful identifying context, and a destination route.
+
+Search covers active Students, active Teachers, Class/Section records, Subjects, Fee Challans, and Tests for Admin and Academics. Admin additionally receives Daily Agenda matches because Daily Agenda is Admin-only. Teachers do not receive this school-wide search entry point and must continue using their existing assignment-scoped workflows. Search results must never expose inactive students or inactive teacher accounts, and the server enforces the role boundary rather than relying on hidden UI alone.
 
 ---
 

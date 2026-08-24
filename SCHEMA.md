@@ -2,7 +2,7 @@
 
 Plain-English companion to `prisma/schema.prisma`. Every model in Prisma should have a matching entry here explaining *why* it exists and how it relates to others.
 
-**Status: reconciled with SRS.md v12.** Three login roles: Admin (single account), Academics (multiple), and Teacher (multiple). Students are data records, not logins. No Parent access.
+**Status: reconciled with SRS.md v13.** Three login roles: Admin (single account), Academics (multiple), and Teacher (multiple). Students are data records, not logins. No Parent access.
 
 ## Conventions
 
@@ -237,6 +237,10 @@ Per-teacher, per-class+subject, per-day lesson log. Teachers write entries for t
 ## Backup Export
 
 The on-demand backup is a read-only serialization of the existing relational models; it introduces no `Backup` table, job record, or background worker. The JSON bundle includes the model rows and relationship-bearing foreign keys needed for restoration, while excluding password hashes, recovery-code hashes, session tokens, and other authentication secrets. The bundle carries `schemaVersion` and `exportedAt` metadata so future restore tooling can identify its format.
+
+## Global Search
+
+Global Search introduces no new model or search index. It queries the existing active Student, TeacherProfile/User, ClassSection, Subject, FeeChallan, Test, and (for Admin) DailyAgenda records. Returned result objects are transient view data containing an entity type, real record ID, title, context subtitle, and destination route. Role and active-record filtering are enforced in the API rather than represented as persisted data.
 
 ## Not Yet Modeled
 

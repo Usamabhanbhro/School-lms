@@ -27,6 +27,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { Role } from "@/generated/prisma/enums";
 import { cn } from "@/lib/utils";
+import { GlobalSearch } from "@/components/layout/global-search";
 
 // ─── Navigation structure ─────────────────────────────────────────
 
@@ -154,6 +155,9 @@ export function Sidebar({
           {schoolName || "School LMS"}
         </span>
       </Link>
+
+      {/* Single school-data search entry point for roles with school-wide oversight */}
+      {(role === "ADMIN" || role === "ACADEMICS") && <GlobalSearch />}
 
       {/* Navigation */}
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3" aria-label="Main navigation">

@@ -2,7 +2,7 @@
 
 Build order for reconciling and implementing the SRS (v5). Each phase unlocks the next — don't skip ahead, since later phases read data/patterns established earlier.
 
-**Status: Phases 0–10 implemented and verified, followed by a regression-fix and backup-export round. The Admin-only on-demand JSON backup export is the current active phase. See `API.md` for per-route status.**
+**Status: Phases 0–10 implemented and verified, followed by regression fixes, backup export, and scoped Global Search. LMS-side licensing and the design-system screenshot pass remain. See `API.md` for per-route status.**
 
 ## Phase 0 — Reconciliation ✅ Complete
 
@@ -158,6 +158,13 @@ Operational round on top of the completed product (SRS v10):
 - SRS, schema, API, architecture, README, and this roadmap document an Admin-only `GET /api/backup/export` returning a single lossless JSON attachment.
 - Implemented the stateless read-only route with `schemaVersion`, `exportedAt`, complete application-model data, relationship keys, and explicit exclusion of password hashes, recovery-code hashes, session tokens, and other authentication secrets. Settings exposes the download action only to Admin with loading feedback and attachment handling.
 - Real browser verification triggered an actual download named `school-lms-backup-2026-08-24.json`, parsed 5,887 bytes of JSON, confirmed live users, teachers, student, attendance, FeeChallanPayment, salary, and other model data were present, confirmed `containsAuthSecrets: false`, verified the Admin response headers, and verified a Teacher receives HTTP 403 `FORBIDDEN`.
+
+## Phase 12 — Scoped Global Search ✅ Complete
+
+- Added one shared **Search school data** entry point to the Admin and Academics dashboard shell. Teachers intentionally do not receive the school-wide trigger and continue using assignment-scoped workflows.
+- Added `GET /api/search?q=...` with server-enforced role and active-record scoping. Admin and Academics can search active Students, active Teachers, Class/Section records, Subjects, Fee Challans, and Tests; Admin additionally receives Daily Agenda matches.
+- The overlay provides keyboard focus, `/` and Cmd/Ctrl+K opening, Escape and backdrop close, debounced requests, result-type labels, destination links, loading, error, empty, and short-query states.
+- Real browser evidence: Admin search for `Ledger` returned the live Student, Class, and Fee Challan records with real entity labels and links; Admin search for `Regression` returned the live Teacher record; the overlay screenshot showed all three mixed results; the Teacher dashboard had zero search triggers and the same endpoint returned HTTP 403 `FORBIDDEN`.
 
 ## Migration Reconciliation (Post-Phase 8)
 

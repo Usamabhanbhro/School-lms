@@ -2,7 +2,7 @@
 
 Living document. Every API route must be added here when created — see `CONVENTIONS.md` and `AGENTS.md`.
 
-**Status: reconciled with SRS.md v12.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
+**Status: reconciled with SRS.md v13.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
 Phase 1–6 routes are implemented. Admin provisioning, school settings, admin self-recovery, and daily agenda routes added.
 
 ## Conventions Recap
@@ -532,6 +532,18 @@ NextAuth handler — login/logout/session. Credentials provider only.
 **Purpose:** Update an existing agenda entry's content. Server rejects if the entry's date is in the past (same `isDateLocked()` helper as POST — one shared function, not duplicated).
 **Request body:** `{ content }`
 **Response (200):** `{ data: { id, content, date, isLocked, ... } }`
+**Status:** implemented
+
+---
+
+## Global Search (Admin & Academics)
+
+### GET /api/search?q=...
+**Role required:** Admin, Academics
+**Purpose:** Search active school records from the shared dashboard search entry point.
+**Query params:** `q` (optional; blank queries return an empty result set)
+**Response:** `{ data: { query, results: [{ type, id, title, subtitle, href }] } }`
+**Result scope:** Active Students, active Teachers, Class/Section records, Subjects, Fee Challans, and Tests. Admin additionally receives Daily Agenda results. Inactive Students and inactive Teacher accounts are excluded server-side. Teachers receive `403 FORBIDDEN` and have no school-wide search trigger in their dashboard shell.
 **Status:** implemented
 
 ---
