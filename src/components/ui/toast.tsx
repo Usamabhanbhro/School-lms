@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, X, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TOAST_DURATION_MS = 4000;
@@ -71,10 +71,10 @@ function ToastItem({
           <button
             type="button"
             onClick={() => onDismiss(toast.id)}
-            className="shrink-0 text-current opacity-50 hover:opacity-100"
-            aria-label="Dismiss"
+            className="inline-flex size-8 shrink-0 items-center justify-center text-current opacity-60 transition-opacity duration-150 hover:bg-current/10 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current motion-reduce:transition-none"
+            aria-label="Dismiss notification"
           >
-            <XCircle className="size-3.5" aria-hidden="true" />
+            <X className="size-4" aria-hidden="true" />
           </button>
         )}
       </div>

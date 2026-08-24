@@ -4,9 +4,9 @@ A web-based Learning Management System for schools — attendance, marks/tests, 
 
 Full web app (no desktop client). Built to be usable from a phone browser, since class teachers need to mark attendance on the go.
 
-**Status: Phases 0–10 implemented and verified, followed by production migration reconciliation, reliability hardening, the Admin Dashboard Needs Attention section, regression fixes, verified backup export, and scoped Global Search.** SRS current at v13 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, full teacher-attendance marking parity and delegated certificate/challan/salary-slip generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
+**Status: Phases 0–10 implemented and verified, followed by production migration reconciliation, reliability hardening, the Admin Dashboard Needs Attention section, regression fixes, verified backup export, scoped Global Search, and the completed design-system refinement pass.** SRS current at v14 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, full teacher-attendance marking parity and delegated certificate/challan/salary-slip generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
 
-`SCHEMA.md` and `API.md` are current with SRS v13. Print layouts for Certificates, Fee Challans (three-copy), Report Cards, and Salary Slips are implemented with database-backed school identity configuration.
+`SCHEMA.md` and `API.md` are current with SRS v14. Print layouts for Certificates, Fee Challans (three-copy), Report Cards, and Salary Slips are implemented with database-backed school identity configuration.
 
 ## Stack
 
@@ -31,9 +31,9 @@ Read these in order before making changes:
 |---|---|
 | `ARCHITECTURE.md` | System design, stack decisions, data layer overview |
 | `DESIGN.md` | Visual design system — colors, type, spacing, motion, components |
-| `SRS.md` | Feature scope — **current draft (v13)**, Admin/Academics/Teacher |
-| `SCHEMA.md` | Database entities, fields, relationships — current with SRS v13 |
-| `API.md` | API route list — current with SRS v13, including scoped Global Search and Admin-only backup export |
+| `SRS.md` | Feature scope — **current draft (v14)**, Admin/Academics/Teacher |
+| `SCHEMA.md` | Database entities, fields, relationships — current with SRS v14 |
+| `API.md` | API route list — current with SRS v14, including scoped Global Search and Admin-only backup export |
 | `ROADMAP.md` | Phased implementation build order |
 | `CONVENTIONS.md` | Coding standards — naming, folder structure, styling, tooling |
 | `AGENTS.md` | Instructions for AI coding tools working in this repo |

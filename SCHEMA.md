@@ -2,7 +2,7 @@
 
 Plain-English companion to `prisma/schema.prisma`. Every model in Prisma should have a matching entry here explaining *why* it exists and how it relates to others.
 
-**Status: reconciled with SRS.md v13.** Three login roles: Admin (single account), Academics (multiple), and Teacher (multiple). Students are data records, not logins. No Parent access.
+**Status: reconciled with SRS.md v14.** Three login roles: Admin (single account), Academics (multiple), and Teacher (multiple). Students are data records, not logins. No Parent access.
 
 ## Conventions
 
@@ -241,6 +241,10 @@ The on-demand backup is a read-only serialization of the existing relational mod
 ## Global Search
 
 Global Search introduces no new model or search index. It queries the existing active Student, TeacherProfile/User, ClassSection, Subject, FeeChallan, Test, and (for Admin) DailyAgenda records. Returned result objects are transient view data containing an entity type, real record ID, title, context subtitle, and destination route. Role and active-record filtering are enforced in the API rather than represented as persisted data.
+
+## Design-System Completion
+
+The design-system completion pass is presentation-only. It adds no models, fields, indexes, migrations, or persisted UI state. Refinements apply to existing shared components and feature surfaces, including interactive focus/hover behavior, state visibility, responsive composition, and screenshot-verifiable interaction feedback.
 
 ## Not Yet Modeled
 

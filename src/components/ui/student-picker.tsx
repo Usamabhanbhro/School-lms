@@ -86,7 +86,7 @@ export function StudentPicker({
         value={selectedStudentId}
         onChange={(e) => onSelect(e.target.value)}
         disabled={disabled || classStudents.length === 0}
-        className="h-10 w-full border border-border bg-bg px-4 text-sm text-text disabled:opacity-50"
+        className="h-10 w-full border border-border bg-bg px-4 text-sm text-text transition-colors duration-150 hover:border-text/30 focus:border-primary focus:ring-2 focus:ring-primary/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 motion-reduce:transition-none"
       >
         <option value="">Select student…</option>
         {classStudents.map((s) => (
@@ -127,7 +127,7 @@ export function StudentPicker({
                 onSelect(s.id);
                 setSearch("");
               }}
-              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-surface"
+              className="flex min-h-10 w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors duration-150 hover:bg-surface focus-visible:bg-surface focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary motion-reduce:transition-none"
             >
               <span className="font-medium">
                 {s.studentId && (

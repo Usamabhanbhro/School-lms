@@ -36,6 +36,31 @@ body {
   outline-offset: 2px;
 }
 
+/* Theme browser-owned surfaces so utility screens still feel intentional. */
+::selection {
+  background: var(--color-primary);
+  color: var(--color-bg);
+}
+
+input,
+textarea {
+  caret-color: var(--color-primary);
+}
+
+* {
+  scrollbar-color: var(--color-border) transparent;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+}
+
 /* Motion consistency + reduced-motion respect per DESIGN.md. */
 @media (prefers-reduced-motion: reduce) {
   *,

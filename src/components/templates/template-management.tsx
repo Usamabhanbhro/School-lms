@@ -293,12 +293,12 @@ export function TemplateManagement() {
           return (
             <div
               key={typeInfo.value}
-              className="border border-zinc-200 bg-white"
+              className="border border-border bg-bg"
             >
               {/* Section header */}
-              <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-zinc-900">
+                  <h3 className="text-sm font-semibold text-text">
                     {typeInfo.label}
                   </h3>
                   {activeTemplate ? (
@@ -310,7 +310,7 @@ export function TemplateManagement() {
                 <button
                   onClick={() => triggerUpload(typeInfo.value)}
                   disabled={uploading}
-                  className="inline-flex items-center gap-1.5 border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
                 >
                   {uploading && uploadingType === typeInfo.value ? (
                     "Uploading..."
@@ -332,7 +332,7 @@ export function TemplateManagement() {
                   description={`Upload a template image (PNG/JPG) or PDF for ${typeInfo.label}. The file will be converted to an image and used as the background for document generation.`}
                 />
               ) : (
-                <div className="divide-y divide-zinc-200">
+                <div className="divide-y divide-border">
                   {typeTemplates.map((template) => {
                     const docCount =
                       template.type === "REPORT_CARD"
@@ -344,11 +344,11 @@ export function TemplateManagement() {
                     return (
                       <div
                         key={template.id}
-                        className="flex items-center justify-between px-4 py-3"
+                        className="flex flex-col items-start gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                       >
                         <div className="flex items-center gap-4">
                           {/* Thumbnail preview */}
-                          <div className="h-12 w-16 overflow-hidden border border-zinc-200 bg-zinc-100">
+                          <div className="h-12 w-16 overflow-hidden border border-border bg-surface">
                             <img
                               src={template.backgroundImageUrl}
                               alt={`Template for ${typeInfo.label}`}
@@ -357,16 +357,16 @@ export function TemplateManagement() {
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-zinc-900">
+                              <span className="text-sm font-medium text-text">
                                 {new Date(template.createdAt).toLocaleDateString()}
                               </span>
                               {template.isActive && (
-                                <span className="inline-flex items-center rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-800">
+                                <span className="inline-flex items-center rounded bg-success/10 px-1.5 py-0.5 text-[10px] font-medium text-success">
                                   ACTIVE
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-zinc-500">
+                            <p className="text-xs text-text/60">
                               {template.fields.length} fields ·{" "}
                               {template.tableRegions.length} table regions ·{" "}
                               {docCount} document(s) generated
@@ -374,24 +374,24 @@ export function TemplateManagement() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                           <button
                             onClick={() => setEditingTemplate(template)}
-                            className="border border-zinc-300 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                            className="border border-border bg-bg px-2.5 py-1 text-xs font-medium text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                           >
                             Edit Fields
                           </button>
                           {!template.isActive && (
                             <button
                               onClick={() => handleActivate(template)}
-                              className="border border-zinc-300 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                              className="border border-border bg-bg px-2.5 py-1 text-xs font-medium text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                             >
                               Activate
                             </button>
                           )}
                           <button
                             onClick={() => setDeleteTarget(template)}
-                            className="border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                            className="border border-danger/30 bg-bg px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
                           >
                             Delete
                           </button>
@@ -406,7 +406,7 @@ export function TemplateManagement() {
         })}
 
         {/* Fallback note */}
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-text/60">
           If no active template exists for a document type, the print view will show
           &ldquo;No template configured — ask your Admin to upload one in Settings&rdquo;
           instead of rendering blank.
@@ -923,24 +923,24 @@ function TemplateEditor({
 
   return (
     <div className="fixed inset-0 z-50 flex bg-black/50">
-      <div className="flex h-full w-full flex-col bg-white">
+      <div className="flex h-full w-full flex-col bg-bg">
         {/* Editor toolbar */}
-        <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-2">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-2">
           <div>
-            <h2 className="text-sm font-semibold text-zinc-900">
+            <h2 className="text-sm font-semibold text-text">
               Edit Fields — {templateTypeConfig.label}
             </h2>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-text/60">
               Drag fields on the canvas to position them. Use the formatting controls to style each field.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Undo/Redo */}
-            <div className="flex items-center border border-zinc-300">
+            <div className="flex items-center border border-border">
               <button
                 onClick={undo}
                 disabled={historyIndex <= 0}
-                className="px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50 disabled:text-zinc-300 disabled:cursor-not-allowed border-r border-zinc-300"
+                className="px-2 py-1 text-xs text-text/60 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:text-text/30 disabled:cursor-not-allowed border-r border-border"
                 title="Undo"
               >
                 <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 10h10a5 5 0 015 5v2M3 10l5 5M3 10l5-5"/></svg>
@@ -948,7 +948,7 @@ function TemplateEditor({
               <button
                 onClick={redo}
                 disabled={historyIndex >= history.length - 1}
-                className="px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50 disabled:text-zinc-300 disabled:cursor-not-allowed"
+                className="px-2 py-1 text-xs text-text/60 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:text-text/30 disabled:cursor-not-allowed"
                 title="Redo"
               >
                 <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10H11a5 5 0 00-5 5v2M21 10l-5 5M21 10l-5-5"/></svg>
@@ -972,28 +972,28 @@ function TemplateEditor({
                 };
                 setStaticTexts((prev) => [...prev, newText]);
               }}
-              className="border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+              className="border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               + Add Text Label
             </button>
             {templateTypeConfig.hasTableRegion && (
               <button
                 onClick={addTableRegion}
-                className="border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                className="border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 + Add Table Region
               </button>
             )}
             <button
               onClick={onClose}
-              className="border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+              className="border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+              className="bg-text px-3 py-1.5 text-xs font-medium text-bg hover:bg-text/90 disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save Positions"}
             </button>
@@ -1002,10 +1002,10 @@ function TemplateEditor({
 
         <div className="flex flex-1 overflow-hidden">
           {/* Canvas area */}
-          <div className="flex-1 overflow-auto bg-zinc-100 p-8">
+          <div className="flex-1 overflow-auto bg-surface p-8">
             <div
               ref={canvasRef}
-              className="relative mx-auto bg-white shadow-sm border border-zinc-200"
+              className="relative mx-auto bg-bg shadow-sm border border-border"
               style={{ width: "700px", height: "990px", aspectRatio: "210/297" }}
               onClick={handleCanvasClick}
               onPointerMove={(e) => {
@@ -1070,8 +1070,8 @@ function TemplateEditor({
                       <div
                         className={`h-full w-full border px-1 py-0.5 text-[10px] font-mono whitespace-nowrap overflow-hidden ${
                           isSelected
-                            ? "border-blue-600 bg-blue-500/15 text-blue-800"
-                            : "border-blue-400 bg-blue-500/10 text-blue-700"
+                            ? "border-primary bg-primary/15 text-primary"
+                            : "border-primary bg-primary/10 text-primary"
                         }`}
                         style={{
                           fontSize: `${Math.min(field.fontSize, 14)}px`,
@@ -1165,8 +1165,8 @@ function TemplateEditor({
                     <div
                       className={`h-full w-full border px-1 py-0.5 text-[10px] whitespace-nowrap overflow-hidden ${
                         isSelected
-                          ? "border-green-600 bg-green-500/15 text-green-800"
-                          : "border-green-400 bg-green-500/10 text-green-700"
+                          ? "border-success bg-success/15 text-success"
+                          : "border-success bg-success/10 text-success"
                       }`}
                       style={{
                         fontSize: `${Math.min(st.fontSize, 14)}px`,
@@ -1222,7 +1222,7 @@ function TemplateEditor({
               {tableRegions.map((region, i) => (
                 <div
                   key={`tr-${i}`}
-                  className="absolute cursor-move border border-dashed border-orange-400 bg-orange-400/10"
+                  className="absolute cursor-move border border-dashed border-text/40 bg-surface"
                   style={{
                     left: `${region.anchorXPercent}%`,
                     top: `${region.anchorYPercent}%`,
@@ -1234,7 +1234,7 @@ function TemplateEditor({
                     setDraggingRegion(i);
                   }}
                 >
-                  <span className="absolute -top-4 left-0 text-[10px] font-mono text-orange-600">
+                  <span className="absolute -top-4 left-0 text-[10px] font-mono text-text/70">
                     Table Region {i + 1}
                   </span>
                 </div>
@@ -1243,8 +1243,8 @@ function TemplateEditor({
           </div>
 
           {/* Field properties panel */}
-          <div className="w-80 overflow-y-auto border-l border-zinc-200 p-4">
-            <h3 className="mb-3 text-xs font-semibold uppercase text-zinc-500">
+          <div className="w-80 overflow-y-auto border-l border-border p-4">
+            <h3 className="mb-3 text-xs font-semibold uppercase text-text/60">
               Single Fields
             </h3>
             <div className="space-y-2">
@@ -1260,15 +1260,15 @@ function TemplateEditor({
                   keyIndices[field.fieldKey] = idx + 1;
                   const label = count > 1 ? `${field.fieldKey} (${idx + 1})` : field.fieldKey;
                   return (
-                    <div key={`${field.fieldKey}-${i}`} className="border border-zinc-200 p-2">
+                    <div key={`${field.fieldKey}-${i}`} className="border border-border p-2">
                       <div className="mb-1 flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-zinc-700">
+                        <span className="text-[11px] font-medium text-text/70">
                           {label}
                         </span>
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => addDuplicateField(i)}
-                            className="text-[10px] text-blue-600 hover:text-blue-800"
+                            className="text-[10px] text-primary hover:text-primary"
                             title="Add another position for this field"
                           >
                             + Position
@@ -1276,7 +1276,7 @@ function TemplateEditor({
                           {count > 1 && (
                             <button
                               onClick={() => removeField(i)}
-                              className="text-[10px] text-red-500 hover:text-red-700"
+                              className="text-[10px] text-danger hover:text-danger"
                               title="Remove this position"
                             >
                               ×
@@ -1285,7 +1285,7 @@ function TemplateEditor({
                         </div>
                       </div>
                   <div className="grid grid-cols-2 gap-1">
-                    <label className="text-[10px] text-zinc-500">
+                    <label className="text-[10px] text-text/60">
                       X%
                       <input
                         type="number"
@@ -1293,13 +1293,13 @@ function TemplateEditor({
                         onChange={(e) =>
                           updateField(i, "xPercent", parseFloat(e.target.value) || 0)
                         }
-                        className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                        className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
                         min={0}
                         max={100}
                         step={0.5}
                       />
                     </label>
-                    <label className="text-[10px] text-zinc-500">
+                    <label className="text-[10px] text-text/60">
                       Y%
                       <input
                         type="number"
@@ -1307,13 +1307,13 @@ function TemplateEditor({
                         onChange={(e) =>
                           updateField(i, "yPercent", parseFloat(e.target.value) || 0)
                         }
-                        className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                        className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
                         min={0}
                         max={100}
                         step={0.5}
                       />
                     </label>
-                    <label className="text-[10px] text-zinc-500">
+                    <label className="text-[10px] text-text/60">
                       Width%
                       <input
                         type="number"
@@ -1322,13 +1322,13 @@ function TemplateEditor({
                         onChange={(e) =>
                           updateField(i, "widthPercent", e.target.value === "" ? null : parseFloat(e.target.value) || null)
                         }
-                        className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                        className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
                         min={2}
                         max={80}
                         step={0.5}
                       />
                     </label>
-                    <label className="text-[10px] text-zinc-500">
+                    <label className="text-[10px] text-text/60">
                       Height%
                       <input
                         type="number"
@@ -1337,13 +1337,13 @@ function TemplateEditor({
                         onChange={(e) =>
                           updateField(i, "heightPercent", e.target.value === "" ? null : parseFloat(e.target.value) || null)
                         }
-                        className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                        className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
                         min={1}
                         max={50}
                         step={0.5}
                       />
                     </label>
-                    <label className="text-[10px] text-zinc-500">
+                    <label className="text-[10px] text-text/60">
                       Size
                       <input
                         type="number"
@@ -1351,17 +1351,17 @@ function TemplateEditor({
                         onChange={(e) =>
                           updateField(i, "fontSize", parseInt(e.target.value) || 12)
                         }
-                        className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                        className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
                         min={6}
                         max={72}
                       />
                     </label>
-                    <label className="text-[10px] text-zinc-500">
+                    <label className="text-[10px] text-text/60">
                       Align
                       <select
                         value={field.textAlign}
                         onChange={(e) => updateField(i, "textAlign", e.target.value)}
-                        className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px]"
+                        className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px]"
                       >
                         <option value="left">Left</option>
                         <option value="center">Center</option>
@@ -1371,12 +1371,12 @@ function TemplateEditor({
                   </div>
                   {/* Formatting controls */}
                   <div className="mt-1 grid grid-cols-2 gap-1">
-                    <label className="text-[10px] text-zinc-500">
+                    <label className="text-[10px] text-text/60">
                       Font
                       <select
                         value={field.fontFamily}
                         onChange={(e) => updateField(i, "fontFamily", e.target.value)}
-                        className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px]"
+                        className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px]"
                       >
                         <option value="">Default</option>
                         <option value="Inter, sans-serif">Inter (Sans)</option>
@@ -1389,13 +1389,13 @@ function TemplateEditor({
                         <option value="Courier New, monospace">Courier New (Mono)</option>
                       </select>
                     </label>
-                    <label className="text-[10px] text-zinc-500">
+                    <label className="text-[10px] text-text/60">
                       Color
                       <input
                         type="color"
                         value={field.fontColor || "#000000"}
                         onChange={(e) => updateField(i, "fontColor", e.target.value)}
-                        className="mt-0.5 block h-5 w-full border border-zinc-300 px-0.5 py-0"
+                        className="mt-0.5 block h-5 w-full border border-border px-0.5 py-0"
                       />
                     </label>
                   </div>
@@ -1404,7 +1404,7 @@ function TemplateEditor({
                     <button
                       type="button"
                       onClick={() => updateField(i, "fontWeight", field.fontWeight === "bold" ? "" : "bold")}
-                      className={`border px-1.5 py-0.5 text-[11px] font-bold ${field.fontWeight === "bold" ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"}`}
+                      className={`border px-1.5 py-0.5 text-[11px] font-bold ${field.fontWeight === "bold" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
                       title="Bold"
                     >
                       B
@@ -1412,7 +1412,7 @@ function TemplateEditor({
                     <button
                       type="button"
                       onClick={() => updateField(i, "fontStyle", field.fontStyle === "italic" ? "" : "italic")}
-                      className={`border px-1.5 py-0.5 text-[11px] italic ${field.fontStyle === "italic" ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"}`}
+                      className={`border px-1.5 py-0.5 text-[11px] italic ${field.fontStyle === "italic" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
                       title="Italic"
                     >
                       I
@@ -1420,7 +1420,7 @@ function TemplateEditor({
                     <button
                       type="button"
                       onClick={() => updateField(i, "textDecoration", field.textDecoration === "underline" ? "" : "underline")}
-                      className={`border px-1.5 py-0.5 text-[11px] underline ${field.textDecoration === "underline" ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"}`}
+                      className={`border px-1.5 py-0.5 text-[11px] underline ${field.textDecoration === "underline" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
                       title="Underline"
                     >
                       U
@@ -1435,18 +1435,18 @@ function TemplateEditor({
             {/* Static Text Labels */}
             {staticTexts.length > 0 && (
               <>
-                <h3 className="mb-3 mt-4 text-xs font-semibold uppercase text-zinc-500">
+                <h3 className="mb-3 mt-4 text-xs font-semibold uppercase text-text/60">
                   Text Labels
                 </h3>
                 <div className="space-y-2">
                   {staticTexts.map((st, i) => (
                     <div
                       key={`stp-${i}`}
-                      className={`border p-2 ${selectedStaticIdx === i ? "border-green-500 bg-green-50" : "border-zinc-200"}`}
+                      className={`border p-2 ${selectedStaticIdx === i ? "border-success bg-success/5" : "border-border"}`}
                       onClick={() => setSelectedStaticIdx(i)}
                     >
                       <div className="mb-1 flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-green-700">
+                        <span className="text-[11px] font-medium text-success">
                           Label {i + 1}
                         </span>
                         <button
@@ -1454,7 +1454,7 @@ function TemplateEditor({
                             setStaticTexts((prev) => prev.filter((_, idx) => idx !== i));
                             if (selectedStaticIdx === i) setSelectedStaticIdx(null);
                           }}
-                          className="text-[10px] text-red-500 hover:text-red-700"
+                          className="text-[10px] text-danger hover:text-danger"
                         >
                           ×
                         </button>
@@ -1465,33 +1465,33 @@ function TemplateEditor({
                           const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, content: e.target.value } : s);
                           setStaticTexts(newSTs);
                         }}
-                        className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px]"
+                        className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px]"
                         rows={2}
                       />
                       <div className="mt-1 grid grid-cols-2 gap-1">
-                        <label className="text-[10px] text-zinc-500">
+                        <label className="text-[10px] text-text/60">
                           X%
                           <input type="number" value={Math.round(st.xPercent * 10) / 10}
                             onChange={(e) => {
                               const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, xPercent: parseFloat(e.target.value) || 0 } : s);
                               setStaticTexts(newSTs);
                             }}
-                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
                             min={0} max={100} step={0.5}
                           />
                         </label>
-                        <label className="text-[10px] text-zinc-500">
+                        <label className="text-[10px] text-text/60">
                           Y%
                           <input type="number" value={Math.round(st.yPercent * 10) / 10}
                             onChange={(e) => {
                               const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, yPercent: parseFloat(e.target.value) || 0 } : s);
                               setStaticTexts(newSTs);
                             }}
-                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
                             min={0} max={100} step={0.5}
                           />
                         </label>
-                        <label className="text-[10px] text-zinc-500">
+                        <label className="text-[10px] text-text/60">
                           Width%
                           <input type="number" value={st.widthPercent != null ? Math.round(st.widthPercent * 10) / 10 : ""}
                             placeholder="auto"
@@ -1499,11 +1499,11 @@ function TemplateEditor({
                               const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, widthPercent: e.target.value === "" ? null : parseFloat(e.target.value) || null } : s);
                               setStaticTexts(newSTs);
                             }}
-                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
                             min={2} max={80} step={0.5}
                           />
                         </label>
-                        <label className="text-[10px] text-zinc-500">
+                        <label className="text-[10px] text-text/60">
                           Height%
                           <input type="number" value={st.heightPercent != null ? Math.round(st.heightPercent * 10) / 10 : ""}
                             placeholder="auto"
@@ -1511,21 +1511,21 @@ function TemplateEditor({
                               const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, heightPercent: e.target.value === "" ? null : parseFloat(e.target.value) || null } : s);
                               setStaticTexts(newSTs);
                             }}
-                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
                             min={1} max={50} step={0.5}
                           />
                         </label>
                       </div>
                       {/* Font + Size + Align */}
                       <div className="mt-1 grid grid-cols-3 gap-1">
-                        <label className="text-[10px] text-zinc-500">
+                        <label className="text-[10px] text-text/60">
                           Font
                           <select value={st.fontFamily}
                             onChange={(e) => {
                               const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, fontFamily: e.target.value } : s);
                               setStaticTexts(newSTs);
                             }}
-                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px]"
+                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px]"
                           >
                             <option value="">Default</option>
                             <option value="Inter, sans-serif">Inter (Sans)</option>
@@ -1538,25 +1538,25 @@ function TemplateEditor({
                             <option value="Courier New, monospace">Courier New (Mono)</option>
                           </select>
                         </label>
-                        <label className="text-[10px] text-zinc-500">
+                        <label className="text-[10px] text-text/60">
                           Size
                           <input type="number" value={st.fontSize}
                             onChange={(e) => {
                               const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, fontSize: parseInt(e.target.value) || 12 } : s);
                               setStaticTexts(newSTs);
                             }}
-                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
                             min={6} max={72}
                           />
                         </label>
-                        <label className="text-[10px] text-zinc-500">
+                        <label className="text-[10px] text-text/60">
                           Align
                           <select value={st.textAlign}
                             onChange={(e) => {
                               const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, textAlign: e.target.value as any } : s);
                               setStaticTexts(newSTs);
                             }}
-                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px]"
+                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px]"
                           >
                             <option value="left">Left</option>
                             <option value="center">Center</option>
@@ -1570,30 +1570,30 @@ function TemplateEditor({
                             const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, fontWeight: s.fontWeight === "bold" ? "" : "bold" } : s);
                             setStaticTexts(newSTs);
                           }}
-                          className={`border px-1.5 py-0.5 text-[11px] font-bold ${st.fontWeight === "bold" ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"}`}
+                          className={`border px-1.5 py-0.5 text-[11px] font-bold ${st.fontWeight === "bold" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
                         >B</button>
                         <button type="button"
                           onClick={() => {
                             const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, fontStyle: s.fontStyle === "italic" ? "" : "italic" } : s);
                             setStaticTexts(newSTs);
                           }}
-                          className={`border px-1.5 py-0.5 text-[11px] italic ${st.fontStyle === "italic" ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"}`}
+                          className={`border px-1.5 py-0.5 text-[11px] italic ${st.fontStyle === "italic" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
                         >I</button>
                         <button type="button"
                           onClick={() => {
                             const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, textDecoration: s.textDecoration === "underline" ? "" : "underline" } : s);
                             setStaticTexts(newSTs);
                           }}
-                          className={`border px-1.5 py-0.5 text-[11px] underline ${st.textDecoration === "underline" ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"}`}
+                          className={`border px-1.5 py-0.5 text-[11px] underline ${st.textDecoration === "underline" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
                         >U</button>
-                        <label className="text-[10px] text-zinc-500 ml-2">
+                        <label className="text-[10px] text-text/60 ml-2">
                           Color
                           <input type="color" value={st.fontColor || "#000000"}
                             onChange={(e) => {
                               const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, fontColor: e.target.value } : s);
                               setStaticTexts(newSTs);
                             }}
-                            className="mt-0.5 block h-5 w-8 border border-zinc-300 px-0.5 py-0"
+                            className="mt-0.5 block h-5 w-8 border border-border px-0.5 py-0"
                           />
                         </label>
                       </div>
@@ -1605,17 +1605,17 @@ function TemplateEditor({
 
             {tableRegions.length > 0 && (
               <>
-                <h3 className="mb-3 mt-4 text-xs font-semibold uppercase text-zinc-500">
+                <h3 className="mb-3 mt-4 text-xs font-semibold uppercase text-text/60">
                   Table Regions
                 </h3>
                 <div className="space-y-3">
                   {tableRegions.map((region, ri) => (
                     <div
                       key={`trp-${ri}`}
-                      className="border border-orange-200 bg-orange-50/50 p-2"
+                      className="border border-border bg-surface p-2"
                     >
                       <div className="mb-1 flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-orange-700">
+                        <span className="text-[11px] font-medium text-text/70">
                           Region {ri + 1}
                         </span>
                         <button
@@ -1624,13 +1624,13 @@ function TemplateEditor({
                               prev.filter((_, i) => i !== ri),
                             )
                           }
-                          className="text-[10px] text-red-500 hover:text-red-700"
+                          className="text-[10px] text-danger hover:text-danger"
                         >
                           Remove
                         </button>
                       </div>
                       <div className="grid grid-cols-2 gap-1">
-                        <label className="text-[10px] text-zinc-500">
+                        <label className="text-[10px] text-text/60">
                           Anchor X%
                           <input
                             type="number"
@@ -1642,13 +1642,13 @@ function TemplateEditor({
                                 parseFloat(e.target.value) || 0,
                               )
                             }
-                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
                             min={0}
                             max={100}
                             step={0.5}
                           />
                         </label>
-                        <label className="text-[10px] text-zinc-500">
+                        <label className="text-[10px] text-text/60">
                           Anchor Y%
                           <input
                             type="number"
@@ -1660,13 +1660,13 @@ function TemplateEditor({
                                 parseFloat(e.target.value) || 0,
                               )
                             }
-                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
                             min={0}
                             max={100}
                             step={0.5}
                           />
                         </label>
-                        <label className="text-[10px] text-zinc-500">
+                        <label className="text-[10px] text-text/60">
                           Row Height %
                           <input
                             type="number"
@@ -1678,7 +1678,7 @@ function TemplateEditor({
                                 parseFloat(e.target.value) || 1,
                               )
                             }
-                            className="mt-0.5 block w-full border border-zinc-300 px-1.5 py-0.5 text-[11px] font-mono"
+                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
                             min={0.5}
                             max={50}
                             step={0.5}
@@ -1688,13 +1688,13 @@ function TemplateEditor({
 
                       {/* Column positions */}
                       <div className="mt-2 space-y-1">
-                        <span className="text-[10px] text-zinc-500">Column X%:</span>
+                        <span className="text-[10px] text-text/60">Column X%:</span>
                         {region.columns.map((col, ci) => (
                           <div
                             key={col.fieldKey}
                             className="flex items-center gap-1"
                           >
-                            <span className="w-20 truncate text-[10px] text-zinc-600">
+                            <span className="w-20 truncate text-[10px] text-text/60">
                               {col.label}
                             </span>
                             <input
@@ -1708,12 +1708,12 @@ function TemplateEditor({
                                   parseFloat(e.target.value) || 0,
                                 )
                               }
-                              className="w-16 border border-zinc-300 px-1 py-0.5 text-[11px] font-mono"
+                              className="w-16 border border-border px-1 py-0.5 text-[11px] font-mono"
                               min={0}
                               max={100}
                               step={0.5}
                             />
-                            <span className="text-[10px] text-zinc-400">%</span>
+                            <span className="text-[10px] text-text/50">%</span>
                           </div>
                         ))}
                       </div>

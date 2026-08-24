@@ -2,7 +2,7 @@
 
 Build order for reconciling and implementing the SRS (v5). Each phase unlocks the next — don't skip ahead, since later phases read data/patterns established earlier.
 
-**Status: Phases 0–10 implemented and verified, followed by regression fixes, backup export, and scoped Global Search. LMS-side licensing and the design-system screenshot pass remain. See `API.md` for per-route status.**
+**Status: Phases 0–10 implemented and verified, followed by regression fixes, backup export, and scoped Global Search. The design-system screenshot pass is the current active phase; LMS-side licensing is intentionally skipped for now. See `API.md` for per-route status.**
 
 ## Phase 0 — Reconciliation ✅ Complete
 
@@ -165,6 +165,14 @@ Operational round on top of the completed product (SRS v10):
 - Added `GET /api/search?q=...` with server-enforced role and active-record scoping. Admin and Academics can search active Students, active Teachers, Class/Section records, Subjects, Fee Challans, and Tests; Admin additionally receives Daily Agenda matches.
 - The overlay provides keyboard focus, `/` and Cmd/Ctrl+K opening, Escape and backdrop close, debounced requests, result-type labels, destination links, loading, error, empty, and short-query states.
 - Real browser evidence: Admin search for `Ledger` returned the live Student, Class, and Fee Challan records with real entity labels and links; Admin search for `Regression` returned the live Teacher record; the overlay screenshot showed all three mixed results; the Teacher dashboard had zero search triggers and the same endpoint returned HTTP 403 `FORBIDDEN`.
+
+## Phase 13 — Design-System Completion and Screenshot Verification ✅ Complete
+
+- Preserved the locked industrial/minimal direction: existing colors, fonts, square corners, 1px borders, Lucide icons, and restrained motion. LMS-side licensing is intentionally skipped by the current product decision.
+- Strengthened shared and custom interactive surfaces across lists, tables, forms, navigation, dropdowns, dialogs, and state treatments. Shared buttons and inputs now provide subtle motion and focus feedback; password visibility toggles are keyboard reachable; StudentPicker options and expandable list rows have visible focus/hover states; table rows respond to focus within; toast dismissal uses a neutral Lucide close affordance; and the template manager’s main list/editor controls use design tokens and responsive wrapping.
+- Added token-based browser-surface styling for selection, caret, scrollbars, and reduced-motion behavior without changing DESIGN.md’s palette or typography.
+- Final real browser evidence captured six states: populated Students list row focus, Teacher Attendance Log Off Time editor, Fee Ledger filter focus with a real Paid row, Admin user dropdown open, mobile navigation drawer open, and Templates instructional empty/list state. No browser console errors were recorded in the final batch.
+- Validation passed: `bun run typecheck`, production `bun run build`, `git diff --check`, and the one-time UI detector returned an empty findings array for the changed design-system surfaces.
 
 ## Migration Reconciliation (Post-Phase 8)
 

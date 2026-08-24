@@ -48,7 +48,7 @@ export function TBody({ className, ...props }: HTMLAttributes<HTMLTableSectionEl
 }
 
 export function TR({ className, ...props }: HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={cn("transition-colors duration-150 ease-out hover:bg-surface/60", className)} {...props} />;
+  return <tr className={cn("transition-colors duration-150 ease-out hover:bg-surface/60 focus-within:bg-surface/60 motion-reduce:transition-none", className)} {...props} />;
 }
 
 export function TH({ className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {

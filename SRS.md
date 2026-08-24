@@ -1,6 +1,6 @@
 # School LMS — Software Requirements Specification (SRS)
 
-**Status: Draft v13 — adds scoped global search after the Admin-only on-demand JSON backup export.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
+**Status: Draft v14 — adds the design-system completion and screenshot-verification pass after scoped global search.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
 
 ---
 
@@ -207,6 +207,12 @@ The Settings page exposes one explicit **Download JSON Backup** action for Admin
 Admin and Academics receive one shared **Search school data** entry point in the dashboard shell. It opens a keyboard-accessible overlay with a debounced query field, loading state, error state, empty state, and links to matching records. The search result shows the real entity type, title, useful identifying context, and a destination route.
 
 Search covers active Students, active Teachers, Class/Section records, Subjects, Fee Challans, and Tests for Admin and Academics. Admin additionally receives Daily Agenda matches because Daily Agenda is Admin-only. Teachers do not receive this school-wide search entry point and must continue using their existing assignment-scoped workflows. Search results must never expose inactive students or inactive teacher accounts, and the server enforces the role boundary rather than relying on hidden UI alone.
+
+### 1.14 Design-System Completion Pass
+
+The final UI refinement pass must preserve the locked industrial/minimal visual language: the existing colors, fonts, square corners, 1px border separation, Lucide icon system, and restrained motion remain unchanged. The implementation should standardize subtle hover and visible keyboard-focus feedback across lists, tables, forms, navigation, dropdowns, dialogs, and custom interactive controls without introducing decorative gradients, rounded cards, or heavy shadows.
+
+Every reviewed surface must retain usable loading, empty, error, disabled, and real-content states where applicable. Status indicators must continue to pair color with an icon or shape. Desktop and mobile verification must capture at least five interaction types, including a list or table row hover/focus state, a primary action button, a form control, a dropdown or dialog, and a loading/empty/error state. The pass is complete only after screenshots show the refined states on real application routes and no out-of-scope visual-system changes are introduced.
 
 ---
 

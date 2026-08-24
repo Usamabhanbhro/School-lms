@@ -112,7 +112,7 @@ export function ReportCardOverview() {
                 <button
                   type="button"
                   onClick={() => toggleExpand(rc.id)}
-                  className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-surface"
+                  className="flex min-h-11 w-full items-center gap-4 px-4 py-3 text-left transition-colors duration-150 hover:bg-surface focus-visible:bg-surface focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary motion-reduce:transition-none"
                   aria-expanded={isExpanded}
                 >
                   <div className="min-w-0 flex-1">

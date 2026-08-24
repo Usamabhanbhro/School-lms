@@ -2,7 +2,7 @@
 
 Living document. Every API route must be added here when created — see `CONVENTIONS.md` and `AGENTS.md`.
 
-**Status: reconciled with SRS.md v13.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
+**Status: reconciled with SRS.md v14.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
 Phase 1–6 routes are implemented. Admin provisioning, school settings, admin self-recovery, and daily agenda routes added.
 
 ## Conventions Recap
@@ -533,6 +533,12 @@ NextAuth handler — login/logout/session. Credentials provider only.
 **Request body:** `{ content }`
 **Response (200):** `{ data: { id, content, date, isLocked, ... } }`
 **Status:** implemented
+
+---
+
+## Design-System Completion
+
+This phase introduces no new endpoint or response contract. Existing routes retain the standard success and error shapes while their shared UI consumers receive the documented focus, hover, loading, empty, error, disabled, responsive, and status-indicator refinements.
 
 ---
 
