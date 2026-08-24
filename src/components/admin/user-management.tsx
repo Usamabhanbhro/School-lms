@@ -29,7 +29,7 @@ import {
   TD,
 } from "@/components/ui/table";
 import { ToastContainer, useToast } from "@/components/ui/toast";
-import { cn } from "@/lib/utils";
+import { cn, getApiErrorMessage } from "@/lib/utils";
 import { cnicRegex, phoneRegex } from "@/lib/validations";
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -152,22 +152,22 @@ export function UserManagement() {
   const fetchTeachers = useCallback(async () => {
     try {
       const res = await fetch("/api/teachers");
-      if (!res.ok) throw new Error("Failed to fetch teachers");
       const json = await res.json();
+      if (!res.ok) throw new Error(getApiErrorMessage(json, "Unable to load teachers right now."));
       setTeachers(json.data ?? []);
-    } catch {
-      setError("Failed to load teachers.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unable to load teachers right now.");
     }
   }, []);
 
   const fetchAcademics = useCallback(async () => {
     try {
       const res = await fetch("/api/academics");
-      if (!res.ok) throw new Error("Failed to fetch academics");
       const json = await res.json();
+      if (!res.ok) throw new Error(getApiErrorMessage(json, "Unable to load academics accounts right now."));
       setAcademics(json.data ?? []);
-    } catch {
-      setError("Failed to load academics accounts.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unable to load academics accounts right now.");
     }
   }, []);
 

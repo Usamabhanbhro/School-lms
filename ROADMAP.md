@@ -2,7 +2,7 @@
 
 Build order for reconciling and implementing the SRS (v5). Each phase unlocks the next — don't skip ahead, since later phases read data/patterns established earlier.
 
-**Status: Phases 0–9 implemented and verified. Admin provisioning, school settings, hardened admin self-recovery, certificate/fee-challan generation UIs, document template system, teacher attendance rework (Admin + Academics), Teacher Salary Slips, student admission optional fields, student archive ("Past Students") with partial unique indexes, and session idle timeout added. Migration chain validated from empty database (17 migrations). See `API.md` for per-route status.**
+**Status: Phases 0–9 implemented and verified, followed by a production reconciliation and reliability round. Admin provisioning, school settings, hardened admin self-recovery, certificate/fee-challan generation UIs, document template system, teacher attendance rework (Admin + Academics), Teacher Salary Slips, student admission optional fields, student archive ("Past Students") with partial unique indexes, session idle timeout, API error-shape coverage, and the Admin Dashboard Needs Attention section are implemented. The 20-migration chain is applied and up to date in production. See `API.md` for per-route status.**
 
 ## Phase 0 — Reconciliation ✅ Complete
 
@@ -103,7 +103,7 @@ Application shell, admin dashboard, and reusable UI primitives:
 - **UI primitives**: Extracted shared `Toast` (`useToast` hook + `ToastContainer`), `ConfirmDialog`, `PageHeader`, `Badge`, and `ErrorState` components under `src/components/ui/`. Replaced duplicated inline toast/dialog patterns across all existing feature components.
 - **Application shell**: Rebuilt sidebar with active-route highlighting (based on `usePathname`), mobile drawer with hamburger toggle, user account menu with sign-out, and consistent `aria-current` for accessibility.
 - **Admin navigation**: Complete role-aware navigation with Dashboard, Students, Teachers, Academics, Classes, Subjects, Attendance, Report Cards, Certificates, Fees, and Settings — all wired to existing routes.
-- **Admin dashboard**: Server-side rendered at `/admin/dashboard` with real database counts (students, teachers, academics, class sections, subjects) and quick-action links.
+- **Admin dashboard**: Server-side rendered at `/admin/dashboard` with real database counts (students, teachers, academics, class sections, subjects), live Needs Attention signals for incomplete attendance, unassigned Class Teachers, incomplete salary setup, and unconfirmed drafts, plus quick-action links.
 - **Page structure**: Standardized all authenticated pages with consistent `PageHeader` (title, description, actions), loading skeletons, empty states, and error states.
 - **Responsive behavior**: Sidebar collapses to mobile drawer on `< md`. Content area uses responsive grid (`sm:grid-cols-2 lg:grid-cols-3`). Tables overflow horizontally on mobile. Forms stack vertically.
 - **Accessibility**: All interactive elements have visible focus states (per DESIGN.md). Dialogs use `aria-modal`, `aria-labelledby`. Navigation uses `aria-current="page"`. Icons use `aria-hidden="true"`.
@@ -140,19 +140,26 @@ Operational round on top of the completed product (SRS v10):
 
 ## Migration Reconciliation (Post-Phase 8)
 
-After Phase 8, the migration chain was found to be incomplete — the database schema had drifted from `schema.prisma`. Three reconciliation migrations were added:
+After Phase 8, the migration chain was found to be incomplete — the database schema had drifted from `schema.prisma`. Four reconciliation and maintenance migrations were added:
 
 1. **`20260820120000_add_academics_role`**: Adds `ACADEMICS` to the `Role` enum (standalone, per Postgres limitation that new enum values cannot be used in the same transaction).
 2. **`20260820120001_add_template_system_and_schema_fixes`**: Adds `isActive` to `ClassTeacherAssignment` with correct backfill (marks historical assignments inactive, only most-recent per class section active); renames `generatedByAdminId` → `generatedByUserId` on `Certificate`/`FeeChallan` via `RENAME COLUMN` (data-safe); creates `DocumentTemplate`, `TemplateField`, `TemplateTableRegion` tables; adds `templateId` FK columns.
 3. **`20260820130000_add_academics_profile_table`**: Creates `AcademicsProfile` table missing from the init migration.
+4. **`20260823180000_add_admin_unique_constraint`**: Reconciles the production-applied `User_admin_role_unique` partial index with repository migration history without re-executing its DDL in production. Production also retains the earlier `User_single_admin_idx`; both protect the same single-Admin invariant and are a historical duplicate, not two intentional design features.
+5. **`20260824010000_fix_class_teacher_partial_unique`**: Removes the incorrect full `(classSectionId, isActive)` unique index and creates the active-only partial `ClassTeacherAssignment_active_unique` index. This was deployed after real production-backed reassignment testing reproduced `P2002`.
 
-The full chain (9 migrations) was validated with `prisma migrate reset --force` from an empty database.
+**Low-priority cleanup debt:** after a safe production window, a future migration can drop one of the duplicate Admin indexes following a fresh verification of the remaining constraint. Do not perform that cleanup during this reconciliation pass because the live invariant is actively protecting the single-Admin account.
+
+The full chain (now 20 migrations) was validated with `prisma migrate reset --force` from an empty database; production reports all 20 migrations applied and up to date. The reconciliation migration was already applied live and was added locally without replaying its DDL.
 
 **Known pre-existing issues found during verification:**
 - `(print)` route group returned 404 in Next.js 16.3.1/Turbopack — fixed by renaming from route group `(print)` to literal directory `print`, making URLs resolve to `/print/certificates/[id]` etc.
 - Attendance routes have `[classSectionId]` and `[id]` at the same path level, causing a Next.js conflict. Fixed by moving confirm endpoint to `/api/attendance/confirm` with query params.
 - Stale `.next` build cache had to be cleared after the print route rename to resolve TS2307 module resolution errors.
 - **Print page template lookups must be wrapped in try/catch** — each Prisma call (certificate query, school settings, template lookup) is a separate DB connection that can fail independently (Neon cold start). The initial fix wrapped only the first two queries; the template lookups at lines 70–83 were unprotected and crashed the page. All three print pages (certificates, fee-challans, report-cards) were affected. Fixed in commit `f0e28c2`.
+- **Class Teacher reassignment invariant**: Production testing reproduced `P2002` from the full `(classSectionId, isActive)` unique index. Migration `20260824010000_fix_class_teacher_partial_unique` replaced it with the active-only partial index; reassignment, multi-history preservation, and restoration were verified against Neon.
+- **Reliability hardening**: Protected API handlers were probed for the standard `{ error: { message, code } }` shape; client surfaces now preserve specific API errors, reset loading state in `finally`, and expose an actionable zero-assignment Teacher Agenda empty state.
+- **Admin Dashboard Needs Attention**: `/admin/dashboard` now computes live operational signals from active records only and links each item to the relevant workflow. The section has an explicit all-clear state when no signal is present.
 
 ## Not in Any Phase (explicitly out of scope for SRS v5)
 

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
+  BookOpen,
   CalendarDays,
   Loader2,
   Lock,
@@ -14,7 +15,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToastContainer, useToast } from "@/components/ui/toast";
-import { cn } from "@/lib/utils";
+import { cn, getApiErrorMessage } from "@/lib/utils";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -113,12 +114,14 @@ export function TeacherAgenda() {
           fetch("/api/subjects"),
         ]);
 
-        if (!classRes.ok || !subjectRes.ok) {
-          throw new Error("Failed to load data");
-        }
-
         const classJson = await classRes.json();
         const subjectJson = await subjectRes.json();
+        if (!classRes.ok) {
+          throw new Error(getApiErrorMessage(classJson, "Unable to load your assigned classes right now."));
+        }
+        if (!subjectRes.ok) {
+          throw new Error(getApiErrorMessage(subjectJson, "Unable to load available subjects right now."));
+        }
 
         const classes: ClassSection[] = classJson.data ?? [];
         const subjects: Subject[] = subjectJson.data ?? [];
@@ -175,8 +178,8 @@ export function TeacherAgenda() {
         if (allSubjects.length > 0) {
           setSelectedSubjectId(allSubjects[0].id);
         }
-      } catch {
-        setError("Failed to load class and subject data.");
+      } catch (error) {
+        setError(error instanceof Error ? error.message : "Unable to load class and subject data right now.");
       } finally {
         setLoadingAssignments(false);
       }
@@ -200,8 +203,8 @@ export function TeacherAgenda() {
         date: selectedDate,
       });
       const res = await fetch(`/api/agenda?${params}`);
-      if (!res.ok) throw new Error("Failed to load entry");
       const json = await res.json();
+      if (!res.ok) throw new Error(getApiErrorMessage(json, "Unable to load this agenda entry right now."));
       const entries: AgendaEntry[] = json.data ?? [];
 
       if (entries.length > 0) {
@@ -211,8 +214,8 @@ export function TeacherAgenda() {
         setExistingEntry(null);
         setContent("");
       }
-    } catch {
-      setError("Failed to load agenda entry.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unable to load this agenda entry right now.");
     } finally {
       setLoadingEntry(false);
     }
@@ -390,7 +393,13 @@ export function TeacherAgenda() {
       )}
 
       {/* Content editor */}
-      {loadingEntry ? (
+      {!loadingAssignments && assignments.length === 0 ? (
+        <EmptyState
+          icon={BookOpen}
+          title="No teaching assignments"
+          description="You do not have any class-and-subject assignments yet. Ask an Admin to assign a subject before adding an agenda entry."
+        />
+      ) : loadingEntry ? (
         <div className="space-y-4">
           <Skeleton className="h-48 w-full" />
         </div>

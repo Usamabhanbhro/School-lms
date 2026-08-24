@@ -48,9 +48,9 @@ Created by Admin (e.g. "Mathematics"). Global to the school, not per-class — a
 - Fields: `name`
 
 ### ClassTeacherAssignment
-Tracks class teacher assignments over time. Only one row per ClassSection should have `isActive = true` at any time. Reassigning soft-deletes the old (sets `isActive = false`) and creates a new active row.
+Tracks class teacher assignments over time. Only one row per ClassSection should have `isActive = true` at any time. Reassigning soft-deletes the old (sets `isActive = false`) and creates a new active row while preserving historical assignments.
 - Fields: `classSectionId`, `teacherId`, `isActive` (default: true)
-- Constraint: `@@unique([classSectionId, isActive])` — only one active assignment per ClassSection
+- Constraint: partial unique index `ClassTeacherAssignment_active_unique` on `classSectionId WHERE isActive = true` — only one active assignment per ClassSection while multiple inactive historical assignments remain permitted. Prisma cannot express this `WHERE` predicate as a schema attribute.
 
 ### SubjectTeacherAssignment
 A teacher assigned to teach one Subject within one ClassSection — holds rights to create tests, enter marks, and generate report cards for that subject/class.
@@ -244,5 +244,9 @@ Per-teacher, per-class+subject, per-day lesson log. Teachers write entries for t
 - **Migration `20260822000000_add_daily_agenda`**: Creates DailyAgenda model for per-teacher, per-class+subject, per-day lesson logs. Unique constraint on (teacherId, classSectionId, subjectId, date). References TeacherProfile, ClassSection, Subject.
 - **Migration `20260823150011_add_student_gr_number_previous_school`**: Adds nullable `grNumber` and `previousSchool` text columns to Student (optional admission fields).
 - **Migration `20260823151349_add_salary_slip`**: Adds salary config fields to TeacherProfile (`perDaySalary`, `lateDeductionType`, `lateDeductionValue`), new enum values (`LateDeductionType`, `SalarySlipDeductionType`, `DocumentTemplateType.SALARY_SLIP`), and the `SalarySlip` + `SalarySlipDeduction` tables with snapshot + cascade relationships.
+- **Migration `20260823180000_add_admin_unique_constraint`**: Reconciles a migration that was already applied in production but missing from the repository. It defines the canonical `User_admin_role_unique` partial unique index on `User(role) WHERE role = 'ADMIN'`; the migration SQL is idempotent and must be marked applied with Prisma resolution tooling during reconciliation rather than re-executed against the live database.
+- **Migration `20260824010000_fix_class_teacher_partial_unique`**: Removes the incorrect full unique index on `(classSectionId, isActive)` and creates `ClassTeacherAssignment_active_unique` on `classSectionId WHERE isActive = true`. This preserves historical inactive assignments and fixes the real reassignment `P2002` reproduced against production.
+
+  Production currently also retains `User_single_admin_idx`, created by migration `20260819000001_add_single_admin_constraint`. Both indexes enforce the same single-Admin invariant. This duplicate is a traceable historical artifact—not two separate constraints by design and not a functional bug—but it is not intentional long-term design. Do not drop either index during reconciliation; schedule a future low-risk cleanup migration after a safe production window and verification.
 - **Migration `20260824000000_add_student_isActive_and_partial_unique_indexes`**: Adds `isActive` boolean (default `true`) to Student for the archive/past-students feature. Drops Prisma-managed full unique constraints on `studentId` and `(classSectionId, rollNumber)`, replacing them with partial unique indexes scoped to active students only (via raw SQL — Prisma `@unique` does not support `WHERE`). Students with historical records are archived (`isActive: false`) rather than hard-deleted; archived students' IDs/roll numbers become reusable by new students.
-- The full chain (16 migrations) was validated from an empty database with `prisma migrate reset --force`
+- The full chain (20 migrations) was validated from an empty database with `prisma migrate reset --force`; production reports all 20 migrations applied and up to date.

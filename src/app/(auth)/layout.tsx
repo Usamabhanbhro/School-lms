@@ -13,7 +13,7 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
       {/* /dashboard is role-aware — signed-in visitors go to their workspace
           instead of the public landing page. */}
       <Link href="/dashboard" className="mb-8 flex items-center gap-3 text-sm font-semibold">
-        <span className="flex size-16 items-center justify-center border border-border bg-surface overflow-hidden">
+        <span className="flex size-16 items-center justify-center overflow-hidden">
           {logoPath ? (
             <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-14 object-contain" />
           ) : (

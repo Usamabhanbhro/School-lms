@@ -81,7 +81,7 @@ export default async function HomePage() {
       <header className="border-b border-border">
         <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-4 md:px-8">
           <span className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex size-12 items-center justify-center border border-border bg-surface overflow-hidden">
+            <span className="flex size-12 items-center justify-center overflow-hidden">
               {logoPath ? (
                 <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-10 object-contain" />
               ) : (

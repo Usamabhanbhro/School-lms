@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { ToastContainer, useToast } from "@/components/ui/toast";
-import { cn } from "@/lib/utils";
+import { cn, getApiErrorMessage } from "@/lib/utils";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -120,11 +120,11 @@ export function SalarySlipGeneration() {
     setError(null);
     try {
       const res = await fetch("/api/teachers");
-      if (!res.ok) throw new Error("Failed to load teachers");
       const json = await res.json();
+      if (!res.ok) throw new Error(getApiErrorMessage(json, "Unable to load teachers right now."));
       setTeachers(json.data ?? []);
-    } catch {
-      setError("Failed to load teachers.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unable to load teachers right now.");
     } finally {
       setLoading(false);
     }
@@ -139,14 +139,18 @@ export function SalarySlipGeneration() {
   const loadHistory = useCallback(async (teacherId: string) => {
     try {
       const res = await fetch(`/api/salary-slips?teacherId=${teacherId}`);
-      if (res.ok) {
-        const json = await res.json();
-        setHistory(json.data ?? []);
+      const json = await res.json();
+      if (!res.ok) {
+        addToast("error", getApiErrorMessage(json, "Unable to load salary slip history right now."));
+        setHistory([]);
+        return;
       }
+      setHistory(json.data ?? []);
     } catch {
+      addToast("error", "Network error while loading salary slip history. Please try again.");
       setHistory([]);
     }
-  }, []);
+  }, [addToast]);
 
   useEffect(() => {
     if (selectedTeacherId) {

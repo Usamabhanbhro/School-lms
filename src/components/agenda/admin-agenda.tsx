@@ -15,7 +15,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
+import { cn, getApiErrorMessage } from "@/lib/utils";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -77,6 +77,7 @@ export function AdminAgenda() {
   const [classSections, setClassSections] = useState<ClassSection[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
+  const [dropdownError, setDropdownError] = useState<string | null>(null);
 
   // Expanded entry for content preview
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -86,26 +87,26 @@ export function AdminAgenda() {
   useEffect(() => {
     (async () => {
       try {
+        setDropdownError(null);
         const [teachersRes, classesRes, subjectsRes] = await Promise.all([
           fetch("/api/teachers"),
           fetch("/api/class-sections"),
           fetch("/api/subjects"),
         ]);
 
-        if (teachersRes.ok) {
-          const json = await teachersRes.json();
-          setTeachers(json.data ?? []);
-        }
-        if (classesRes.ok) {
-          const json = await classesRes.json();
-          setClassSections(json.data ?? []);
-        }
-        if (subjectsRes.ok) {
-          const json = await subjectsRes.json();
-          setSubjects(json.data ?? []);
-        }
-      } catch {
-        // Dropdowns fail silently
+        const [teachersJson, classesJson, subjectsJson] = await Promise.all([
+          teachersRes.json(),
+          classesRes.json(),
+          subjectsRes.json(),
+        ]);
+        if (!teachersRes.ok) throw new Error(getApiErrorMessage(teachersJson, "Unable to load teachers for the agenda filters."));
+        if (!classesRes.ok) throw new Error(getApiErrorMessage(classesJson, "Unable to load classes for the agenda filters."));
+        if (!subjectsRes.ok) throw new Error(getApiErrorMessage(subjectsJson, "Unable to load subjects for the agenda filters."));
+        setTeachers(teachersJson.data ?? []);
+        setClassSections(classesJson.data ?? []);
+        setSubjects(subjectsJson.data ?? []);
+      } catch (error) {
+        setDropdownError(error instanceof Error ? error.message : "Unable to load agenda filters right now.");
       } finally {
         setLoadingDropdowns(false);
       }
@@ -126,11 +127,11 @@ export function AdminAgenda() {
       if (dateTo) params.set("to", dateTo);
 
       const res = await fetch(`/api/agenda?${params}`);
-      if (!res.ok) throw new Error("Failed to load agenda entries");
       const json = await res.json();
+      if (!res.ok) throw new Error(getApiErrorMessage(json, "Unable to load agenda entries right now."));
       setEntries(json.data ?? []);
-    } catch {
-      setError("Failed to load agenda entries.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unable to load agenda entries right now.");
     } finally {
       setLoading(false);
     }
@@ -263,6 +264,14 @@ export function AdminAgenda() {
           </div>
         </div>
       </Card>
+
+      {/* Filter-data error */}
+      {dropdownError && (
+        <div className="mb-4 flex items-center gap-2 border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger" role="alert">
+          <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
+          {dropdownError}
+        </div>
+      )}
 
       {/* Error */}
       {error && (

@@ -4,7 +4,7 @@ A web-based Learning Management System for schools — attendance, marks/tests, 
 
 Full web app (no desktop client). Built to be usable from a phone browser, since class teachers need to mark attendance on the go.
 
-**Status: Phases 0–9 implemented. Admin provisioning, school settings, hardened admin self-recovery, document templates, teacher attendance rework (Admin + Academics), Teacher Salary Slips, and session idle timeout added.** SRS current at v10 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, full teacher-attendance marking parity and delegated certificate/challan/salary-slip generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
+**Status: Phases 0–9 implemented and verified, followed by production migration reconciliation, reliability hardening, and the Admin Dashboard Needs Attention section.** SRS current at v10 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, full teacher-attendance marking parity and delegated certificate/challan/salary-slip generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
 
 `SCHEMA.md` and `API.md` are current with SRS v10. Print layouts for Certificates, Fee Challans (three-copy), Report Cards, and Salary Slips are implemented with database-backed school identity configuration.
 
@@ -104,7 +104,7 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/admin/recover` | Public | Self-service admin password recovery — implemented |
 | `/dashboard` | Authenticated | Redirects to the signed-in user's role home |
 | `/admin/settings` | ADMIN | School identity settings (name, address, phone, email, logo) |
-| `/admin/dashboard` | ADMIN | Admin dashboard with stats |
+| `/admin/dashboard` | ADMIN | Admin dashboard with live stats, Needs Attention signals, and operational links |
 | `/admin/teachers` | ADMIN | Teacher management |
 | `/admin/academics` | ADMIN, ACADEMICS | Academics staff management (Admin CRUD, Academics read) |
 | `/admin/classes` | ADMIN | Class/section management with teacher assignments |
@@ -145,7 +145,7 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/api/students` | ADMIN (write), TEACHER (scoped read), ACADEMICS (read) | Student CRUD |
 | `/api/teacher-attendance` | ADMIN, ACADEMICS | Mark/edit teacher attendance directly (full parity) |
 | `/api/attendance` | TEACHER (Class Teacher only, write), ADMIN + ACADEMICS (read) | Student attendance draft |
-| `/api/attendance/:classSectionId/:date/confirm` | TEACHER (Class Teacher) | Lock a draft attendance sheet |
+| `/api/attendance/confirm` | TEACHER (Class Teacher) | Lock a draft attendance sheet using classSectionId/date query parameters |
 | `/api/attendance/:id` | ADMIN | Override a locked record |
 | `/api/attendance/export` | ADMIN, ACADEMICS, TEACHER (own class) | CSV export |
 | `/api/tests` | TEACHER (Subject Teacher, write), ADMIN + ACADEMICS (read) | Test creation |
@@ -173,7 +173,7 @@ Multi-tenant SaaS deployment is a planned future enhancement — not yet impleme
 
 ## Remaining Work
 
-- Nothing blocking. Optional next steps: branded document templates (Admin-uploaded backgrounds — the template system supports Certificates, Report Cards, Fee Challans, and Salary Slips), and a spawned Academics claims-salary-print is already covered.
+- Nothing blocking. Optional next steps are branded document templates and future cleanup of the duplicated historical Admin indexes after a safe production window. The Salary Slip generation and print flow is already covered.
 - 15-minute session idle timeout is client-side (NextAuth signOut + `?expired=1` message) — it clears the session in the browser; server-side JWT revocation remains out of scope (see SCHEMA.md JWT limitation).
 
 ## Admin Self-Recovery

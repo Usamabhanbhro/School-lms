@@ -16,7 +16,7 @@ export default async function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12">
       <Link href="/" className="flex items-center gap-2 text-sm font-semibold">
-        <span className="flex size-9 items-center justify-center border border-border bg-surface">
+        <span className="flex size-9 items-center justify-center">
           {logoPath ? (
             <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-7 object-contain" />
           ) : (

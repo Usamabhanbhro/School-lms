@@ -141,7 +141,7 @@ export function Sidebar({
         className="flex items-center gap-3 border-b border-border px-4 py-4"
         onClick={() => setMobileOpen(false)}
       >
-        <span className="flex size-16 shrink-0 items-center justify-center border border-border bg-surface overflow-hidden">
+        <span className="flex size-16 shrink-0 items-center justify-center overflow-hidden">
           {logoPath ? (
             <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-14 object-contain" />
           ) : (
@@ -245,7 +245,7 @@ export function Sidebar({
       {/* ─── Mobile header ─────────────────────────────────────── */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-bg px-4 py-3 md:hidden">
         <Link href={home} className="flex items-center gap-2 text-sm font-semibold">
-          <span className="flex size-12 shrink-0 items-center justify-center border border-border bg-surface overflow-hidden">
+          <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden">
             {logoPath ? (
               <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-10 object-contain" />
             ) : (
