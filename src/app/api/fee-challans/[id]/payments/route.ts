@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { deriveFeePaymentSummary } from "@/lib/fee-ledger";
 import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
+import { getTodayLocal, isValidDateOnly } from "@/lib/timezone";
 
 const paymentSchema = z.object({
   amount: z.number().int().positive(),
@@ -94,6 +95,13 @@ export async function POST(
     const authedSession = requireRole(session, ["ADMIN", "ACADEMICS"]);
     const { id } = await params;
     const body = paymentSchema.parse(await request.json());
+    const paidAtDateOnly = body.paidAt.slice(0, 10);
+    if (!isValidDateOnly(paidAtDateOnly)) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Payment date must use a valid ISO date.");
+    }
+    if (paidAtDateOnly > getTodayLocal()) {
+      throw new ApiError(400, "DATE_IN_FUTURE", "Payment date cannot be later than today.");
+    }
     const paidAt = parsePaymentDate(body.paidAt);
 
     const result = await prisma.$transaction(async (tx) => {

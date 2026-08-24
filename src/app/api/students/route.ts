@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
 import { getScopedClassSectionIds } from "@/lib/teacher-scope";
 import { cnicField, phoneField } from "@/lib/validations";
+import { getTodayLocal, isDateInFuture, isValidDateOnly } from "@/lib/timezone";
 
 /**
  * GET /api/students
@@ -72,6 +73,14 @@ export async function POST(request: Request) {
     requireRole(session, ["ADMIN"]);
 
     const body = createStudentSchema.parse(await request.json());
+    for (const [label, value] of [["dateOfBirth", body.dateOfBirth], ["admissionDate", body.admissionDate]] as const) {
+      if (!isValidDateOnly(value)) {
+        throw new ApiError(400, "VALIDATION_ERROR", `${label} must use YYYY-MM-DD format.`);
+      }
+      if (isDateInFuture(value)) {
+        throw new ApiError(400, "DATE_IN_FUTURE", `${label} cannot be later than today (${getTodayLocal()}).`);
+      }
+    }
 
     // Verify class section exists
     const classSection = await prisma.classSection.findUnique({

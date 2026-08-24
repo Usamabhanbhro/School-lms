@@ -4,11 +4,11 @@ import { authOptions } from "@/lib/auth";
 import { deriveFeePaymentSummary, type FeePaymentStatus } from "@/lib/fee-ledger";
 import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
+import { getTodayLocal, isValidDateOnly } from "@/lib/timezone";
 
 function parseDate(value: string | null) {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-  const parsed = new Date(`${value}T00:00:00.000Z`);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  if (!value || !isValidDateOnly(value)) return null;
+  return new Date(`${value}T00:00:00.000Z`);
 }
 
 export async function GET(request: Request) {
@@ -31,6 +31,17 @@ export async function GET(request: Request) {
     }
     if (status && !["Pending", "Partial", "Paid"].includes(status)) {
       throw new ApiError(400, "VALIDATION_ERROR", "Status must be Pending, Partial, or Paid.");
+    }
+
+    const today = getTodayLocal();
+    if (from && from > today) {
+      throw new ApiError(400, "DATE_IN_FUTURE", "The issued-from date cannot be later than today.");
+    }
+    if (to && to > today) {
+      throw new ApiError(400, "DATE_IN_FUTURE", "The issued-to date cannot be later than today.");
+    }
+    if (from && to && from > to) {
+      throw new ApiError(400, "INVALID_DATE_RANGE", "The issued-from date cannot be after the issued-to date.");
     }
 
     const fromDate = parseDate(from);

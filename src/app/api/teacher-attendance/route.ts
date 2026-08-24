@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
+import { getTodayLocal, isDateInFuture, isValidDateOnly } from "@/lib/timezone";
 
 /**
  * GET /api/teacher-attendance
@@ -22,6 +23,20 @@ export async function GET(request: Request) {
     const teacherId = searchParams.get("teacherId");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
+
+    const today = getTodayLocal();
+    for (const [label, value] of [["from", from], ["to", to]] as const) {
+      if (!value) continue;
+      if (!isValidDateOnly(value)) {
+        throw new ApiError(400, "VALIDATION_ERROR", `${label} must use YYYY-MM-DD format.`);
+      }
+      if (value > today) {
+        throw new ApiError(400, "DATE_IN_FUTURE", `${label} cannot be later than today.`);
+      }
+    }
+    if (from && to && from > to) {
+      throw new ApiError(400, "INVALID_DATE_RANGE", "The from date cannot be after the to date.");
+    }
 
     const where: Record<string, unknown> = {};
     if (teacherId) where.teacherId = teacherId;
@@ -87,6 +102,12 @@ export async function POST(request: Request) {
     const authedSession = requireRole(session, ["ADMIN", "ACADEMICS"]);
 
     const body = upsertTeacherAttendanceSchema.parse(await request.json());
+    if (!isValidDateOnly(body.date)) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Date must use YYYY-MM-DD format.");
+    }
+    if (isDateInFuture(body.date)) {
+      throw new ApiError(400, "DATE_IN_FUTURE", "Attendance date cannot be later than today.");
+    }
 
     // Verify teacher exists
     const teacher = await prisma.teacherProfile.findUnique({

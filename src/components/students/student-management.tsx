@@ -21,6 +21,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ToastContainer, useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { cnicRegex, phoneRegex } from "@/lib/validations";
+import { getTodayLocal } from "@/lib/timezone";
 
 const BLOOD_GROUP_OPTIONS = [
   { value: "A_PLUS", label: "A+" },
@@ -84,8 +85,7 @@ interface StudentForm {
 }
 
 function todayStr(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return getTodayLocal();
 }
 
 function emptyForm(): StudentForm {

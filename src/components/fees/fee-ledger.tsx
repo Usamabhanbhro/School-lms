@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { getApiErrorMessage } from "@/lib/utils";
+import { getTodayLocal } from "@/lib/timezone";
 
 type FeePaymentStatus = "Pending" | "Partial" | "Paid";
 
@@ -50,6 +51,7 @@ export function FeeLedger() {
   const [to, setTo] = useState("");
   const [status, setStatus] = useState<"" | FeePaymentStatus>("");
   const [loading, setLoading] = useState(true);
+  const today = getTodayLocal();
   const [error, setError] = useState<string | null>(null);
 
   const loadLedger = useCallback(async () => {
@@ -124,11 +126,11 @@ export function FeeLedger() {
           </label>
           <label className="space-y-1 text-xs font-medium text-text/60">
             Issued from
-            <Input type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
+            <Input type="date" value={from} max={to || today} onChange={(event) => setFrom(event.target.value)} />
           </label>
           <label className="space-y-1 text-xs font-medium text-text/60">
             Issued to
-            <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
+            <Input type="date" value={to} min={from || undefined} max={today} onChange={(event) => setTo(event.target.value)} />
           </label>
           <label className="space-y-1 text-xs font-medium text-text/60">
             Status

@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
 import { cnicField, phoneField } from "@/lib/validations";
+import { getTodayLocal, isDateInFuture, isValidDateOnly } from "@/lib/timezone";
 
 /**
  * PATCH /api/students/:id — edit student fields or reallot to a different class/section. Admin only.
@@ -36,6 +37,15 @@ export async function PATCH(
 
     const { id } = await params;
     const body = editStudentSchema.parse(await request.json());
+    for (const [label, value] of [["dateOfBirth", body.dateOfBirth], ["admissionDate", body.admissionDate]] as const) {
+      if (value === undefined) continue;
+      if (!isValidDateOnly(value)) {
+        throw new ApiError(400, "VALIDATION_ERROR", `${label} must use YYYY-MM-DD format.`);
+      }
+      if (isDateInFuture(value)) {
+        throw new ApiError(400, "DATE_IN_FUTURE", `${label} cannot be later than today (${getTodayLocal()}).`);
+      }
+    }
 
     // Verify student exists
     const existing = await prisma.student.findUnique({ where: { id } });

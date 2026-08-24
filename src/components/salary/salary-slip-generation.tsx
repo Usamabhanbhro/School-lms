@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { ToastContainer, useToast } from "@/components/ui/toast";
 import { cn, getApiErrorMessage } from "@/lib/utils";
+import { getTodayLocal } from "@/lib/timezone";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -68,15 +69,12 @@ interface SavedSlip {
 }
 
 function currentMonthRange(): { from: string; to: string } {
-  const now = new Date();
-  const from = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-  const to = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  return { from, to };
+  const today = getTodayLocal();
+  return { from: `${today.slice(0, 8)}01`, to: today };
 }
 
 function todayStr(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return getTodayLocal();
 }
 
 function formatRs(n: number): string {

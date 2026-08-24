@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { ToastContainer, useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { getTodayLocal } from "@/lib/timezone";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -58,8 +59,7 @@ type StatusOption = "PRESENT" | "ABSENT" | "LEAVE";
 // ─── Helpers ────────────────────────────────────────────────────────
 
 function todayStr(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return getTodayLocal();
 }
 
 const STATUS_OPTIONS: {

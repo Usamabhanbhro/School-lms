@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { ApiError, requireRole } from "@/lib/rbac";
 import { computeSalaryBreakdown } from "@/lib/salary-slip";
+import { getTodayLocal, isValidDateOnly } from "@/lib/timezone";
 
 /**
  * POST /api/salary-slips/preview
@@ -31,9 +32,22 @@ export async function POST(request: Request) {
     }
     const body = parsed.data;
 
-    const from = new Date(body.from);
-    const to = new Date(body.to);
-    if (isNaN(from.getTime()) || isNaN(to.getTime()) || from > to) {
+    if (!isValidDateOnly(body.from) || !isValidDateOnly(body.to)) {
+      return NextResponse.json(
+        { error: { message: "Dates must use YYYY-MM-DD format.", code: "VALIDATION_ERROR" } },
+        { status: 400 },
+      );
+    }
+    const today = getTodayLocal();
+    if (body.from > today || body.to > today) {
+      return NextResponse.json(
+        { error: { message: "Salary Slip dates cannot be later than today.", code: "DATE_IN_FUTURE" } },
+        { status: 400 },
+      );
+    }
+    const from = new Date(`${body.from}T00:00:00.000Z`);
+    const to = new Date(`${body.to}T00:00:00.000Z`);
+    if (from > to) {
       return NextResponse.json(
         { error: { message: "Invalid date range.", code: "VALIDATION_ERROR" } },
         { status: 400 },

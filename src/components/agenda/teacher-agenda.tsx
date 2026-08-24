@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToastContainer, useToast } from "@/components/ui/toast";
 import { cn, getApiErrorMessage } from "@/lib/utils";
+import { getTodayLocal } from "@/lib/timezone";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -51,18 +52,8 @@ interface AgendaEntry {
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
-function todayStr(): string {
-  const d = new Date();
-  // Use UTC+5 (Asia/Karachi) to match server-side timezone logic
-  const pktTime = new Date(d.getTime() + 5 * 60 * 60 * 1000);
-  const year = pktTime.getUTCFullYear();
-  const month = String(pktTime.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(pktTime.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
 function isDateLocked(dateStr: string): boolean {
-  return dateStr < todayStr();
+  return dateStr < getTodayLocal();
 }
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -71,7 +62,7 @@ export function TeacherAgenda() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedClassId, setSelectedClassId] = useState("");
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
-  const [selectedDate, setSelectedDate] = useState(todayStr());
+  const [selectedDate, setSelectedDate] = useState(getTodayLocal());
   const [content, setContent] = useState("");
   const [existingEntry, setExistingEntry] = useState<AgendaEntry | null>(null);
   const [loadingAssignments, setLoadingAssignments] = useState(true);
@@ -349,7 +340,8 @@ export function TeacherAgenda() {
               id="agenda-date"
               type="date"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              max={getTodayLocal()}
+              onChange={(e) => setSelectedDate(e.target.value > getTodayLocal() ? getTodayLocal() : e.target.value)}
               className="h-10 border border-border bg-bg px-4 text-sm text-text"
             />
           </div>

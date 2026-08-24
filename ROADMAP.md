@@ -2,7 +2,7 @@
 
 Build order for reconciling and implementing the SRS (v5). Each phase unlocks the next — don't skip ahead, since later phases read data/patterns established earlier.
 
-**Status: Phases 0–10 implemented and verified, followed by regression fixes, backup export, and scoped Global Search. The design-system screenshot pass is the current active phase; LMS-side licensing is intentionally skipped for now. See `API.md` for per-route status.**
+**Status: Phases 0–10 implemented and verified, followed by regression fixes, backup export, scoped Global Search, and the completed design-system and future-date validation corrections. LMS-side licensing remains intentionally skipped. See `API.md` for per-route status.**
 
 ## Phase 0 — Reconciliation ✅ Complete
 
@@ -151,7 +151,7 @@ Operational round on top of the completed product (SRS v10):
 ### Regression fixes ✅ Complete
 
 - **Teacher Attendance Present action:** The real post-reset reproduction showed the click handler ran but no request fired because the reporting-time editor was rendered only when an already-saved record was `PRESENT` or `LATE`. The editor now renders whenever the Present action opens it. Fresh Teacher data was used; the reporting-time save returned HTTP 201, the UI showed `Reported 9:55 AM`, the persisted record reloaded as `LATE` with the saved reporting time, and the browser recorded no console errors.
-- **Salary Slip future dates:** Both `From` and `To` period inputs now use a today `max` value. The real browser check attempted tomorrow’s date and confirmed native `rangeOverflow: true` and `valid: false`. The date sweep confirmed the earlier attendance, student DOB/admission, and test-date caps; Daily Agenda remains intentionally future-datable, while Fee Ledger dates are filters rather than data-entry dates.
+- **Salary Slip future dates:** Both `From` and `To` period inputs now use a today `max` value. The earlier real browser check attempted tomorrow’s date and confirmed native `rangeOverflow: true` and `valid: false`. The current future-date validation correction also enforces the same boundary in the preview and save APIs.
 
 ### Backup export ✅ Complete
 
@@ -173,6 +173,13 @@ Operational round on top of the completed product (SRS v10):
 - Added token-based browser-surface styling for selection, caret, scrollbars, and reduced-motion behavior without changing DESIGN.md’s palette or typography.
 - Final real browser evidence captured six states: populated Students list row focus, Teacher Attendance Log Off Time editor, Fee Ledger filter focus with a real Paid row, Admin user dropdown open, mobile navigation drawer open, and Templates instructional empty/list state. No browser console errors were recorded in the final batch.
 - Validation passed: `bun run typecheck`, production `bun run build`, `git diff --check`, and the one-time UI detector returned an empty findings array for the changed design-system surfaces.
+
+## Phase 14 — Future-Date Validation Correction ✅ Complete
+
+- Audited every date input and date-validation path, classifying historical/data-entry dates separately from reporting filters and intentionally future-datable records. The explicit product rule supersedes the earlier Daily Agenda assumption: agenda entries are current-day only; past entries are locked and future entries are rejected.
+- Capped Fee Ledger Issued From/To, Admin and Teacher Daily Agenda dates, Teacher Attendance dates/month filters, Salary Slip periods, fee-payment dates, and existing Student, Student Attendance, Student DOB/admission, and Test historical controls at the current Asia/Karachi local date where appropriate. Fee Ledger and other reporting filters are also server-protected where the requirement calls for historical-only filtering.
+- Added shared date-only/local-today checks and server-side future/range rejection for Fee Ledger, Fee Payments, Daily Agenda, Teacher Attendance, Student Attendance, Salary Slip preview/save, Student DOB/admission create/edit, and Test creation. FeeChallan issuance remains server-generated.
+- Real authenticated browser/API verification on 2026-08-24 confirmed native future invalidity on all targeted Admin controls and Teacher Agenda, HTTP 400 `DATE_IN_FUTURE`/`INVALID_DATE_RANGE` on the protected future/inverted probes, HTTP 200 current-day reads, HTTP 201 current-day Teacher Agenda creation, preservation of the paid Ledger verification row, zero probe payments, temporary-fixture cleanup, `bun run typecheck`, `bun run build`, and `git diff --check`.
 
 ## Migration Reconciliation (Post-Phase 8)
 

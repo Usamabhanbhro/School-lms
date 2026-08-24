@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { ToastContainer, useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { getTodayLocal } from "@/lib/timezone";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -67,8 +68,7 @@ interface TimeEditor {
 // ─── Helpers ────────────────────────────────────────────────────────
 
 function todayStr(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return getTodayLocal();
 }
 
 /** Current local time as HH:MM — default value for the time editors. */
@@ -118,10 +118,7 @@ export function AdminTeacherAttendance() {
 
   // Monthly summary toggle
   const [showMonthly, setShowMonthly] = useState(false);
-  const [monthlyFrom, setMonthlyFrom] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-  });
+  const [monthlyFrom, setMonthlyFrom] = useState(() => `${getTodayLocal().slice(0, 8)}01`);
   const [monthlyTo, setMonthlyTo] = useState(todayStr());
   const [monthlyRecords, setMonthlyRecords] = useState<TeacherAttendanceRecord[]>([]);
   const [loadingMonthly, setLoadingMonthly] = useState(false);
@@ -347,6 +344,7 @@ export function AdminTeacherAttendance() {
                 id="monthly-from"
                 type="date"
                 value={monthlyFrom}
+                max={monthlyTo || todayStr()}
                 onChange={(e) => setMonthlyFrom(e.target.value)}
                 className="h-9 border border-border bg-bg px-4 text-sm text-text"
               />

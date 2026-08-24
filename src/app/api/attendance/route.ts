@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
 import { getTeacherProfile } from "@/lib/teacher-scope";
 import { requireActiveClassTeacher } from "@/lib/class-teacher";
+import { isDateInFuture, isValidDateOnly } from "@/lib/timezone";
 
 /**
  * GET /api/attendance
@@ -31,6 +32,18 @@ export async function GET(request: Request) {
     const studentId = searchParams.get("studentId");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
+
+    for (const [label, value] of [["date", date], ["from", from], ["to", to]] as const) {
+      if (value && !isValidDateOnly(value)) {
+        throw new ApiError(400, "VALIDATION_ERROR", `${label} must use YYYY-MM-DD format.`);
+      }
+      if (value && isDateInFuture(value)) {
+        throw new ApiError(400, "DATE_IN_FUTURE", `${label} cannot be later than today.`);
+      }
+    }
+    if (from && to && from > to) {
+      throw new ApiError(400, "INVALID_DATE_RANGE", "From date cannot be later than To date.");
+    }
 
     const where: Record<string, unknown> = {};
 
@@ -129,6 +142,12 @@ export async function POST(request: Request) {
     const profile = await getTeacherProfile(authedSession.user.id);
 
     const body = submitAttendanceSchema.parse(await request.json());
+    if (!isValidDateOnly(body.date)) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Attendance date must use YYYY-MM-DD format.");
+    }
+    if (isDateInFuture(body.date)) {
+      throw new ApiError(400, "DATE_IN_FUTURE", "Attendance date cannot be later than today.");
+    }
 
     // Verify this teacher is the active Class Teacher for this section
     await requireActiveClassTeacher(profile.id, body.classSectionId);

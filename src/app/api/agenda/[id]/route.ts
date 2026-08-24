@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
 import { getTeacherProfile } from "@/lib/teacher-scope";
-import { isDateLocked } from "@/lib/timezone";
+import { isDateInFuture, isDateLocked } from "@/lib/timezone";
 
 /**
  * PATCH /api/agenda/:id
@@ -50,14 +50,13 @@ export async function PATCH(
       );
     }
 
-    // Check date locking — same helper as POST route
+    // Check the shared local-date boundary — past entries are locked and future rows are invalid.
     const dateStr = existing.date.toISOString().split("T")[0];
+    if (isDateInFuture(dateStr)) {
+      throw new ApiError(400, "DATE_IN_FUTURE", "Cannot edit an entry for a future date.");
+    }
     if (isDateLocked(dateStr)) {
-      throw new ApiError(
-        400,
-        "DATE_LOCKED",
-        "Cannot edit an entry for a date that has already passed.",
-      );
+      throw new ApiError(400, "DATE_LOCKED", "Cannot edit an entry for a date that has already passed.");
     }
 
     const entry = await prisma.dailyAgenda.update({

@@ -2,7 +2,7 @@
 
 Living document. Every API route must be added here when created — see `CONVENTIONS.md` and `AGENTS.md`.
 
-**Status: reconciled with SRS.md v14.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
+**Status: reconciled with SRS.md v15.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
 Phase 1–6 routes are implemented. Admin provisioning, school settings, admin self-recovery, and daily agenda routes added.
 
 ## Conventions Recap
@@ -159,13 +159,14 @@ NextAuth handler — login/logout/session. Credentials provider only.
 **Role required:** Admin
 **Purpose:** Create a student record and allot to a class/section
 **Request body:** `{ name, guardianName, guardianCnic, dateOfBirth, admissionDate, placeOfBirth, bloodGroup?, guardianContact, address, classSectionId, studentId?, rollNumber?, grNumber?, previousSchool? }`
-**Notes:** validates guardian CNIC and guardianContact phone formats server-side; validates studentId uniqueness globally and rollNumber uniqueness within class section. `bloodGroup` is optional (enum: A_PLUS, A_MINUS, B_PLUS, B_MINUS, AB_PLUS, AB_MINUS, O_PLUS, O_MINUS). `grNumber` and `previousSchool` are optional free text — omitted/blank values are stored as null. Verified: both-fields-blank and both-fields-filled create paths work.
+**Notes:** validates guardian CNIC and guardianContact phone formats server-side; validates `dateOfBirth` and `admissionDate` as real `YYYY-MM-DD` dates no later than the current Asia/Karachi local date; validates studentId uniqueness globally and rollNumber uniqueness within class section. `bloodGroup` is optional (enum: A_PLUS, A_MINUS, B_PLUS, B_MINUS, AB_PLUS, AB_MINUS, O_PLUS, O_MINUS). `grNumber` and `previousSchool` are optional free text — omitted/blank values are stored as null. Verified: both-fields-blank and both-fields-filled create paths work.
 **Status:** implemented
 
 ### PATCH /api/students/:id
 **Role required:** Admin
 **Purpose:** Edit student fields or reallot to a different class/section
 **Request body:** partial `{ name, guardianName, guardianCnic, dateOfBirth, admissionDate, placeOfBirth, bloodGroup, guardianContact, address, classSectionId, studentId, rollNumber, grNumber, previousSchool }`
+**Validation:** Supplied `dateOfBirth` and `admissionDate` values must be real `YYYY-MM-DD` dates no later than the current Asia/Karachi local date.
 **Status:** implemented
 
 ### DELETE /api/students/:id
@@ -188,12 +189,14 @@ NextAuth handler — login/logout/session. Credentials provider only.
 **Role required:** Admin, Academics
 **Purpose:** Fetch teacher attendance records, filterable by teacherId and date range
 **Query params:** `teacherId`, `from`, `to` (all optional)
+**Validation:** Supplied `from` and `to` dates must use ISO `YYYY-MM-DD`, cannot be later than the current Asia/Karachi local date, and `from` cannot be after `to`.
 **Status:** implemented
 
 ### POST /api/teacher-attendance
 **Role required:** Admin, Academics
 **Purpose:** Mark or directly edit a teacher's attendance for a date — upsert by teacherId+date, no lock/confirm step. The same endpoint serves both the "mark present + reporting time" step and the "log off time" step (off time re-POSTs with the existing reporting time included).
 **Request body:** `{ teacherId, date, status, actualReportingTime?, actualOffTime? }`
+**Validation:** `date` must use ISO `YYYY-MM-DD` and cannot be later than the current Asia/Karachi local date. Future attendance submissions return `400 DATE_IN_FUTURE`.
 **Status auto-derivation (behavior change):** When `status` is `PRESENT` and `actualReportingTime` is provided, the server compares it against the teacher's configured `lateThreshold` (from TeacherProfile). If the actual time is after the threshold, the stored status is automatically changed to `LATE` instead of `PRESENT`. This is server-side logic — the database records LATE as the canonical status.
 **Notes:** `actualReportingTime` and `actualOffTime` are nullable text strings (e.g. `"08:25:00"`). Only populated for PRESENT/LATE records; null for ABSENT/LEAVE. Verified live: Admin + Academics 201, Teacher 403 on both GET and POST; off-time logged by Academics persists (`actualOffTime` round-trips).
 **Status:** implemented
@@ -216,14 +219,14 @@ NextAuth handler — login/logout/session. Credentials provider only.
 
 ### GET /api/attendance
 **Role required:** Admin (any class); Teacher (only if active Class Teacher); Academics (read-only, any class)
-**Purpose:** Fetch attendance records, filterable by classSectionId, date, studentId, from/to date range
+**Purpose:** Fetch attendance records, filterable by classSectionId, date, studentId, from/to date range. Date filters must be real `YYYY-MM-DD` values no later than the current Asia/Karachi local date, and `from` cannot be later than `to`.
 **Status:** implemented
 
 ### POST /api/attendance
 **Role required:** Teacher (must be the active Class Teacher for the given ClassSection)
 **Purpose:** Save a draft attendance sheet for a class+date
 **Request body:** `{ classSectionId, date, records: [{ studentId, status }] }`
-**Notes:** upserts as `isConfirmed: false` (Draft); rejects if any record for the class+date is already locked
+**Notes:** accepts only real `YYYY-MM-DD` dates no later than the current Asia/Karachi local date; upserts as `isConfirmed: false` (Draft); rejects if any record for the class+date is already locked.
 **Status:** implemented
 
 ### POST /api/attendance/:classSectionId/:date/confirm
@@ -263,6 +266,7 @@ NextAuth handler — login/logout/session. Credentials provider only.
 ### POST /api/tests
 **Role required:** Teacher (must hold a SubjectTeacherAssignment for the given ClassSection+Subject)
 **Request body:** `{ classSectionId, subjectId, title, date, maxMarks }`
+**Validation:** `date` must be a real `YYYY-MM-DD` value no later than the current Asia/Karachi local date.
 **Status:** implemented
 
 ### POST /api/tests/:id/marks
@@ -392,13 +396,14 @@ NextAuth handler — login/logout/session. Credentials provider only.
 **Purpose:** Record a payment without modifying the immutable challan snapshot.
 **Request body:** `{ amount, paidAt, note? }`
 **Response (201):** `{ data: { payment, paidTotal, balanceRemaining, status } }`
-**Notes:** `amount` must be a positive integer, `paidAt` is an ISO date/time, `note` is optional, and the server rejects payments that exceed the remaining balance. Multiple payments per challan are supported.
+**Notes:** `amount` must be a positive integer, `paidAt` is an ISO date/time no later than the current Asia/Karachi local date, `note` is optional, and the server rejects future payments and payments that exceed the remaining balance. Multiple payments per challan are supported.
 **Status:** implemented
 
 ### GET /api/fee-ledger
 **Role required:** Admin, Academics
 **Purpose:** School-wide fee ledger showing all saved challans and their derived payment status/balance.
 **Query params:** `classSection` (optional text match), `studentId` (optional), `from` and `to` (optional issued-date range), `status` (`Pending` | `Partial` | `Paid`, optional)
+**Validation:** Supplied `from` and `to` values cannot be later than the current Asia/Karachi local date, and `from` cannot be after `to`. Blank values remain valid.
 **Response:** `{ data: { rows: [{ challanId, studentId, studentName, classSection, issuedDate, total, paidTotal, balanceRemaining, status }], totals: { challans, total, paidTotal, balanceRemaining } } }`
 **Status:** implemented
 
@@ -497,14 +502,14 @@ NextAuth handler — login/logout/session. Credentials provider only.
 **Purpose:** Compute the salary breakdown for a teacher over a date range **without saving**. This is the "review then generate" step (same pattern as Fee Challan).
 **Request body:** `{ teacherId, from, to }` (ISO dates)
 **Response:** `{ data: { teacher: { id, name }, periodFrom, periodTo, perDaySalary, lateDeductionType, lateDeductionValue, workingDays, leaveDays, baseAmount, deductions: [{ lineId: "d-0", date, type: "LATE"|"ABSENT", amount, waived: false }], totalDeductions, netAmount } }`
-**Notes:** Deduction math: Absent = full `perDaySalary`; Late = `lateDeductionValue` (AMOUNT) or `round(perDaySalary × lateDeductionValue / 100)` (PERCENTAGE); Leave/Present = none; unmarked days are not counted as working days. Returns `400 SALARY_NOT_CONFIGURED` if the teacher has no rates. `lineId`s are stable identifiers used for waiver.
+**Notes:** `from` and `to` must be real `YYYY-MM-DD` dates no later than the current Asia/Karachi local date, with `from` not after `to`. Deduction math: Absent = full `perDaySalary`; Late = `lateDeductionValue` (AMOUNT) or `round(perDaySalary × lateDeductionValue / 100)` (PERCENTAGE); Leave/Present = none; unmarked days are not counted as working days. Returns `400 SALARY_NOT_CONFIGURED` if the teacher has no rates. `lineId`s are stable identifiers used for waiver.
 **Status:** implemented
 
 ### POST /api/salary-slips
 **Role required:** Admin, Academics
 **Purpose:** Generate + save a salary slip. Takes the reviewed breakdown and the per-line waiver decisions; only **non-waived** deduction lines are persisted.
 **Request body:** `{ teacherId, from, to, waivedIds?: ["d-0", …] }` (waivedIds = `lineId`s to exclude)
-**Notes:** Transaction creates the `SalarySlip` + its `SalarySlipDeduction` rows (net = base − non-waived deductions). Immutable once saved — regenerating the same period creates a new slip. Print view at `/print/salary-slips/[id]`.
+**Notes:** `from` and `to` must be real `YYYY-MM-DD` dates no later than the current Asia/Karachi local date, with `from` not after `to`. Transaction creates the `SalarySlip` + its `SalarySlipDeduction` rows (net = base − non-waived deductions). Immutable once saved — regenerating the same period creates a new slip. Print view at `/print/salary-slips/[id]`.
 **Status:** implemented
 
 ---
@@ -516,20 +521,20 @@ NextAuth handler — login/logout/session. Credentials provider only.
 **Purpose:** Fetch daily agenda entries. Teacher sees only entries they authored, scoped to their SubjectTeacherAssignment combinations. Admin sees all entries across all teachers.
 **Query params (all optional):** `classSectionId`, `subjectId`, `date`, `from` (date range start), `to` (date range end), `teacherId` (Admin only)
 **Response:** `{ data: [{ id, content, date, isLocked, teacher: { id, name }, classSection: { id, className, sectionName }, subject: { id, name }, createdAt, updatedAt }] }`
-**Notes:** `isLocked` is derived server-side: `true` if the entry's date is before today (Asia/Karachi timezone), `false` otherwise. Not stored in the database.
+**Notes:** `isLocked` is derived server-side: `true` if the entry's date is before today (Asia/Karachi timezone), `false` otherwise. Not stored in the database. Supplied `date`, `from`, and `to` filters cannot be later than today's Asia/Karachi date, and `from` cannot be after `to`.
 **Status:** implemented
 
 ### POST /api/agenda
 **Role required:** Teacher (must hold a SubjectTeacherAssignment for the given classSectionId + subjectId)
 **Purpose:** Create or update a daily agenda entry. Upserts by (teacherId, classSectionId, subjectId, date) — if an entry already exists for that combination, it updates instead of creating a duplicate.
 **Request body:** `{ classSectionId, subjectId, date, content }`
-**Validation:** Server rejects if `date` is in the past (before today in Asia/Karachi timezone). Content must be 1–5000 characters.
+**Validation:** Server rejects if `date` is in the past or later than today in Asia/Karachi timezone. Future submissions return `400 DATE_IN_FUTURE`; past submissions return `400 DATE_LOCKED`. Content must be 1–5000 characters.
 **Response (200/201):** `{ data: { id, content, date, isLocked: false, ... } }`
 **Status:** implemented
 
 ### PATCH /api/agenda/:id
 **Role required:** Teacher (must be the author of the entry, i.e. same teacherId)
-**Purpose:** Update an existing agenda entry's content. Server rejects if the entry's date is in the past (same `isDateLocked()` helper as POST — one shared function, not duplicated).
+**Purpose:** Update an existing agenda entry's content. Server rejects if the entry's date is in the past or later than today (same shared local-date helpers as POST).
 **Request body:** `{ content }`
 **Response (200):** `{ data: { id, content, date, isLocked, ... } }`
 **Status:** implemented

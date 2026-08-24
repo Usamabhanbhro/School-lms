@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { cn, getApiErrorMessage } from "@/lib/utils";
+import { getTodayLocal } from "@/lib/timezone";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -47,17 +48,6 @@ interface AgendaEntry {
   updatedAt: string;
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────
-
-function todayStr(): string {
-  const d = new Date();
-  const pktTime = new Date(d.getTime() + 5 * 60 * 60 * 1000);
-  const year = pktTime.getUTCFullYear();
-  const month = String(pktTime.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(pktTime.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
 // ─── Component ──────────────────────────────────────────────────────
 
 export function AdminAgenda() {
@@ -71,6 +61,7 @@ export function AdminAgenda() {
   const [subjectFilter, setSubjectFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const today = getTodayLocal();
 
   // Dropdown data
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -242,6 +233,7 @@ export function AdminAgenda() {
               id="admin-agenda-from"
               type="date"
               value={dateFrom}
+              max={dateTo || today}
               onChange={(e) => setDateFrom(e.target.value)}
               className="h-10 border border-border bg-bg px-4 text-sm text-text"
             />
@@ -258,6 +250,8 @@ export function AdminAgenda() {
               id="admin-agenda-to"
               type="date"
               value={dateTo}
+              min={dateFrom || undefined}
+              max={today}
               onChange={(e) => setDateTo(e.target.value)}
               className="h-10 border border-border bg-bg px-4 text-sm text-text"
             />

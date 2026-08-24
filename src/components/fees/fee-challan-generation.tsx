@@ -24,6 +24,7 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { getApiErrorMessage } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { getTodayLocal } from "@/lib/timezone";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -92,7 +93,7 @@ export function FeeChallanGeneration() {
   const [historyStudentId, setHistoryStudentId] = useState<string | null>(null);
   const [paymentForChallanId, setPaymentForChallanId] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
-  const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [paymentDate, setPaymentDate] = useState(getTodayLocal());
   const [paymentNote, setPaymentNote] = useState("");
   const [recordingPayment, setRecordingPayment] = useState(false);
 
@@ -471,7 +472,7 @@ export function FeeChallanGeneration() {
                           </label>
                           <label className="space-y-1 text-xs font-medium text-text/60">
                             Payment date
-                            <Input type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} />
+                            <Input type="date" value={paymentDate} max={getTodayLocal()} onChange={(event) => setPaymentDate(event.target.value > getTodayLocal() ? getTodayLocal() : event.target.value)} />
                           </label>
                           <label className="space-y-1 text-xs font-medium text-text/60">
                             Note (optional)

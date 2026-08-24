@@ -2,7 +2,7 @@
 
 Plain-English companion to `prisma/schema.prisma`. Every model in Prisma should have a matching entry here explaining *why* it exists and how it relates to others.
 
-**Status: reconciled with SRS.md v14.** Three login roles: Admin (single account), Academics (multiple), and Teacher (multiple). Students are data records, not logins. No Parent access.
+**Status: reconciled with SRS.md v15.** Three login roles: Admin (single account), Academics (multiple), and Teacher (multiple). Students are data records, not logins. No Parent access.
 
 ## Conventions
 
@@ -229,7 +229,7 @@ Per-teacher, per-class+subject, per-day lesson log. Teachers write entries for t
 - Fields: `teacherId` (FK to TeacherProfile), `classSectionId` (FK to ClassSection), `subjectId` (FK to Subject), `date` (date only, not datetime), `content` (text, up to 5000 chars), `createdAt`, `updatedAt`
 - Relationships: belongs to one TeacherProfile, one ClassSection, one Subject
 - Constraint: `@@unique([teacherId, classSectionId, subjectId, date])` — one entry per teacher per class+subject per day; writing again for an existing date updates, not duplicates
-- Locking: no stored lock flag. Server-side check compares `date` against current date using `Asia/Karoshi` (PKT) timezone via `getTodayLocal()` helper. Editable if date is today or future; read-only if past.
+- Locking: no stored lock flag. Server-side check compares `date` against current date using `Asia/Karachi` (PKT) timezone via `getTodayLocal()` helper. Editable if date is today; read-only if past. Future dates are rejected at data-entry and filter boundaries.
 - Permission: only the Subject Teacher assigned to the (classSectionId, subjectId) combination can create/edit — enforced via `SubjectTeacherAssignment` lookup, same as Tests
 - Admin access: read-only across all teachers/classes/subjects/dates
 - Academics access: explicitly excluded (see SRS §1A.2)
@@ -241,6 +241,10 @@ The on-demand backup is a read-only serialization of the existing relational mod
 ## Global Search
 
 Global Search introduces no new model or search index. It queries the existing active Student, TeacherProfile/User, ClassSection, Subject, FeeChallan, Test, and (for Admin) DailyAgenda records. Returned result objects are transient view data containing an entity type, real record ID, title, context subtitle, and destination route. Role and active-record filtering are enforced in the API rather than represented as persisted data.
+
+## Future-Date Validation
+
+Future-date policy is enforced in application logic rather than by schema constraints. Historical fields use the local Asia/Karachi date boundary where applicable: attendance dates, Daily Agenda dates, salary-slip periods, fee payment dates, and Fee Ledger issued-date filters cannot be later than today. Fee challan issuance remains server-generated. From/To filters must also satisfy chronological order. No new model or migration is required for this rule.
 
 ## Design-System Completion
 

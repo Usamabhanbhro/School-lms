@@ -1,6 +1,6 @@
 # School LMS — Software Requirements Specification (SRS)
 
-**Status: Draft v14 — adds the design-system completion and screenshot-verification pass after scoped global search.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
+**Status: Draft v15 — corrects future-date validation for attendance, Daily Agenda, Fee Ledger filters, and fee payments.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
 
 ---
 
@@ -161,7 +161,7 @@ Admin (and Academics — see §1A) generate a fee challan by selecting a student
 
 Once saved, a challan is treated as an immutable historical record — regenerating for the same student creates a new challan rather than editing the old one. The template version used at generation time is recorded on the challan.
 
-**Fee Ledger and partial payments:** Every saved challan starts with a derived `Pending` status and balance equal to its total. Admin or Academics can record a payment against any saved challan with an amount, payment date, and optional note. Multiple payments are allowed over time. Payments are separate linked records and never modify the original challan snapshot. At read time, the server sums recorded payments and derives `Pending` when paid total is zero, `Partial` when paid total is greater than zero but below the challan total, and `Paid` when paid total equals the challan total. Overpayments are rejected. The challan detail/history view shows the full payment history, and the school-wide Fee Ledger lists derived balances with class, student, and issued-date filters.
+**Fee Ledger and partial payments:** Every saved challan starts with a derived `Pending` status and balance equal to its total. Admin or Academics can record a payment against any saved challan with an amount, payment date, and optional note. Multiple payments are allowed over time. Payments are separate linked records and never modify the original challan snapshot. At read time, the server sums recorded payments and derives `Pending` when paid total is zero, `Partial` when paid total is greater than zero but below the challan total, and `Paid` when paid total equals the challan total. Overpayments are rejected. Payment dates cannot be later than the school's current local date. The challan detail/history view shows the full payment history, and the school-wide Fee Ledger lists derived balances with class, student, and issued-date filters. Fee Ledger Issued From/To filters are bounded by the current local date and must preserve From <= To.
 
 ### 1.10 Teacher Salary Slip
 
@@ -190,7 +190,9 @@ Admin configures, per teacher (in the Users → Teachers tab, at creation or edi
 
 Admin has read-only visibility into all daily agenda entries across all teachers, classes, subjects, and dates — same oversight pattern as attendance (§1.5), marks (§1.6), and report cards (§1.6).
 
-**Filters:** Admin can filter by teacher, class+subject, and date range. The admin agenda view is read-only — no write actions, no edit buttons, no ability to modify or delete any entry.
+**Filters:** Admin can filter by teacher, class+subject, and date range. The admin agenda view is read-only — no write actions, no edit buttons, no ability to modify or delete any entry. Agenda date filters cannot be later than the current local date, and From must not be after To.
+
+**Date rule:** Daily Agenda is now current-or-historical only. Teacher date entry and server submission reject future dates; past entries remain locked for editing, while today's entry remains editable. This supersedes the earlier assumption that teachers could plan future agenda entries.
 
 **Scope note:** Academics does **NOT** have access to the Daily Agenda feature — neither read-only oversight nor write access. This is a deliberate scope decision, not an oversight. The Daily Agenda is a teacher-admin communication channel (lesson logs for principal oversight), which is outside Academics' delegated scope of certificate/challan generation and attendance editing. Adding Academics access would require a separate product decision and is not part of this feature.
 
@@ -208,7 +210,11 @@ Admin and Academics receive one shared **Search school data** entry point in the
 
 Search covers active Students, active Teachers, Class/Section records, Subjects, Fee Challans, and Tests for Admin and Academics. Admin additionally receives Daily Agenda matches because Daily Agenda is Admin-only. Teachers do not receive this school-wide search entry point and must continue using their existing assignment-scoped workflows. Search results must never expose inactive students or inactive teacher accounts, and the server enforces the role boundary rather than relying on hidden UI alone.
 
-### 1.14 Design-System Completion Pass
+### 1.14 Future-Date Validation
+
+All historical/data-entry dates use the school's current local date as their maximum where applicable. Student DOB and admission date, student and teacher attendance, Daily Agenda, salary-slip periods, fee payment dates, and Fee Ledger issuance filters cannot select or submit future dates. Fee challan issuance is server-generated at creation time and is not client-supplied. From/To pairs must preserve chronological order. Test dates follow the existing application convention and remain capped by their current validation.
+
+### 1.15 Design-System Completion Pass
 
 The final UI refinement pass must preserve the locked industrial/minimal visual language: the existing colors, fonts, square corners, 1px border separation, Lucide icon system, and restrained motion remain unchanged. The implementation should standardize subtle hover and visible keyboard-focus feedback across lists, tables, forms, navigation, dropdowns, dialogs, and custom interactive controls without introducing decorative gradients, rounded cards, or heavy shadows.
 

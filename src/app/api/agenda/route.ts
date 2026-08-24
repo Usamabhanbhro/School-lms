@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
 import { getTeacherProfile } from "@/lib/teacher-scope";
 import { requireSubjectTeacher } from "@/lib/subject-teacher";
-import { isDateLocked, getTodayLocal } from "@/lib/timezone";
+import { getTodayLocal, isDateInFuture, isDateLocked, isValidDateOnly } from "@/lib/timezone";
 
 /**
  * GET /api/agenda
@@ -30,6 +30,20 @@ export async function GET(request: Request) {
     const from = searchParams.get("from");
     const to = searchParams.get("to");
     const teacherIdFilter = searchParams.get("teacherId");
+
+    const today = getTodayLocal();
+    for (const [label, value] of [["date", date], ["from", from], ["to", to]] as const) {
+      if (!value) continue;
+      if (!isValidDateOnly(value)) {
+        throw new ApiError(400, "VALIDATION_ERROR", `${label} must use YYYY-MM-DD format.`);
+      }
+      if (value > today) {
+        throw new ApiError(400, "DATE_IN_FUTURE", `${label} cannot be later than today.`);
+      }
+    }
+    if (from && to && from > to) {
+      throw new ApiError(400, "INVALID_DATE_RANGE", "The from date cannot be after the to date.");
+    }
 
     const where: Record<string, unknown> = {};
 
@@ -104,8 +118,6 @@ export async function GET(request: Request) {
       }
     }
 
-    const todayStr = getTodayLocal();
-
     const entries = await prisma.dailyAgenda.findMany({
       where,
       include: {
@@ -141,8 +153,8 @@ export async function GET(request: Request) {
  * Teacher ONLY. Must hold a SubjectTeacherAssignment for the given
  * classSectionId + subjectId.
  *
- * Creates or updates (upserts) an agenda entry for a specific date.
- * Server rejects if date is in the past.
+ * Creates or updates (upserts) an agenda entry for today only.
+ * Server rejects both future dates and past (locked) dates.
  *
  * Body: { classSectionId, subjectId, date, content }
  */
@@ -164,13 +176,14 @@ export async function POST(request: Request) {
     // Verify this teacher holds the SubjectTeacherAssignment
     await requireSubjectTeacher(profile.id, body.classSectionId, body.subjectId);
 
-    // Check date locking
+    if (!isValidDateOnly(body.date)) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Date must use YYYY-MM-DD format.");
+    }
+    if (isDateInFuture(body.date)) {
+      throw new ApiError(400, "DATE_IN_FUTURE", "Cannot create an entry for a future date.");
+    }
     if (isDateLocked(body.date)) {
-      throw new ApiError(
-        400,
-        "DATE_LOCKED",
-        "Cannot create an entry for a date that has already passed.",
-      );
+      throw new ApiError(400, "DATE_LOCKED", "Cannot create an entry for a date that has already passed.");
     }
 
     // Upsert by unique constraint: (teacherId, classSectionId, subjectId, date)

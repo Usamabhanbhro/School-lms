@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
 import { getTeacherProfile, getScopedClassSectionIds } from "@/lib/teacher-scope";
 import { requireSubjectTeacher } from "@/lib/subject-teacher";
+import { isDateInFuture, isValidDateOnly } from "@/lib/timezone";
 
 /**
  * GET /api/tests
@@ -114,6 +115,12 @@ export async function POST(request: Request) {
 
     const profile = await getTeacherProfile(authedSession.user.id);
     const body = createTestSchema.parse(await request.json());
+    if (!isValidDateOnly(body.date)) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Test date must use YYYY-MM-DD format.");
+    }
+    if (isDateInFuture(body.date)) {
+      throw new ApiError(400, "DATE_IN_FUTURE", "Test date cannot be later than today.");
+    }
 
     // Verify this teacher holds the SubjectTeacherAssignment
     const assignment = await requireSubjectTeacher(
