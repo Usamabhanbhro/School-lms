@@ -181,6 +181,15 @@ Operational round on top of the completed product (SRS v10):
 - Added shared date-only/local-today checks and server-side future/range rejection for Fee Ledger, Fee Payments, Daily Agenda, Teacher Attendance, Student Attendance, Salary Slip preview/save, Student DOB/admission create/edit, and Test creation. FeeChallan issuance remains server-generated.
 - Real authenticated browser/API verification on 2026-08-24 confirmed native future invalidity on all targeted Admin controls and Teacher Agenda, HTTP 400 `DATE_IN_FUTURE`/`INVALID_DATE_RANGE` on the protected future/inverted probes, HTTP 200 current-day reads, HTTP 201 current-day Teacher Agenda creation, preservation of the paid Ledger verification row, zero probe payments, temporary-fixture cleanup, `bun run typecheck`, `bun run build`, and `git diff --check`.
 
+## Phase 15 — Comprehensive End-to-End Audit ✅ Complete
+
+- Audited the full public, Admin, Academics, Teacher, print, API, loading, error, responsive, accessibility, and motion surface inventory against the repository requirements and design system. Temporary role and workflow fixtures were isolated, tracked, and removed in FK-safe order; protected verification fixtures remained intact.
+- Fixed AUTH-01: `/admin/academics` now permits Admin and Academics access while preserving denial for other roles. Live Admin navigation returned HTTP 200 and rendered the Academics Dashboard; unauthenticated navigation still redirected to `/login`.
+- Fixed A11Y-01: the shared `StudentPicker` now applies an optional control ID to its rendered input/select. Certificate, Fee Challan, and Report Card labels now reference the actual control; live Certificate and Fee Challan DOM checks passed, and a repository-wide literal `htmlFor` scan found no unresolved associations.
+- Closed remaining date-filter API gaps in Student Attendance CSV export, Teacher Attendance export, Attendance confirmation/audit filters, and Salary Slip list filters. Current-day queries remained successful while future, malformed, and inverted probes returned the documented validation codes.
+- End-to-end workflow evidence covered attendance draft/confirm/lock/admin override/audit/export, tests/marks/terms/report cards, fees/payments/ledger/print, salary derivation/waivers/print, Daily Agenda, search, backup secrecy, student archive/delete, certificates/print, and Bank Settings validation. Responsive checks at desktop, tablet, and mobile widths found no horizontal overflow; motion and reduced-motion checks found no defect.
+- Final audit limitation: the optional Mobbin pattern reference was unavailable on the configured plan, so the repository’s authoritative `DESIGN.md` was used for visual evaluation.
+
 ## Migration Reconciliation (Post-Phase 8)
 
 After Phase 8, the migration chain was found to be incomplete — the database schema had drifted from `schema.prisma`. Four reconciliation and maintenance migrations were added:

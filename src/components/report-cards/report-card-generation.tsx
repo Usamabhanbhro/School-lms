@@ -359,6 +359,7 @@ export function ReportCardGeneration() {
                 <Skeleton className="h-10 w-full" />
               ) : (
                 <StudentPicker
+                  id="rc-student"
                   students={students}
                   selectedStudentId={selectedStudentId}
                   onSelect={setSelectedStudentId}

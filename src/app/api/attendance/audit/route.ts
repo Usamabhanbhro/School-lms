@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
+import { isDateInFuture, isValidDateOnly } from "@/lib/timezone";
 
 /**
  * GET /api/attendance/audit
@@ -30,6 +31,12 @@ export async function GET(request: Request) {
       where.studentAttendance = { classSectionId };
     }
     if (date) {
+      if (!isValidDateOnly(date)) {
+        throw new ApiError(400, "VALIDATION_ERROR", "date must use YYYY-MM-DD format.");
+      }
+      if (isDateInFuture(date)) {
+        throw new ApiError(400, "DATE_IN_FUTURE", "date cannot be later than today.");
+      }
       if (!where.studentAttendance) where.studentAttendance = {};
       (where.studentAttendance as Record<string, unknown>).date = new Date(date);
     }

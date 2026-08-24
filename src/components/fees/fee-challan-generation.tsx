@@ -277,6 +277,7 @@ export function FeeChallanGeneration() {
             </label>
             <div className="max-w-md">
               <StudentPicker
+                id="fee-student-search"
                 students={students}
                 selectedStudentId={selectedStudentId}
                 onSelect={(id) => {

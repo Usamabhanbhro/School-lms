@@ -138,6 +138,7 @@ export function CertificateGeneration() {
               Student
             </label>
             <StudentPicker
+              id="student-search"
               students={students}
               selectedStudentId={selectedStudentId}
               onSelect={setSelectedStudentId}

@@ -31,6 +31,8 @@ interface StudentPickerProps {
   classSectionId?: string;
   /** Label shown for the currently selected student */
   selectedLabel?: string;
+  /** Optional ID for associating an external label with the actual control */
+  id?: string;
 }
 
 /**
@@ -58,6 +60,7 @@ export function StudentPicker({
   searchPlaceholder = "Search by name, guardian, or student ID…",
   disabled = false,
   classSectionId,
+  id,
 }: StudentPickerProps) {
   const [search, setSearch] = useState("");
 
@@ -83,6 +86,7 @@ export function StudentPicker({
     );
     return (
       <select
+        id={id}
         value={selectedStudentId}
         onChange={(e) => onSelect(e.target.value)}
         disabled={disabled || classStudents.length === 0}
@@ -107,6 +111,7 @@ export function StudentPicker({
           aria-hidden="true"
         />
         <Input
+          id={id}
           placeholder={searchPlaceholder}
           value={selectedStudentId ? formatStudentDisplay(selectedStudent!) : search}
           onChange={(e) => {

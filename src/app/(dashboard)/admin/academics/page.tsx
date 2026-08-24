@@ -49,7 +49,7 @@ const quickActions: QuickAction[] = [
 export default async function AcademicsPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/login");
-  if (session.user.role !== "ACADEMICS") redirect("/login");
+  if (session.user.role !== "ADMIN" && session.user.role !== "ACADEMICS") redirect("/login");
 
   return (
     <>

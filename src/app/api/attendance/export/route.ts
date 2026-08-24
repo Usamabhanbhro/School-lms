@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
 import { getTeacherProfile } from "@/lib/teacher-scope";
+import { isDateInFuture, isValidDateOnly } from "@/lib/timezone";
 
 /**
  * GET /api/attendance/export
@@ -38,6 +39,19 @@ export async function GET(request: Request) {
             code: "VALIDATION_ERROR",
           },
         },
+        { status: 400 },
+      );
+    }
+
+    if (!isValidDateOnly(date)) {
+      return NextResponse.json(
+        { error: { message: "date must use YYYY-MM-DD format.", code: "VALIDATION_ERROR" } },
+        { status: 400 },
+      );
+    }
+    if (isDateInFuture(date)) {
+      return NextResponse.json(
+        { error: { message: "date cannot be later than today.", code: "DATE_IN_FUTURE" } },
         { status: 400 },
       );
     }

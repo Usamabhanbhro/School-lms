@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
 import { getTeacherProfile } from "@/lib/teacher-scope";
 import { requireActiveClassTeacher } from "@/lib/class-teacher";
+import { isDateInFuture, isValidDateOnly } from "@/lib/timezone";
 
 /**
  * POST /api/attendance/confirm?classSectionId=xxx&date=2026-01-15
@@ -30,6 +31,13 @@ export async function POST(request: Request) {
         { error: { message: "classSectionId and date query parameters are required.", code: "VALIDATION_ERROR" } },
         { status: 400 },
       );
+    }
+
+    if (!isValidDateOnly(date)) {
+      throw new ApiError(400, "VALIDATION_ERROR", "date must use YYYY-MM-DD format.");
+    }
+    if (isDateInFuture(date)) {
+      throw new ApiError(400, "DATE_IN_FUTURE", "date cannot be later than today.");
     }
 
     const recordDate = new Date(date);
