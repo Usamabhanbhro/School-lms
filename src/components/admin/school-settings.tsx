@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Copy,
+  Download,
   KeyRound,
   Loader2,
   Save,
@@ -56,6 +57,7 @@ export function SchoolSettings() {
   const [bankSaving, setBankSaving] = useState(false);
   const [bankLoading, setBankLoading] = useState(true);
   const [bankExists, setBankExists] = useState(false);
+  const [exportingBackup, setExportingBackup] = useState(false);
 
   // Form state
   const [schoolName, setSchoolName] = useState("");
@@ -205,6 +207,34 @@ export function SchoolSettings() {
       fileInputRef.current.value = "";
     }
   }, [handleLogoUpload]);
+
+  const handleBackupExport = useCallback(async () => {
+    setExportingBackup(true);
+    try {
+      const res = await fetch("/api/backup/export", { cache: "no-store" });
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error?.message ?? "Failed to download backup.");
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get("content-disposition");
+      const filename = disposition?.match(/filename="?([^";]+)"?/i)?.[1] ?? "school-lms-backup.json";
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      addToast("success", "JSON backup downloaded.");
+    } catch (err) {
+      addToast("error", err instanceof Error ? err.message : "Unable to download backup.");
+    } finally {
+      setExportingBackup(false);
+    }
+  }, [addToast]);
 
   // ─── Render ────────────────────────────────────────────────────
 
@@ -426,6 +456,24 @@ export function SchoolSettings() {
                 {bankExists ? "Update Bank Settings" : "Save Bank Settings"}
               </Button>
             </div>
+          </Card>
+
+          {/* Backup Export Section */}
+          <Card className="p-6">
+            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-text/70">
+              Backup Export
+            </h2>
+            <p className="mb-4 max-w-2xl text-sm text-text/60">
+              Download a complete JSON copy of your school data for restoration and safekeeping. Authentication secrets are excluded.
+            </p>
+            <Button variant="secondary" onClick={handleBackupExport} disabled={exportingBackup}>
+              {exportingBackup ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Download className="size-4" aria-hidden="true" />
+              )}
+              {exportingBackup ? "Preparing Backup…" : "Download JSON Backup"}
+            </Button>
           </Card>
 
           {/* Recovery Code Section */}

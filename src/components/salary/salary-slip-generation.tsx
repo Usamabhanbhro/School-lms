@@ -74,6 +74,11 @@ function currentMonthRange(): { from: string; to: string } {
   return { from, to };
 }
 
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function formatRs(n: number): string {
   return `Rs. ${n.toLocaleString()}`;
 }
@@ -340,6 +345,7 @@ export function SalarySlipGeneration() {
               id="salary-from"
               type="date"
               value={range.from}
+              max={todayStr()}
               onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
               className="h-10 border border-border bg-bg px-4 text-sm text-text"
             />
@@ -352,6 +358,7 @@ export function SalarySlipGeneration() {
               id="salary-to"
               type="date"
               value={range.to}
+              max={todayStr()}
               onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
               className="h-10 border border-border bg-bg px-4 text-sm text-text"
             />

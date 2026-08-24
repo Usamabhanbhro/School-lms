@@ -522,7 +522,7 @@ export function AdminTeacherAttendance() {
                           </div>
 
                           {/* Step 1: reporting-time editor (opened via Present) */}
-                          {editor?.kind === "reporting" && isLiveOrLate && (
+                          {editor?.kind === "reporting" && (
                             <div className="flex items-center gap-1">
                               <input
                                 type="time"

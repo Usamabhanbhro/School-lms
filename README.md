@@ -4,9 +4,9 @@ A web-based Learning Management System for schools — attendance, marks/tests, 
 
 Full web app (no desktop client). Built to be usable from a phone browser, since class teachers need to mark attendance on the go.
 
-**Status: Phases 0–9 implemented and verified, followed by production migration reconciliation, reliability hardening, the Admin Dashboard Needs Attention section, and the Fee Ledger partial-payment extension.** SRS current at v11 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, full teacher-attendance marking parity and delegated certificate/challan/salary-slip generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
+**Status: Phases 0–10 implemented and verified, followed by production migration reconciliation, reliability hardening, the Admin Dashboard Needs Attention section, regression fixes, and the verified Admin-only JSON backup export.** SRS current at v12 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, full teacher-attendance marking parity and delegated certificate/challan/salary-slip generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
 
-`SCHEMA.md` and `API.md` are current with SRS v11. Print layouts for Certificates, Fee Challans (three-copy), Report Cards, and Salary Slips are implemented with database-backed school identity configuration.
+`SCHEMA.md` and `API.md` are current with SRS v12. Print layouts for Certificates, Fee Challans (three-copy), Report Cards, and Salary Slips are implemented with database-backed school identity configuration.
 
 ## Stack
 
@@ -31,9 +31,9 @@ Read these in order before making changes:
 |---|---|
 | `ARCHITECTURE.md` | System design, stack decisions, data layer overview |
 | `DESIGN.md` | Visual design system — colors, type, spacing, motion, components |
-| `SRS.md` | Feature scope — **finalized (v10)**, Admin/Academics/Teacher |
-| `SCHEMA.md` | Database entities, fields, relationships — current with SRS v10 |
-| `API.md` | API route list — current with SRS v10, all phases marked implemented, salary slips included |
+| `SRS.md` | Feature scope — **current draft (v12)**, Admin/Academics/Teacher |
+| `SCHEMA.md` | Database entities, fields, relationships — current with SRS v12 |
+| `API.md` | API route list — current with SRS v12, including the planned Admin-only backup route |
 | `ROADMAP.md` | Phased implementation build order |
 | `CONVENTIONS.md` | Coding standards — naming, folder structure, styling, tooling |
 | `AGENTS.md` | Instructions for AI coding tools working in this repo |

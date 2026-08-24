@@ -2,7 +2,7 @@
 
 Build order for reconciling and implementing the SRS (v5). Each phase unlocks the next — don't skip ahead, since later phases read data/patterns established earlier.
 
-**Status: Phases 0–9 implemented and verified, followed by a production reconciliation and reliability round. The Fee Ledger with immutable challan-linked partial payments is the next active phase. See `API.md` for per-route status.**
+**Status: Phases 0–10 implemented and verified, followed by a regression-fix and backup-export round. The Admin-only on-demand JSON backup export is the current active phase. See `API.md` for per-route status.**
 
 ## Phase 0 — Reconciliation ✅ Complete
 
@@ -145,6 +145,19 @@ Operational round on top of the completed product (SRS v10):
 - Added Admin/Academics payment history and recording controls to the Fee Challan flow, including loading feedback and color-plus-icon status badges.
 - Added the school-wide Admin/Academics Fee Ledger with class, student, date-range, and status filters.
 - Real Admin E2E evidence against Neon created a Rs. 12,000 challan with two line items, recorded Rs. 3,000 then Rs. 9,000, verified Pending → Partial (Rs. 9,000 balance) → Paid (Rs. 0 balance), confirmed two payment records in challan and student history, verified the Paid ledger row and Rs. 12,000 collected total, rejected an additional payment with `PAYMENT_EXCEEDS_BALANCE` (HTTP 400), and confirmed the challan total and two line items remained unchanged. Authenticated screenshots were captured for the Fee Challan payment history and school-wide ledger.
+
+## Phase 11 — Regression Fixes and Backup Export
+
+### Regression fixes ✅ Complete
+
+- **Teacher Attendance Present action:** The real post-reset reproduction showed the click handler ran but no request fired because the reporting-time editor was rendered only when an already-saved record was `PRESENT` or `LATE`. The editor now renders whenever the Present action opens it. Fresh Teacher data was used; the reporting-time save returned HTTP 201, the UI showed `Reported 9:55 AM`, the persisted record reloaded as `LATE` with the saved reporting time, and the browser recorded no console errors.
+- **Salary Slip future dates:** Both `From` and `To` period inputs now use a today `max` value. The real browser check attempted tomorrow’s date and confirmed native `rangeOverflow: true` and `valid: false`. The date sweep confirmed the earlier attendance, student DOB/admission, and test-date caps; Daily Agenda remains intentionally future-datable, while Fee Ledger dates are filters rather than data-entry dates.
+
+### Backup export ✅ Complete
+
+- SRS, schema, API, architecture, README, and this roadmap document an Admin-only `GET /api/backup/export` returning a single lossless JSON attachment.
+- Implemented the stateless read-only route with `schemaVersion`, `exportedAt`, complete application-model data, relationship keys, and explicit exclusion of password hashes, recovery-code hashes, session tokens, and other authentication secrets. Settings exposes the download action only to Admin with loading feedback and attachment handling.
+- Real browser verification triggered an actual download named `school-lms-backup-2026-08-24.json`, parsed 5,887 bytes of JSON, confirmed live users, teachers, student, attendance, FeeChallanPayment, salary, and other model data were present, confirmed `containsAuthSecrets: false`, verified the Admin response headers, and verified a Teacher receives HTTP 403 `FORBIDDEN`.
 
 ## Migration Reconciliation (Post-Phase 8)
 

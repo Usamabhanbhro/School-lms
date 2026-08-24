@@ -2,7 +2,7 @@
 
 Living document. Every API route must be added here when created — see `CONVENTIONS.md` and `AGENTS.md`.
 
-**Status: reconciled with SRS.md v11.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
+**Status: reconciled with SRS.md v12.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
 Phase 1–6 routes are implemented. Admin provisioning, school settings, admin self-recovery, and daily agenda routes added.
 
 ## Conventions Recap
@@ -532,6 +532,18 @@ NextAuth handler — login/logout/session. Credentials provider only.
 **Purpose:** Update an existing agenda entry's content. Server rejects if the entry's date is in the past (same `isDateLocked()` helper as POST — one shared function, not duplicated).
 **Request body:** `{ content }`
 **Response (200):** `{ data: { id, content, date, isLocked, ... } }`
+**Status:** implemented
+
+---
+
+## Backup Export (Admin-only)
+
+### GET /api/backup/export
+**Role required:** Admin
+**Purpose:** Download a complete on-demand JSON backup bundle of the LMS.
+**Response:** File attachment with `Content-Type: application/json` and `Content-Disposition: attachment; filename="school-lms-backup-YYYY-MM-DD.json"`.
+**Bundle shape:** `{ schemaVersion, exportedAt, data: { users, adminRecoveryCodes, teacherProfiles, academicsProfiles, classSections, subjects, classTeacherAssignments, subjectTeacherAssignments, students, studentAttendance, teacherAttendance, attendanceAuditLogs, tests, marks, terms, reportCards, reportCardTests, certificates, bankSettings, feeChallans, feeChallanLineItems, feeChallanPayments, documentTemplates, templateFields, templateStaticTexts, templateTableRegions, salarySlips, salarySlipDeductions, dailyAgenda } }`.
+**Notes:** Password hashes, recovery-code hashes, session tokens, and other authentication secrets are excluded. The endpoint is read-only, does not create a backup row, and returns `401 UNAUTHENTICATED` or `403 FORBIDDEN` for non-Admin access.
 **Status:** implemented
 
 ---

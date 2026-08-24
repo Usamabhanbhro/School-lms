@@ -1,6 +1,6 @@
 # School LMS — Software Requirements Specification (SRS)
 
-**Status: Draft v11 — adds the Fee Ledger with immutable challan-linked partial payments.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
+**Status: Draft v12 — adds the Admin-only on-demand JSON backup export after the Fee Ledger requirements.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
 
 ---
 
@@ -193,6 +193,14 @@ Admin has read-only visibility into all daily agenda entries across all teachers
 **Filters:** Admin can filter by teacher, class+subject, and date range. The admin agenda view is read-only — no write actions, no edit buttons, no ability to modify or delete any entry.
 
 **Scope note:** Academics does **NOT** have access to the Daily Agenda feature — neither read-only oversight nor write access. This is a deliberate scope decision, not an oversight. The Daily Agenda is a teacher-admin communication channel (lesson logs for principal oversight), which is outside Academics' delegated scope of certificate/challan generation and attendance editing. Adding Academics access would require a separate product decision and is not part of this feature.
+
+### 1.12 On-Demand Backup Export
+
+Admin can download a complete, lossless backup of the LMS on demand from Settings. The export is generated as a single JSON attachment rather than a multi-sheet spreadsheet because its purpose is restoration and archival, not visual reporting. A single bundle preserves IDs, relationships, nullable values, timestamps, enum values, snapshots, and append-only history without spreadsheet conversion ambiguity.
+
+The Admin-only `GET /api/backup/export` endpoint returns a file download with `Content-Disposition: attachment`, a stable `schemaVersion`, an `exportedAt` timestamp, and every meaningful application table required to restore school data, including users, profiles, classes, subjects, assignments, students, attendance, tests, marks, terms, report cards, certificates, templates, bank settings, fee challans, fee line items, fee payments, salary slips, salary deductions, daily agenda entries, and attendance audit logs. Password hashes and other authentication secrets are excluded from the export.
+
+The Settings page exposes one explicit **Download JSON Backup** action for Admin. Academics and Teachers must receive an authorization error and must not see or trigger the action. Exporting does not mutate application data, create a backup record, or require a background job.
 
 ---
 
