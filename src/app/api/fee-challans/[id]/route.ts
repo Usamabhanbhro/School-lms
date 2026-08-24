@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
+import { deriveFeePaymentSummary } from "@/lib/fee-ledger";
 import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
 
@@ -35,6 +36,16 @@ export async function GET(
         generatedByUser: {
           select: { id: true, name: true },
         },
+        payments: {
+          orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
+          select: {
+            id: true,
+            amount: true,
+            paidAt: true,
+            note: true,
+            recordedByUser: { select: { id: true, name: true } },
+          },
+        },
       },
     });
 
@@ -45,7 +56,12 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ data: challan });
+    const summary = deriveFeePaymentSummary(
+      challan.total,
+      challan.payments.reduce((sum, payment) => sum + payment.amount, 0),
+    );
+
+    return NextResponse.json({ data: { ...challan, ...summary } });
   } catch (error) {
     if (error instanceof ApiError) {
       return NextResponse.json(

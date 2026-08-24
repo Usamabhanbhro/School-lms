@@ -48,6 +48,7 @@ const adminNav: NavItem[] = [
   { label: "Daily Agenda", href: "/admin/agenda", icon: CalendarDays },
   { label: "Certificates", href: "/admin/certificates", icon: FileText },
   { label: "Fees", href: "/admin/fees", icon: Banknote },
+  { label: "Fee Ledger", href: "/admin/fee-ledger", icon: Banknote },
   { label: "Salary Slips", href: "/admin/salary-slips", icon: Banknote },
   { label: "Templates", href: "/admin/templates", icon: LayoutTemplate },
   { label: "Settings", href: "/admin/settings", icon: Settings },
@@ -68,6 +69,7 @@ const teacherNav: NavItem[] = [
 const academicsNav: NavItem[] = [
   { label: "Certificates", href: "/admin/certificates", icon: FileText },
   { label: "Fees", href: "/admin/fees", icon: Banknote },
+  { label: "Fee Ledger", href: "/admin/fee-ledger", icon: Banknote },
   { label: "Salary Slips", href: "/admin/salary-slips", icon: Banknote },
   { label: "Students", href: "/admin/students", icon: Users },
   { label: "Attendance", href: "/admin/attendance", icon: ClipboardCheck },

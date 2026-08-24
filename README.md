@@ -4,9 +4,9 @@ A web-based Learning Management System for schools — attendance, marks/tests, 
 
 Full web app (no desktop client). Built to be usable from a phone browser, since class teachers need to mark attendance on the go.
 
-**Status: Phases 0–9 implemented and verified, followed by production migration reconciliation, reliability hardening, and the Admin Dashboard Needs Attention section.** SRS current at v10 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, full teacher-attendance marking parity and delegated certificate/challan/salary-slip generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
+**Status: Phases 0–9 implemented and verified, followed by production migration reconciliation, reliability hardening, the Admin Dashboard Needs Attention section, and the Fee Ledger partial-payment extension.** SRS current at v11 (see `SRS.md`). Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, full teacher-attendance marking parity and delegated certificate/challan/salary-slip generation), and **Teacher** (multiple accounts, Class Teacher and/or Subject Teacher assignments). Students are data records, not accounts; there is no Parent access.
 
-`SCHEMA.md` and `API.md` are current with SRS v10. Print layouts for Certificates, Fee Challans (three-copy), Report Cards, and Salary Slips are implemented with database-backed school identity configuration.
+`SCHEMA.md` and `API.md` are current with SRS v11. Print layouts for Certificates, Fee Challans (three-copy), Report Cards, and Salary Slips are implemented with database-backed school identity configuration.
 
 ## Stack
 
@@ -116,7 +116,8 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/admin/report-cards` | ADMIN, ACADEMICS | Report cards list (read-only) |
 | `/admin/agenda` | ADMIN | Daily agenda overview (read-only) |
 | `/admin/certificates` | ADMIN, ACADEMICS | Certificate generation |
-| `/admin/fees` | ADMIN, ACADEMICS | Fee challan generation |
+| `/admin/fees` | ADMIN, ACADEMICS | Fee challan generation and per-challan payment history |
+| `/admin/fee-ledger` | ADMIN, ACADEMICS | School-wide outstanding-balance ledger |
 | `/admin/salary-slips` | ADMIN, ACADEMICS | Salary slip generation (rates configured by Admin in Users) |
 | `/admin/templates` | ADMIN | Document template management (upload, visual editor, activate) |
 | `/teacher` | TEACHER | Teacher dashboard and quick actions |
@@ -157,6 +158,8 @@ Students are **not** logins — they're records Admin creates and allots to a cl
 | `/api/certificates` | ADMIN, ACADEMICS | Certificate generation |
 | `/api/settings/bank` | ADMIN (write), ACADEMICS (read) | Bank settings for challans |
 | `/api/students/:id/fee-challans` | ADMIN, ACADEMICS | Generate/list fee challans for a student |
+| `/api/fee-challans/:id/payments` | ADMIN, ACADEMICS | Record/list immutable challan payments with derived status and balance |
+| `/api/fee-ledger` | ADMIN, ACADEMICS | School-wide challan balance ledger |
 | `/api/fee-challans/:id` | ADMIN, ACADEMICS | Retrieve a saved challan |
 | `/api/salary-slips` | ADMIN, ACADEMICS | List salary slips |
 | `/api/salary-slips/preview` | ADMIN, ACADEMICS | Compute salary breakdown (review step) |

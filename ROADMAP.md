@@ -2,7 +2,7 @@
 
 Build order for reconciling and implementing the SRS (v5). Each phase unlocks the next — don't skip ahead, since later phases read data/patterns established earlier.
 
-**Status: Phases 0–9 implemented and verified, followed by a production reconciliation and reliability round. Admin provisioning, school settings, hardened admin self-recovery, certificate/fee-challan generation UIs, document template system, teacher attendance rework (Admin + Academics), Teacher Salary Slips, student admission optional fields, student archive ("Past Students") with partial unique indexes, session idle timeout, API error-shape coverage, and the Admin Dashboard Needs Attention section are implemented. The 20-migration chain is applied and up to date in production. See `API.md` for per-route status.**
+**Status: Phases 0–9 implemented and verified, followed by a production reconciliation and reliability round. The Fee Ledger with immutable challan-linked partial payments is the next active phase. See `API.md` for per-route status.**
 
 ## Phase 0 — Reconciliation ✅ Complete
 
@@ -138,6 +138,14 @@ Operational round on top of the completed product (SRS v10):
 - **Landing page accuracy**: Modules section now lists only real modules (Attendance, Teacher Attendance, Tests & Marks, Report Cards, Certificates, Fee Challan, Daily Agenda, Templates, Salary Slips) — dummy Assignments/Timetables/Announcements removed.
 - **Student archive ("Past Students")**: Students with historical records (attendance, marks, report cards, certificates, fee challans) cannot be hard-deleted — they are archived (`isActive: false`), preserving all linked data while freeing their Student ID / Roll Number for reuse by new students. Students with zero historical records can still be hard-deleted. Partial unique indexes on `studentId` and `(classSectionId, rollNumber)` scoped to active students only (raw SQL migration — Prisma `@unique` does not support `WHERE`). `DELETE /api/students/:id` returns `archived: true` or `deleted: true` so the UI can show the right message. `GET /api/students?status=PAST` for listing archived students. All active-workflow queries (attendance, marks, report cards, class rosters, dashboard counts) filter to `isActive: true`. UI has Active/Past Students tabs with archive/delete action per row and ConfirmDialog. Migration `20260824000000`.
 
+## Phase 10 — Fee Ledger with Partial Payments ✅ Complete
+
+- Added `FeeChallanPayment` as a separate append-only record linked to immutable challans.
+- Derive payment status and outstanding balance at read time; never store a redundant status field.
+- Added Admin/Academics payment history and recording controls to the Fee Challan flow, including loading feedback and color-plus-icon status badges.
+- Added the school-wide Admin/Academics Fee Ledger with class, student, date-range, and status filters.
+- Real Admin E2E evidence against Neon created a Rs. 12,000 challan with two line items, recorded Rs. 3,000 then Rs. 9,000, verified Pending → Partial (Rs. 9,000 balance) → Paid (Rs. 0 balance), confirmed two payment records in challan and student history, verified the Paid ledger row and Rs. 12,000 collected total, rejected an additional payment with `PAYMENT_EXCEEDS_BALANCE` (HTTP 400), and confirmed the challan total and two line items remained unchanged. Authenticated screenshots were captured for the Fee Challan payment history and school-wide ledger.
+
 ## Migration Reconciliation (Post-Phase 8)
 
 After Phase 8, the migration chain was found to be incomplete — the database schema had drifted from `schema.prisma`. Four reconciliation and maintenance migrations were added:
@@ -150,7 +158,7 @@ After Phase 8, the migration chain was found to be incomplete — the database s
 
 **Low-priority cleanup debt:** after a safe production window, a future migration can drop one of the duplicate Admin indexes following a fresh verification of the remaining constraint. Do not perform that cleanup during this reconciliation pass because the live invariant is actively protecting the single-Admin account.
 
-The full chain (now 20 migrations) was validated with `prisma migrate reset --force` from an empty database; production reports all 20 migrations applied and up to date. The reconciliation migration was already applied live and was added locally without replaying its DDL.
+The full chain (now 21 migrations) was validated with `prisma migrate reset --force` from an empty database; production reports all 21 migrations applied and up to date. The Fee Ledger migration was then deployed to Neon and `prisma migrate status` confirmed the database was up to date. The reconciliation migration was already applied live and was added locally without replaying its DDL.
 
 **Known pre-existing issues found during verification:**
 - `(print)` route group returned 404 in Next.js 16.3.1/Turbopack — fixed by renaming from route group `(print)` to literal directory `print`, making URLs resolve to `/print/certificates/[id]` etc.

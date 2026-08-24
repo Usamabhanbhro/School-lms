@@ -2,7 +2,7 @@
 
 Living document. Every API route must be added here when created — see `CONVENTIONS.md` and `AGENTS.md`.
 
-**Status: reconciled with SRS.md v9.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
+**Status: reconciled with SRS.md v11.** Three login roles: Admin, Academics, Teacher. No Student/Parent-facing endpoints.
 Phase 1–6 routes are implemented. Admin provisioning, school settings, admin self-recovery, and daily agenda routes added.
 
 ## Conventions Recap
@@ -378,7 +378,28 @@ NextAuth handler — login/logout/session. Credentials provider only.
 
 ### GET /api/fee-challans/:id
 **Role required:** Admin, Academics
-**Purpose:** Retrieve a saved challan (e.g. to reprint) — returns the full snapshot + line items, ready for the print view to render three copies (Bank/Student/School) client-side per the print stylesheet in DESIGN.md
+**Purpose:** Retrieve a saved challan (e.g. to reprint) — returns the full snapshot + line items plus the full payment history and derived paid total, remaining balance, and status, ready for the print view to render three copies (Bank/Student/School) client-side per the print stylesheet in DESIGN.md
+**Status:** implemented
+
+### GET /api/fee-challans/:id/payments
+**Role required:** Admin, Academics
+**Purpose:** List the complete payment history for one saved challan, newest first, with derived `paidTotal`, `balanceRemaining`, and `status` (`Pending` | `Partial` | `Paid`).
+**Response:** `{ data: { payments: [{ id, amount, paidAt, note, recordedByUser: { id, name } }], paidTotal, balanceRemaining, status } }`
+**Status:** implemented
+
+### POST /api/fee-challans/:id/payments
+**Role required:** Admin, Academics
+**Purpose:** Record a payment without modifying the immutable challan snapshot.
+**Request body:** `{ amount, paidAt, note? }`
+**Response (201):** `{ data: { payment, paidTotal, balanceRemaining, status } }`
+**Notes:** `amount` must be a positive integer, `paidAt` is an ISO date/time, `note` is optional, and the server rejects payments that exceed the remaining balance. Multiple payments per challan are supported.
+**Status:** implemented
+
+### GET /api/fee-ledger
+**Role required:** Admin, Academics
+**Purpose:** School-wide fee ledger showing all saved challans and their derived payment status/balance.
+**Query params:** `classSection` (optional text match), `studentId` (optional), `from` and `to` (optional issued-date range), `status` (`Pending` | `Partial` | `Paid`, optional)
+**Response:** `{ data: { rows: [{ challanId, studentId, studentName, classSection, issuedDate, total, paidTotal, balanceRemaining, status }], totals: { challans, total, paidTotal, balanceRemaining } } }`
 **Status:** implemented
 
 ---

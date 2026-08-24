@@ -1,6 +1,6 @@
 # School LMS — Software Requirements Specification (SRS)
 
-**Status: Draft v10 — student admission fields, teacher schedule + late auto-derivation, responsive logo, student archive ("Past Students") with partial unique indexes.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
+**Status: Draft v11 — adds the Fee Ledger with immutable challan-linked partial payments.** Three login roles: **Admin** (single account, the Principal), **Academics** (multiple accounts, delegated certificate/challan generation and attendance editing), and **Teacher** (multiple accounts). Students are data records, not accounts. No Parent access.
 
 ---
 
@@ -160,6 +160,8 @@ Admin (and Academics — see §1A) generate a fee challan by selecting a student
 **Fallback:** If no active template exists, the print view shows a clear message instead of rendering blank.
 
 Once saved, a challan is treated as an immutable historical record — regenerating for the same student creates a new challan rather than editing the old one. The template version used at generation time is recorded on the challan.
+
+**Fee Ledger and partial payments:** Every saved challan starts with a derived `Pending` status and balance equal to its total. Admin or Academics can record a payment against any saved challan with an amount, payment date, and optional note. Multiple payments are allowed over time. Payments are separate linked records and never modify the original challan snapshot. At read time, the server sums recorded payments and derives `Pending` when paid total is zero, `Partial` when paid total is greater than zero but below the challan total, and `Paid` when paid total equals the challan total. Overpayments are rejected. The challan detail/history view shows the full payment history, and the school-wide Fee Ledger lists derived balances with class, student, and issued-date filters.
 
 ### 1.10 Teacher Salary Slip
 

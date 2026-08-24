@@ -4,10 +4,15 @@ import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
   Banknote,
+  CheckCircle2,
+  Clock3,
+  CreditCard,
+  Loader2,
   Minus,
   Plus,
   Printer,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -17,6 +22,7 @@ import { StudentPicker } from "@/components/ui/student-picker";
 import type { StudentPickerStudent } from "@/components/ui/student-picker";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
+import { getApiErrorMessage } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 // ─── Types ──────────────────────────────────────────────────────
@@ -46,8 +52,26 @@ interface FeeChallan {
   total: number;
   issuedDate: string;
   lineItems: FeeChallanLineItem[];
+  payments: FeeChallanPayment[];
+  paidTotal: number;
+  balanceRemaining: number;
+  status: "Pending" | "Partial" | "Paid";
   createdAt: string;
 }
+
+interface FeeChallanPayment {
+  id: string;
+  amount: number;
+  paidAt: string;
+  note: string | null;
+  recordedByUser: { id: string; name: string };
+}
+
+const paymentStatusMeta = {
+  Pending: { variant: "neutral" as const, icon: Clock3 },
+  Partial: { variant: "primary" as const, icon: CreditCard },
+  Paid: { variant: "success" as const, icon: CheckCircle2 },
+};
 
 // ─── Component ──────────────────────────────────────────────────
 
@@ -66,6 +90,11 @@ export function FeeChallanGeneration() {
   ]);
   const [saving, setSaving] = useState(false);
   const [historyStudentId, setHistoryStudentId] = useState<string | null>(null);
+  const [paymentForChallanId, setPaymentForChallanId] = useState<string | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [paymentNote, setPaymentNote] = useState("");
+  const [recordingPayment, setRecordingPayment] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -96,12 +125,11 @@ export function FeeChallanGeneration() {
   const fetchChallanHistory = useCallback(async (studentId: string) => {
     try {
       const res = await fetch(`/api/students/${studentId}/fee-challans`);
-      if (res.ok) {
-        const json = await res.json();
-        setChallans(json.data ?? []);
-      }
-    } catch {
-      // Silently handle history fetch errors
+      const json = await res.json();
+      if (!res.ok) throw new Error(getApiErrorMessage(json, "Unable to load challan history."));
+      setChallans(json.data ?? []);
+    } catch (err) {
+      addToast("error", err instanceof Error ? err.message : "Unable to load challan history.");
     }
   }, []);
 
@@ -135,6 +163,38 @@ export function FeeChallanGeneration() {
         i === index ? { ...item, [field]: value } : item,
       ),
     );
+  }
+
+  async function handleRecordPayment(challan: FeeChallan) {
+    const amount = Number(paymentAmount);
+    if (!Number.isInteger(amount) || amount <= 0) {
+      addToast("error", "Enter a positive whole-number payment amount.");
+      return;
+    }
+    if (amount > challan.balanceRemaining) {
+      addToast("error", `Payment cannot exceed the remaining balance of Rs. ${challan.balanceRemaining.toLocaleString()}.`);
+      return;
+    }
+
+    setRecordingPayment(true);
+    try {
+      const response = await fetch(`/api/fee-challans/${challan.id}/payments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, paidAt: paymentDate, note: paymentNote.trim() || undefined }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(getApiErrorMessage(payload, "Unable to record payment."));
+      addToast("success", "Payment recorded successfully.");
+      setPaymentForChallanId(null);
+      setPaymentAmount("");
+      setPaymentNote("");
+      await fetchChallanHistory(historyStudentId ?? challan.studentId);
+    } catch (err) {
+      addToast("error", err instanceof Error ? err.message : "Unable to record payment.");
+    } finally {
+      setRecordingPayment(false);
+    }
   }
 
   async function handleSaveAndPrint() {
@@ -334,31 +394,102 @@ export function FeeChallanGeneration() {
               description="Generated challans will appear here for reprinting."
             />
           ) : (
-            <div className="space-y-2">
-              {challans.map((challan) => (
-                <Card key={challan.id} className="flex items-center justify-between px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{challan.studentNameSnapshot}</span>
-                      <span className="text-xs text-text/40">•</span>
-                      <span className="text-sm text-text/60">
-                        {challan.classSectionSnapshot}
-                      </span>
+            <div className="space-y-3">
+              {challans.map((challan) => {
+                const statusMeta = paymentStatusMeta[challan.status];
+                const StatusIcon = statusMeta.icon;
+                const isRecording = paymentForChallanId === challan.id;
+                return (
+                  <Card key={challan.id} className="p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{challan.studentNameSnapshot}</span>
+                          <span className="text-xs text-text/40">•</span>
+                          <span className="text-sm text-text/60">{challan.classSectionSnapshot}</span>
+                          <Badge variant={statusMeta.variant} icon={<StatusIcon className="size-3" aria-hidden="true" />}>
+                            {challan.status}
+                          </Badge>
+                        </div>
+                        <div className="mt-1 text-xs text-text/50">
+                          Issued {new Date(challan.issuedDate).toLocaleDateString()} · {challan.lineItems.length} items
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        onClick={() => window.open(`/print/fee-challans/${challan.id}`, "_blank")}
+                        title="Print challan"
+                      >
+                        <Printer className="size-3.5" aria-hidden="true" />
+                        Print
+                      </Button>
                     </div>
-                    <div className="mt-0.5 text-xs text-text/50">
-                      Rs. {challan.total.toLocaleString()} · {challan.lineItems.length} items ·{" "}
-                      {new Date(challan.issuedDate).toLocaleDateString()}
+
+                    <div className="mt-4 grid grid-cols-3 gap-2 border-y border-border py-3 text-sm">
+                      <div><div className="text-xs text-text/50">Total</div><div className="font-semibold tabular-nums">Rs. {challan.total.toLocaleString()}</div></div>
+                      <div><div className="text-xs text-text/50">Paid</div><div className="font-semibold tabular-nums text-success">Rs. {challan.paidTotal.toLocaleString()}</div></div>
+                      <div><div className="text-xs text-text/50">Balance</div><div className="font-semibold tabular-nums text-danger">Rs. {challan.balanceRemaining.toLocaleString()}</div></div>
                     </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    onClick={() => window.open(`/print/fee-challans/${challan.id}`, "_blank")}
-                    title="Print challan"
-                  >
-                    <Printer className="size-3.5" aria-hidden="true" />
-                  </Button>
-                </Card>
-              ))}
+
+                    <div className="mt-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-text/60">Payment history</h4>
+                        {challan.balanceRemaining > 0 && (
+                          <Button variant="secondary" className="h-8 text-xs" onClick={() => setPaymentForChallanId(isRecording ? null : challan.id)}>
+                            <CreditCard className="size-3.5" aria-hidden="true" />
+                            {isRecording ? "Cancel" : "Record Payment"}
+                          </Button>
+                        )}
+                      </div>
+                      {challan.payments.length === 0 ? (
+                        <p className="text-sm text-text/50">No payments recorded for this challan.</p>
+                      ) : (
+                        <div className="overflow-x-auto border border-border">
+                          <Table>
+                            <THead><TR><TH>Date</TH><TH>Note</TH><TH>Recorded by</TH><TH className="text-right">Amount</TH></TR></THead>
+                            <TBody>
+                              {challan.payments.map((payment) => (
+                                <TR key={payment.id}>
+                                  <TD className="tabular-nums">{new Date(payment.paidAt).toLocaleDateString()}</TD>
+                                  <TD>{payment.note || "—"}</TD>
+                                  <TD>{payment.recordedByUser.name}</TD>
+                                  <TD className="text-right font-medium tabular-nums">Rs. {payment.amount.toLocaleString()}</TD>
+                                </TR>
+                              ))}
+                            </TBody>
+                          </Table>
+                        </div>
+                      )}
+                    </div>
+
+                    {isRecording && (
+                      <div className="mt-4 border-t border-border pt-4">
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <label className="space-y-1 text-xs font-medium text-text/60">
+                            Amount (Rs.)
+                            <Input type="number" min={1} max={challan.balanceRemaining} value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} placeholder={String(challan.balanceRemaining)} />
+                          </label>
+                          <label className="space-y-1 text-xs font-medium text-text/60">
+                            Payment date
+                            <Input type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} />
+                          </label>
+                          <label className="space-y-1 text-xs font-medium text-text/60">
+                            Note (optional)
+                            <Input value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} placeholder="e.g. Bank transfer" maxLength={500} />
+                          </label>
+                        </div>
+                        <div className="mt-3 flex items-center gap-3">
+                          <Button onClick={() => handleRecordPayment(challan)} disabled={recordingPayment}>
+                            {recordingPayment ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <CreditCard className="size-3.5" aria-hidden="true" />}
+                            {recordingPayment ? "Recording…" : "Save Payment"}
+                          </Button>
+                          <span className="text-xs text-text/50">Remaining: Rs. {challan.balanceRemaining.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
             </div>
           )}
         </>

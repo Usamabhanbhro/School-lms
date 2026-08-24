@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { deriveFeePaymentSummary } from "@/lib/fee-ledger";
 import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
 
@@ -42,11 +43,29 @@ export async function GET(
       where: { studentId: id },
       include: {
         lineItems: true,
+        payments: {
+          orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
+          select: {
+            id: true,
+            amount: true,
+            paidAt: true,
+            note: true,
+            recordedByUser: { select: { id: true, name: true } },
+          },
+        },
       },
       orderBy: { issuedDate: "desc" },
     });
 
-    return NextResponse.json({ data: challans });
+    return NextResponse.json({
+      data: challans.map((challan) => ({
+        ...challan,
+        ...deriveFeePaymentSummary(
+          challan.total,
+          challan.payments.reduce((sum, payment) => sum + payment.amount, 0),
+        ),
+      })),
+    });
   } catch (error) {
     return handleError(error);
   }
