@@ -2,7 +2,7 @@
 
 Build order for reconciling and implementing the SRS (v5). Each phase unlocks the next — don't skip ahead, since later phases read data/patterns established earlier.
 
-**Status: Phases 0–10 implemented and verified, followed by regression fixes, backup export, scoped Global Search, and the completed design-system and future-date validation corrections. LMS-side licensing remains intentionally skipped. See `API.md` for per-route status.**
+**Status: Phases 0–15 implemented and verified. Phases 0–14 cover core features through future-date validation. Phase 15 is the first phase of a two-phase comprehensive motion pass (high-traffic screens). LMS-side licensing remains intentionally skipped. See `API.md` for per-route status.**
 
 ## Phase 0 — Reconciliation ✅ Complete
 
@@ -212,6 +212,29 @@ The full chain (now 21 migrations) was validated with `prisma migrate reset --fo
 - **Class Teacher reassignment invariant**: Production testing reproduced `P2002` from the full `(classSectionId, isActive)` unique index. Migration `20260824010000_fix_class_teacher_partial_unique` replaced it with the active-only partial index; reassignment, multi-history preservation, and restoration were verified against Neon.
 - **Reliability hardening**: Protected API handlers were probed for the standard `{ error: { message, code } }` shape; client surfaces now preserve specific API errors, reset loading state in `finally`, and expose an actionable zero-assignment Teacher Agenda empty state.
 - **Admin Dashboard Needs Attention**: `/admin/dashboard` now computes live operational signals from active records only and links each item to the relevant workflow. The section has an explicit all-clear state when no signal is present.
+
+## Phase 15 — Comprehensive Motion Pass (Phase 1 of 2) ✅ Complete
+
+First phase of a two-phase motion audit and refinement pass, covering the four highest-traffic screens: Login, Dashboard, Attendance (student + teacher), and Students.
+
+**Changes applied:**
+
+- **Login page entry animation**: Added `MountAnimation` wrapper (200ms ease-out fade-in + slide-up) to the login page, matching the existing dashboard mount transition pattern.
+- **Skeleton shimmer sweep**: Replaced generic `animate-pulse` with a left-to-right shimmer sweep (`shimmer` keyframe, 1600ms loop) across all Skeleton usages. The shimmer uses a subtle semi-transparent gradient rather than an opacity pulse, matching the DESIGN.md spec of "~1.4–1.8s loop". Verified on all four screens' loading states.
+- **Login button spinner**: Added `Loader2` spinner icon during form submission (previously only changed button text). Confirmed spinner resets on both success and error paths via `finally` block.
+- **Toast entrance animation**: Added `toast-slide-in` (200ms ease-out, `translateX(100%) → translateX(0)`) toasts so they slide in from the right rather than appearing instantly. Progress bar + dismiss button already existed and remain unchanged.
+- **Monthly totals panel slide**: Teacher attendance "Show Monthly Totals" panel now uses `dialog-scale-in` (200ms ease-out) when opening, matching the modal timing family.
+- **Status change flash**: Admin student attendance status badges now flash briefly (`status-flash`, 400ms ease-out) when a status is overridden via the optimistic update, using React `key` prop forcing re-render on status change.
+
+**Already present (confirmed, not changed):**
+- Dashboard mount animation via `MountAnimation` in layout — all four screens inherit this.
+- `ConfirmDialog` open/close transitions (`overlay-fade-in` 150ms + `dialog-scale-in` 200ms) — already applied to attendance lock and student archive/delete dialogs.
+- Table row hover states (`transition-colors duration-150 ease-out hover:bg-surface/60`) on `TR` component — already present across all tables.
+- Toast progress bar animation (`toast-progress` keyframe, 4000ms linear drain) — already present.
+- Button spinners (`Loader2 animate-spin`) on submit buttons in Attendance and Students — already present and correctly resetting on all paths.
+- `prefers-reduced-motion` global rule sets `animation-duration: 0.01ms` — all new animations inherit this automatically.
+
+**Phase 2 (follow-up):** Covers the remaining ~11 modules (Certificates, Fees, Templates, Report Cards, Tests, Settings, Salary Slips, Daily Agenda, Fee Ledger, Academics dashboard, Teacher dashboard). Not covered in this phase.
 
 ## Not in Any Phase (explicitly out of scope for SRS v5)
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,6 +99,7 @@ export function LoginForm() {
         ) : null}
 
         <Button type="submit" className="w-full" disabled={pending}>
+          {pending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
           {pending ? "Signing in…" : "Sign in"}
         </Button>
       </form>

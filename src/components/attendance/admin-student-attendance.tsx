@@ -305,6 +305,7 @@ export function AdminStudentAttendance({ readOnly = false }: { readOnly?: boolea
                     <TD className="text-text/60">{r.student.guardianName}</TD>
                     <TD className="text-center">
                       <span
+                        key={`${r.id}-${r.status}`}
                         className={cn(
                           "inline-flex items-center gap-1 border px-2 py-0.5 text-xs font-semibold",
                           r.status === "PRESENT"
@@ -313,6 +314,7 @@ export function AdminStudentAttendance({ readOnly = false }: { readOnly?: boolea
                               ? "border-danger/30 bg-danger/10 text-danger"
                               : "border-primary/30 bg-primary/10 text-primary",
                         )}
+                        style={{ animation: "status-flash 400ms ease-out both" }}
                       >
                         {r.status === "PRESENT" ? (
                           <CheckCircle2 className="size-3" aria-hidden="true" />

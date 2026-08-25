@@ -55,6 +55,7 @@ function ToastItem({
           ? "border-success/30 bg-success/10 text-success"
           : "border-danger/30 bg-danger/10 text-danger",
       )}
+      style={{ animation: "toast-slide-in 200ms ease-out both" }}
       role="status"
     >
       {/* Left accent bar */}

@@ -64,8 +64,53 @@ One icon library only: **Lucide** (thin stroke, geometric, pairs with the square
 | User menu dropdown | `opacity 0 translateY(-4px)` → `opacity 1 translateY(0)` | 150ms | ease-out |
 | Dashboard mount (sign-in transition) | `opacity 0 translateY(8px)` → `opacity 1 translateY(0)` | 200ms | ease-out |
 | Toast progress bar | `scaleX(1)` → `scaleX(0)` | 4000ms | linear |
+| Global search (mobile full-screen) | `opacity 0 translateY(8px)` → `opacity 1 translateY(0)` | 200ms | ease-out |
+| Global search (desktop dialog) | `scale(0.95) translateY(4px)` → `scale(1) translateY(0)` | 200ms | ease-out |
+| Skeleton shimmer sweep | `background-position: -200%` → `200%` | 1600ms | ease-in-out (infinite) |
+| Toast slide-in | `translateX(100%) opacity 0` → `translateX(0) opacity 1` | 200ms | ease-out |
+| Status badge change flash | `background-color: primary 15%` → `transparent` | 400ms | ease-out |
+| Collapsible panel open | `scale(0.95) translateY(4px)` → `scale(1) translateY(0)` | 200ms | ease-out |
 
 All animations respect `prefers-reduced-motion` via the global CSS rule that sets `animation-duration: 0.01ms` when reduced motion is preferred.
+
+## Motion Patterns
+
+### Skeleton shimmer
+
+Loading skeletons use a left-to-right shimmer sweep (`shimmer` keyframe, 1600ms loop) rather than a generic opacity pulse. The shimmer is a subtle semi-transparent gradient that moves across the skeleton shape. Skeletons must always match the shape of the real content they replace (table rows for tables, card blocks for cards).
+
+### Status change flash
+
+When a status badge changes value (e.g. attendance marking Present/Absent/Leave, or auto-Late derivation), apply a brief flash animation (`status-flash`, 400ms ease-out) to acknowledge the change. The badge's `key` prop should include the status value so React re-renders the element and replays the animation on each change. This is applied at the call site, not on the generic Badge component.
+
+### Panel/collapsible transitions
+
+Panels that toggle visibility (e.g. monthly attendance totals) use `dialog-scale-in` (200ms ease-out) when opening, matching the same timing family as modals and dialogs.
+
+## Overlay Patterns
+
+### Full-screen takeover (mobile)
+
+On narrow viewports (`< md`), overlays that require user input should **replace the current view entirely** — no scrim, no floating box, no competing z-index layers. Structure:
+
+- `fixed inset-0 z-50 flex flex-col bg-bg` — fills the full screen with the app background
+- Pinned header bar at top (search input + back/close action)
+- Scrollable content area fills remaining space via `flex-1 overflow-y-auto`
+- Slide-in animation: `global-search-slide-in` (200ms ease-out, `translateY(8px)` → `translateY(0)`)
+
+This eliminates sidebar-drawer overlap entirely — there's no competing layered UI.
+
+### Centered overlay dialog (desktop)
+
+On wider viewports (`md+`), use a semi-transparent backdrop + centered fixed-width panel:
+
+- Backdrop: `fixed inset-0 z-50 bg-black/30` with `overlay-fade-in` (150ms)
+- Panel: `max-w-2xl` centered with `dialog-scale-in` (200ms ease-out)
+- Dismiss on backdrop click or Escape key
+
+### Empty state sizing
+
+Pre-search and empty-result states must **shrink to fit their content** — no fixed minimum heights or excessive padding. Use `py-4` for compact hint states, not `py-8` which creates a large blank box.
 
 ## Layout
 

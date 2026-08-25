@@ -335,7 +335,10 @@ export function AdminTeacherAttendance() {
 
       {/* Monthly totals panel */}
       {showMonthly && (
-        <Card className="mb-6 p-4">
+        <Card
+          className="mb-6 p-4"
+          style={{ animation: "dialog-scale-in 200ms ease-out both" }}
+        >
           <div className="mb-3 flex flex-wrap items-end gap-4">
             <h3 className="text-sm font-semibold">Monthly Attendance Summary</h3>
             <div>

@@ -138,6 +138,34 @@ textarea {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ─── Global search: mobile full-screen slide-in ───────────────── */
+@keyframes global-search-slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Skeleton shimmer sweep (left-to-right) ──────────────────── */
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+
+/* ─── Toast entrance/exit ────────────────────────────────────── */
+@keyframes toast-slide-in {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes toast-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* ─── Status badge change flash ──────────────────────────────── */
+@keyframes status-flash {
+  0% { background-color: var(--color-primary); opacity: 0.15; }
+  100% { background-color: transparent; opacity: 0; }
+}
+
 /* ─── Print stylesheet (Phase 6) ──────────────────────────────────── */
 @media print {
   /* Hide all screen-only chrome */

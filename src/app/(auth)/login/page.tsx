@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { MountAnimation } from "@/components/ui/mount-animation";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = {
@@ -8,8 +9,10 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <Suspense>
-      <LoginForm />
-    </Suspense>
+    <MountAnimation>
+      <Suspense>
+        <LoginForm />
+      </Suspense>
+    </MountAnimation>
   );
 }
