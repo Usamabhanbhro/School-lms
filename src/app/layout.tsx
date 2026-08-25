@@ -22,7 +22,13 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s · ${schoolName}`,
     },
     description:
-      "Attendance, gradebooks, assignments, timetables, and communication for schools — built for admin, teacher, student, and parent roles.",
+      "Attendance, gradebooks, certificates, fee challans, and salary slips — a web-based school management system for Admin, Academics, and Teacher roles.",
+    robots: {
+      index: false,
+      follow: false,
+      noarchive: true,
+      nosnippet: true,
+    },
   };
 }
 
@@ -30,6 +36,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={inter.variable}>
       <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#2563EB" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

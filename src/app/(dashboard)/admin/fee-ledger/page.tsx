@@ -5,7 +5,7 @@ import { FeeLedger } from "@/components/fees/fee-ledger";
 import { authOptions } from "@/lib/auth";
 
 export const metadata = {
-  title: "Fee Ledger · School LMS",
+  title: "Fee Ledger",
 };
 
 export default async function FeeLedgerPage() {

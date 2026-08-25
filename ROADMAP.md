@@ -2,7 +2,7 @@
 
 Build order for reconciling and implementing the SRS (v5). Each phase unlocks the next — don't skip ahead, since later phases read data/patterns established earlier.
 
-**Status: Phases 0–15 implemented and verified. Phases 0–14 cover core features through future-date validation. Phase 15 is the first phase of a two-phase comprehensive motion pass (high-traffic screens). LMS-side licensing remains intentionally skipped. See `API.md` for per-route status.**
+**Status: Phases 0–16 implemented and verified. Phases 0–14 cover core features through future-date validation. Phase 15 is the first phase of a two-phase comprehensive motion pass (high-traffic screens). Phase 16 is the production housekeeping pass. LMS-side licensing remains intentionally skipped. See `API.md` for per-route status.**
 
 ## Phase 0 — Reconciliation ✅ Complete
 
@@ -212,6 +212,22 @@ The full chain (now 21 migrations) was validated with `prisma migrate reset --fo
 - **Class Teacher reassignment invariant**: Production testing reproduced `P2002` from the full `(classSectionId, isActive)` unique index. Migration `20260824010000_fix_class_teacher_partial_unique` replaced it with the active-only partial index; reassignment, multi-history preservation, and restoration were verified against Neon.
 - **Reliability hardening**: Protected API handlers were probed for the standard `{ error: { message, code } }` shape; client surfaces now preserve specific API errors, reset loading state in `finally`, and expose an actionable zero-assignment Teacher Agenda empty state.
 - **Admin Dashboard Needs Attention**: `/admin/dashboard` now computes live operational signals from active records only and links each item to the relevant workflow. The section has an explicit all-clear state when no signal is present.
+
+## Phase 16 — Production Housekeeping Pass ✅ Complete
+
+Comprehensive housekeeping pass covering nine categories of deferred maintenance:
+
+1. **Favicon + PWA-lite**: Added `public/favicon.svg` (blue square with graduation cap icon matching DESIGN.md primary `#2563EB`), `public/manifest.json` (app name, standalone display, theme color, SVG icon), and `public/robots.txt` (disallow all). Root layout updated with `<link rel="icon">`, `<link rel="manifest">`, and `<meta name="theme-color">`. No multi-resolution ICO/PNG generated — SVG as the sole format is supported by all modern browsers and avoids the complexity of generating multiple raster sizes from an uploaded school crest.
+2. **Full noindex**: Added `robots: { index: false, follow: false, noarchive: true, nosnippet: true }` to root layout metadata exports (covers all pages). Created `public/robots.txt` with `Disallow: /`. Description also updated to reflect actual feature set.
+3. **Page titles**: Audited all 26 page routes. Fixed double school-name bug on `/admin/fee-ledger` — its metadata title was `"Fee Ledger · School LMS"` which, combined with the root layout's `%s · SchoolName` template, produced `"Fee Ledger · School LMS · School LMS"`. Changed to `"Fee Ledger"`. Fixed duplicate `import type { Metadata }` and duplicate `export const metadata` in `admin/dashboard/page.tsx`.
+4. **Styled 404 + error pages**: Confirmed `not-found.tsx` and `error.tsx` already render custom, on-brand pages (square corners, design tokens, Lucide icon, clear navigation link to `/dashboard`). No default Next.js pages. No changes needed.
+5. **Login brute-force protection**: Added `src/middleware.ts` rate-limiting POST to `/api/auth/callback/credentials` (NextAuth's internal login endpoint) — 5 attempts per 15 minutes per IP, matching the existing pattern in `lib/rate-limit.ts`. Added `login` entry to `PUBLIC_ENDPOINT_LIMITS` for documentation consistency. Returns HTTP 429 `{ error: { message, code: "RATE_LIMITED" } }` on lockout.
+6. **Global Search debounce**: Confirmed `global-search.tsx` uses a 220ms `window.setTimeout` debounce with `AbortController` cancellation before firing the fetch. Already correctly wired — no fix needed.
+7. **Debug artifacts sweep**: Searched all source files for `console.log`, `console.debug`, `console.warn`, `console.info`. Found only `console.error` calls in catch blocks (appropriate for serverless error logging). No `console.log` debug statements, no commented-out debug code, no hardcoded test credentials or API keys anywhere in `src/`.
+8. **example.env + dependency audit**: `example.env` already existed (missing `BLOB_READ_WRITE_TOKEN`). Added the missing variable with a description. `bun audit` found 36 vulnerabilities (1 critical, 16 high, 15 moderate, 4 low) — all in transitive dependencies of `vercel` (local dev CLI) and `prisma` (dev tooling). The critical `tar@7.5.7` vulnerability (advisory: pre-7.5.8) is a transitive dep of `@vercel/fun` (local dev serverless function manager) and `@mapbox/node-pre-gyp` (native binary installer). Neither is executed during production Vercel builds (`prisma generate && next build`) or runtime — `@vercel/fun` only runs during `vercel dev` and `node-pre-gyp` is inert for pure-JS projects. Genuinely inert in production. Fixable when upstream releases patched versions; `bun update` can be run periodically to track.
+9. **Security headers + login rate-limit documentation**: Added to `next.config.ts` via `async headers()`: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-XSS-Protection: 0` (modern recommendation — browser XSS Auditor is deprecated), `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
+
+**Verification:** `bun tsc -b --noEmit` passes cleanly after all changes.
 
 ## Phase 15 — Comprehensive Motion Pass (Phase 1 of 2) ✅ Complete
 

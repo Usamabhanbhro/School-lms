@@ -76,4 +76,6 @@ export const PUBLIC_ENDPOINT_LIMITS = {
   adminRecover: { limit: 5, windowMs: 15 * 60 * 1000 },
   /** Admin recovery code generation: 3 attempts per 15 minutes per IP */
   adminRecoverCode: { limit: 3, windowMs: 15 * 60 * 1000 },
+  /** Login (all roles): 5 attempts per 15 minutes per IP */
+  login: { limit: 5, windowMs: 15 * 60 * 1000 },
 } as const;

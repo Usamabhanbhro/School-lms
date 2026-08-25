@@ -23,7 +23,7 @@ import { NeedsAttention, needsAttentionIcons, type NeedsAttentionItem } from "@/
 import { getTodayLocal } from "@/lib/timezone";
 
 export const metadata: Metadata = {
-  title: "Dashboard — Admin",
+  title: "Dashboard",
 };
 
 /**

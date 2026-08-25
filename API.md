@@ -575,6 +575,30 @@ This phase introduces no new endpoint or response contract. Existing routes reta
 
 ---
 
+## Rate Limiting
+
+All public (unauthenticated) endpoints have in-memory rate limiting. The login endpoint is protected via Next.js middleware; admin signup and recovery endpoints are protected in their route handlers.
+
+### POST /api/auth/callback/credentials (login)
+**Rate limit:** 5 attempts per 15 minutes per IP
+**Mechanism:** `src/middleware.ts` intercepts POST to this internal NextAuth endpoint
+**Response on limit exceeded:** HTTP 429 `{ error: { message: "Too many login attempts. Please try again later.", code: "RATE_LIMITED" } }`
+**Known limitation:** Counters are per serverless function instance. Vercel's scaling for this project (single school deployment, low user volume) means multiple concurrent instances rarely exist under normal load. Under a sustained brute-force attack, separate instances could each serve their own 5-attempt window, effectively raising the limit. Mitigations for a higher-threat model: move rate-limit state to a shared store (Redis / Vercel KV), or use an external WAF / Cloudflare rate-limiting rule at the edge. This is documented as a known limitation, not an immediate fix — see ARCHITECTURE.md constraints.
+
+### POST /api/admin/signup
+**Rate limit:** 3 attempts per 15 minutes per IP
+**Mechanism:** In-memory in route handler (`lib/rate-limit.ts`)
+
+### POST /api/admin/recover
+**Rate limit:** 5 attempts per 15 minutes per IP
+**Mechanism:** In-memory in route handler (`lib/rate-limit.ts`)
+
+### POST /api/admin/recover/code
+**Rate limit:** 3 attempts per 15 minutes per IP
+**Mechanism:** In-memory in route handler (`lib/rate-limit.ts`)
+
+---
+
 ## Not Yet Scoped
 
 
