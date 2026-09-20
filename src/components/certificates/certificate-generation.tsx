@@ -158,7 +158,7 @@ export function CertificateGeneration() {
                   type="button"
                   onClick={() => setCertType(t)}
                   className={cn(
-                    "flex-1 border px-4 py-2.5 text-sm font-medium transition-colors",
+                    "flex-1 border px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
                     certType === t
                       ? "border-primary bg-primary text-white"
                       : "border-border bg-bg text-text/70 hover:bg-surface",

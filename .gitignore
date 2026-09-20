@@ -16,3 +16,4 @@
 *.tsbuildinfo
 .DS_Store
 public/uploads/
+.audit-screenshots/

@@ -21,3 +21,43 @@ export function Skeleton({ className }: { className?: string }) {
     />
   );
 }
+
+/**
+ * Table loading skeleton that renders a header bar and ruled rows,
+ * matching real ledger/table layouts and avoiding jarring layout shift.
+ */
+export function TableSkeleton({
+  rows = 5,
+  columns = 4,
+  className,
+}: {
+  rows?: number;
+  columns?: number;
+  className?: string;
+}) {
+  return (
+    <div className={cn("border border-border bg-bg overflow-hidden", className)}>
+      <div className="border-b border-border bg-surface px-4 py-3 flex items-center gap-4">
+        {Array.from({ length: columns }).map((_, i) => (
+          <Skeleton key={i} className="h-4 flex-1 max-w-[140px]" />
+        ))}
+      </div>
+      <div className="divide-y divide-border">
+        {Array.from({ length: rows }).map((_, r) => (
+          <div key={r} className="px-4 py-3.5 flex items-center gap-4">
+            {Array.from({ length: columns }).map((_, c) => (
+              <Skeleton
+                key={c}
+                className={cn(
+                  "h-4 flex-1",
+                  c === 0 ? "max-w-[180px]" : c === columns - 1 ? "max-w-[80px]" : "max-w-[120px]",
+                )}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+

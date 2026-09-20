@@ -32,8 +32,9 @@ export function NeedsAttention({ items }: { items: NeedsAttentionItem[] }) {
           </p>
         </div>
         {items.length > 0 && (
-          <span className="border border-danger/30 bg-danger/5 px-2 py-1 text-xs font-semibold tabular-nums text-danger" aria-label={`${items.length} items need attention`}>
-            {items.length} {items.length === 1 ? "item" : "items"}
+          <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border border-danger/30 bg-danger/5 px-2 py-1 text-xs font-semibold tabular-nums text-danger" aria-label={`${items.length} items need attention`}>
+            <AlertTriangle className="size-3" aria-hidden="true" />
+            <span>{items.length} {items.length === 1 ? "item" : "items"}</span>
           </span>
         )}
       </div>

@@ -1,17 +1,6 @@
 "use client";
 
-/**
- * TemplateRenderer — Shared print view for document types.
- *
- * Fetches the active template (or document-specific snapshot),
- * renders the background image, and absolutely positions text fields
- * and table regions at saved percentage coordinates.
- *
- * Used by:
- * - Certificate print view
- * - Report Card print view
- * - Fee Challan print view
- */
+import { FileQuestion } from "lucide-react";
 
 interface TemplateField {
   id: string;
@@ -259,25 +248,16 @@ export function TemplateRenderer({
  */
 export function NoTemplateFallback({ documentType }: { documentType: string }) {
   return (
-    <div className="flex h-64 items-center justify-center border border-dashed border-zinc-300 bg-zinc-50">
+    <div className="flex h-64 items-center justify-center border border-dashed border-border bg-surface">
       <div className="text-center">
-        <svg
-          className="mx-auto h-12 w-12 text-zinc-400"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={1}
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-          />
-        </svg>
-        <p className="mt-2 text-sm text-zinc-600">
+        <FileQuestion
+          className="mx-auto size-10 text-text/40"
+          aria-hidden="true"
+        />
+        <p className="mt-2 text-sm text-text/70">
           No template configured — ask your Admin to upload one in Settings.
         </p>
-        <p className="mt-1 text-xs text-zinc-400">
+        <p className="mt-1 text-xs text-text/50">
           Document type: {documentType.replace(/_/g, " ")}
         </p>
       </div>

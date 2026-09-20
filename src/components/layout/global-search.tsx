@@ -163,7 +163,8 @@ export function GlobalSearch() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search students, teachers, classes…"
-                className="h-10 min-w-0 flex-1 bg-transparent text-sm text-text outline-none placeholder:text-text/40"
+                className="h-10 min-w-0 flex-1 bg-transparent text-sm text-text placeholder:text-text/40"
+                style={{ outline: "none" }}
                 aria-label="Search school data"
                 autoComplete="off"
               />
@@ -223,7 +224,7 @@ export function GlobalSearch() {
             }}
           >
             <section
-              className="w-full max-w-2xl border border-border bg-bg shadow-lg"
+              className="w-full max-w-2xl border border-border bg-bg"
               style={{ animation: "dialog-scale-in 200ms ease-out both" }}
               role="dialog"
               aria-modal="true"
@@ -236,7 +237,8 @@ export function GlobalSearch() {
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Search students, teachers, classes, subjects, fees, and tests…"
-                  className="h-14 min-w-0 flex-1 bg-transparent text-sm text-text outline-none placeholder:text-text/40"
+                  className="h-14 min-w-0 flex-1 bg-transparent text-sm text-text placeholder:text-text/40"
+                  style={{ outline: "none" }}
                   aria-label="Search school data"
                   autoComplete="off"
                   ref={inputRef}

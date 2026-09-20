@@ -151,7 +151,7 @@ export default async function HomePage() {
               Role-based access control at every API boundary — each role sees exactly its
               navigation and nothing else.
             </p>
-            <div className="mt-8 grid gap-px border border-border bg-border sm:grid-cols-2">
+            <div className="mt-8 grid gap-px border border-border bg-border sm:grid-cols-3">
               {roles.map(({ icon: Icon, name, body }) => (
                 <div key={name} className="flex flex-col gap-4 bg-bg p-6">
                   <Icon className="size-5 text-text/60" aria-hidden="true" />

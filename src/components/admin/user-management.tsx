@@ -12,6 +12,7 @@ import {
   UserPlus,
   XCircle,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -19,7 +20,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { PageHeader } from "@/components/ui/page-header";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import {
   Table,
   THead,
@@ -795,11 +796,7 @@ export function UserManagement() {
       {view === "list" && (
         <>
           {loading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-14 w-full" />
-              ))}
-            </div>
+            <TableSkeleton rows={5} columns={6} />
           ) : error ? (
             <EmptyState
               icon={AlertTriangle}
@@ -845,16 +842,18 @@ export function UserManagement() {
                         <TD className="tabular-nums">{u.phone}</TD>
                         <TD>{u.email ?? "—"}</TD>
                         <TD>
-                          <span
-                            className={cn(
-                              "inline-flex items-center gap-1 border px-2 py-0.5 text-xs font-medium",
-                              u.user.isActive
-                                ? "border-success/30 bg-success/10 text-success"
-                                : "border-danger/30 bg-danger/10 text-danger",
-                            )}
+                          <Badge
+                            variant={u.user.isActive ? "success" : "danger"}
+                            icon={
+                              u.user.isActive ? (
+                                <CheckCircle2 className="size-3" aria-hidden="true" />
+                              ) : (
+                                <XCircle className="size-3" aria-hidden="true" />
+                              )
+                            }
                           >
                             {u.user.isActive ? "Active" : "Inactive"}
-                          </span>
+                          </Badge>
                         </TD>
                         <TD>
                           <div className="flex gap-1">

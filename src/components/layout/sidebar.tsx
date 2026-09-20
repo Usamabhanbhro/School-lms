@@ -160,7 +160,7 @@ export function Sidebar({
       {(role === "ADMIN" || role === "ACADEMICS") && <GlobalSearch />}
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3" aria-label="Main navigation">
+      <nav className="flex-1 min-h-0 space-y-0.5 overflow-y-auto px-2 py-3" aria-label="Main navigation">
         {/* Dashboard link */}
         <Link
           href={home}
@@ -201,7 +201,7 @@ export function Sidebar({
       </nav>
 
       {/* Footer: credit + user menu */}
-      <div className="border-t border-border">
+      <div className="shrink-0 border-t border-border">
         {/* User menu */}
         <div className="relative px-2 pt-2">
           <button
@@ -224,7 +224,7 @@ export function Sidebar({
                 className="fixed inset-0 z-40"
                 onClick={() => setUserMenuOpen(false)}
               />
-              <div className="absolute bottom-full left-2 right-2 z-50 mb-1 border border-border bg-bg shadow-sm" style={{ animation: "dropdown-fade-in 150ms ease-out both" }}>
+              <div className="absolute bottom-full left-2 right-2 z-50 mb-1 border border-border bg-bg" style={{ animation: "dropdown-fade-in 150ms ease-out both" }}>
                 <button
                   type="button"
                   onClick={handleSignOut}
@@ -250,7 +250,7 @@ export function Sidebar({
     <>
       {/* ─── Mobile header ─────────────────────────────────────── */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-bg px-4 py-3 md:hidden">
-        <Link href={home} className="flex items-center gap-2 text-sm font-semibold">
+        <Link href={home} className="flex min-w-0 items-center gap-2 text-sm font-semibold">
           <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden">
             {logoPath ? (
               <img src={logoPath} alt={`${schoolName ?? "School"} logo`} className="size-10 object-contain" />
@@ -258,7 +258,7 @@ export function Sidebar({
               <GraduationCap className="size-6" aria-hidden="true" />
             )}
           </span>
-          {schoolName || "School LMS"}
+          <span className="truncate">{schoolName || "School LMS"}</span>
         </Link>
         <button
           type="button"

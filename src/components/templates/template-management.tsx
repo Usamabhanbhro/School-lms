@@ -8,6 +8,22 @@ import { ErrorState } from "@/components/ui/error-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  AlertTriangle,
+  Bold,
+  CheckCircle2,
+  Italic,
+  Loader2,
+  Plus,
+  Redo2,
+  Save,
+  Trash2,
+  Underline,
+  Undo2,
+  Upload,
+  X,
+} from "lucide-react";
 
 const TEMPLATE_TYPES = [
   {
@@ -250,10 +266,22 @@ export function TemplateManagement() {
     return (
       <div>
         <PageHeader title="Document Templates" description="Manage print templates for certificates, report cards, and fee challans" />
-        <div className="space-y-4 p-6">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
+        <div className="space-y-6 p-6">
+          {TEMPLATE_TYPES.map((t) => (
+            <div key={t.value} className="border border-border bg-bg">
+              <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-5 w-24" />
+                </div>
+                <Skeleton className="h-8 w-32" />
+              </div>
+              <div className="flex flex-col items-center justify-center gap-2 p-8 text-center">
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-3 w-80 max-w-full" />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -302,27 +330,33 @@ export function TemplateManagement() {
                     {typeInfo.label}
                   </h3>
                   {activeTemplate ? (
-                    <Badge variant="success">Active</Badge>
+                    <Badge variant="success" icon={<CheckCircle2 className="size-3" aria-hidden="true" />}>
+                      Active
+                    </Badge>
                   ) : (
-                    <Badge variant="danger">No active template</Badge>
+                    <Badge variant="neutral" icon={<AlertTriangle className="size-3" aria-hidden="true" />}>
+                      No active template
+                    </Badge>
                   )}
                 </div>
-                <button
+                <Button
+                  size="sm"
+                  variant="secondary"
                   onClick={() => triggerUpload(typeInfo.value)}
                   disabled={uploading}
-                  className="inline-flex items-center gap-1.5 border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
                 >
                   {uploading && uploadingType === typeInfo.value ? (
-                    "Uploading..."
+                    <>
+                      <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                      Uploading...
+                    </>
                   ) : (
                     <>
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                      </svg>
+                      <Upload className="size-3.5" aria-hidden="true" />
                       Upload Template
                     </>
                   )}
-                </button>
+                </Button>
               </div>
 
               {/* Template list */}
@@ -361,9 +395,13 @@ export function TemplateManagement() {
                                 {new Date(template.createdAt).toLocaleDateString()}
                               </span>
                               {template.isActive && (
-                                <span className="inline-flex items-center rounded bg-success/10 px-1.5 py-0.5 text-[10px] font-medium text-success">
+                                <Badge
+                                  variant="success"
+                                  icon={<CheckCircle2 className="size-2.5" aria-hidden="true" />}
+                                  className="text-[10px] py-0 px-1.5"
+                                >
                                   ACTIVE
-                                </span>
+                                </Badge>
                               )}
                             </div>
                             <p className="text-xs text-text/60">
@@ -375,26 +413,29 @@ export function TemplateManagement() {
                         </div>
 
                         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-                          <button
+                          <Button
+                            size="xs"
+                            variant="secondary"
                             onClick={() => setEditingTemplate(template)}
-                            className="border border-border bg-bg px-2.5 py-1 text-xs font-medium text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                           >
                             Edit Fields
-                          </button>
+                          </Button>
                           {!template.isActive && (
-                            <button
+                            <Button
+                              size="xs"
+                              variant="secondary"
                               onClick={() => handleActivate(template)}
-                              className="border border-border bg-bg px-2.5 py-1 text-xs font-medium text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                             >
                               Activate
-                            </button>
+                            </Button>
                           )}
-                          <button
+                          <Button
+                            size="xs"
+                            variant="danger"
                             onClick={() => setDeleteTarget(template)}
-                            className="border border-danger/30 bg-bg px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
                           >
                             Delete
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     );
@@ -922,8 +963,17 @@ function TemplateEditor({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex bg-black/50">
-      <div className="flex h-full w-full flex-col bg-bg">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      style={{ animation: "overlay-fade-in 150ms ease-out both" }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Edit Fields — ${templateTypeConfig.label}`}
+    >
+      <div
+        className="flex h-full w-full flex-col bg-bg"
+        style={{ animation: "dialog-scale-in 200ms ease-out both" }}
+      >
         {/* Editor toolbar */}
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-2">
           <div>
@@ -936,25 +986,32 @@ function TemplateEditor({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {/* Undo/Redo */}
-            <div className="flex items-center border border-border">
+            <div className="flex items-center border border-border bg-bg">
               <button
+                type="button"
                 onClick={undo}
                 disabled={historyIndex <= 0}
-                className="px-2 py-1 text-xs text-text/60 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:text-text/30 disabled:cursor-not-allowed border-r border-border"
-                title="Undo"
+                className="flex size-8 items-center justify-center border-r border-border text-text/60 transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:text-text/30"
+                title="Undo (Ctrl+Z)"
+                aria-label="Undo"
               >
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 10h10a5 5 0 015 5v2M3 10l5 5M3 10l5-5"/></svg>
+                <Undo2 className="size-3.5" aria-hidden="true" />
               </button>
               <button
+                type="button"
                 onClick={redo}
                 disabled={historyIndex >= history.length - 1}
-                className="px-2 py-1 text-xs text-text/60 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:text-text/30 disabled:cursor-not-allowed"
-                title="Redo"
+                className="flex size-8 items-center justify-center text-text/60 transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:text-text/30"
+                title="Redo (Ctrl+Y)"
+                aria-label="Redo"
               >
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10H11a5 5 0 00-5 5v2M21 10l-5 5M21 10l-5-5"/></svg>
+                <Redo2 className="size-3.5" aria-hidden="true" />
               </button>
             </div>
-            <button
+            <Button
+              size="sm"
+              variant="secondary"
+              type="button"
               onClick={() => {
                 const newText: EditorStaticText = {
                   content: "New Label",
@@ -972,31 +1029,48 @@ function TemplateEditor({
                 };
                 setStaticTexts((prev) => [...prev, newText]);
               }}
-              className="border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
-              + Add Text Label
-            </button>
+              <Plus className="size-3.5" aria-hidden="true" />
+              Add Text Label
+            </Button>
             {templateTypeConfig.hasTableRegion && (
-              <button
+              <Button
+                size="sm"
+                variant="secondary"
+                type="button"
                 onClick={addTableRegion}
-                className="border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
-                + Add Table Region
-              </button>
+                <Plus className="size-3.5" aria-hidden="true" />
+                Add Table Region
+              </Button>
             )}
-            <button
+            <Button
+              size="sm"
+              variant="secondary"
+              type="button"
               onClick={onClose}
-              className="border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              type="button"
               onClick={handleSave}
               disabled={saving}
-              className="bg-text px-3 py-1.5 text-xs font-medium text-bg hover:bg-text/90 disabled:opacity-50"
             >
-              {saving ? "Saving..." : "Save Positions"}
-            </button>
+              {saving ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="size-3.5" aria-hidden="true" />
+                  Save Positions
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
@@ -1005,7 +1079,7 @@ function TemplateEditor({
           <div className="flex-1 overflow-auto bg-surface p-8">
             <div
               ref={canvasRef}
-              className="relative mx-auto bg-bg shadow-sm border border-border"
+              className="relative mx-auto bg-bg border border-border"
               style={{ width: "700px", height: "990px", aspectRatio: "210/297" }}
               onClick={handleCanvasClick}
               onPointerMove={(e) => {
@@ -1267,19 +1341,22 @@ function TemplateEditor({
                         </span>
                         <div className="flex items-center gap-1">
                           <button
+                            type="button"
                             onClick={() => addDuplicateField(i)}
-                            className="text-[10px] text-primary hover:text-primary"
+                            className="inline-flex items-center gap-0.5 text-[10px] font-medium text-primary hover:underline focus-visible:outline-none"
                             title="Add another position for this field"
                           >
-                            + Position
+                            <Plus className="size-2.5" aria-hidden="true" /> Position
                           </button>
                           {count > 1 && (
                             <button
+                              type="button"
                               onClick={() => removeField(i)}
-                              className="text-[10px] text-danger hover:text-danger"
+                              className="p-0.5 text-danger hover:bg-danger/10 focus-visible:outline-none"
                               title="Remove this position"
+                              aria-label="Remove this position"
                             >
-                              ×
+                              <X className="size-3" aria-hidden="true" />
                             </button>
                           )}
                         </div>
@@ -1293,7 +1370,7 @@ function TemplateEditor({
                         onChange={(e) =>
                           updateField(i, "xPercent", parseFloat(e.target.value) || 0)
                         }
-                        className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
+                        className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 font-mono text-[11px] tabular-nums transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                         min={0}
                         max={100}
                         step={0.5}
@@ -1307,7 +1384,7 @@ function TemplateEditor({
                         onChange={(e) =>
                           updateField(i, "yPercent", parseFloat(e.target.value) || 0)
                         }
-                        className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
+                        className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 font-mono text-[11px] tabular-nums transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                         min={0}
                         max={100}
                         step={0.5}
@@ -1322,7 +1399,7 @@ function TemplateEditor({
                         onChange={(e) =>
                           updateField(i, "widthPercent", e.target.value === "" ? null : parseFloat(e.target.value) || null)
                         }
-                        className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
+                        className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 font-mono text-[11px] tabular-nums transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                         min={2}
                         max={80}
                         step={0.5}
@@ -1337,7 +1414,7 @@ function TemplateEditor({
                         onChange={(e) =>
                           updateField(i, "heightPercent", e.target.value === "" ? null : parseFloat(e.target.value) || null)
                         }
-                        className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
+                        className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 font-mono text-[11px] tabular-nums transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                         min={1}
                         max={50}
                         step={0.5}
@@ -1351,7 +1428,7 @@ function TemplateEditor({
                         onChange={(e) =>
                           updateField(i, "fontSize", parseInt(e.target.value) || 12)
                         }
-                        className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
+                        className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 font-mono text-[11px] tabular-nums transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                         min={6}
                         max={72}
                       />
@@ -1361,7 +1438,7 @@ function TemplateEditor({
                       <select
                         value={field.textAlign}
                         onChange={(e) => updateField(i, "textAlign", e.target.value)}
-                        className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px]"
+                        className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 text-[11px] transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                       >
                         <option value="left">Left</option>
                         <option value="center">Center</option>
@@ -1376,7 +1453,7 @@ function TemplateEditor({
                       <select
                         value={field.fontFamily}
                         onChange={(e) => updateField(i, "fontFamily", e.target.value)}
-                        className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px]"
+                        className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 text-[11px] transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                       >
                         <option value="">Default</option>
                         <option value="Inter, sans-serif">Inter (Sans)</option>
@@ -1395,7 +1472,7 @@ function TemplateEditor({
                         type="color"
                         value={field.fontColor || "#000000"}
                         onChange={(e) => updateField(i, "fontColor", e.target.value)}
-                        className="mt-0.5 block h-5 w-full border border-border px-0.5 py-0"
+                        className="mt-0.5 block h-5 w-full cursor-pointer border border-border bg-bg px-0.5 py-0 transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                       />
                     </label>
                   </div>
@@ -1404,26 +1481,29 @@ function TemplateEditor({
                     <button
                       type="button"
                       onClick={() => updateField(i, "fontWeight", field.fontWeight === "bold" ? "" : "bold")}
-                      className={`border px-1.5 py-0.5 text-[11px] font-bold ${field.fontWeight === "bold" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
+                      className={`flex size-6 items-center justify-center border text-[11px] font-bold transition-colors ${field.fontWeight === "bold" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
                       title="Bold"
+                      aria-label="Bold"
                     >
-                      B
+                      <Bold className="size-3" aria-hidden="true" />
                     </button>
                     <button
                       type="button"
                       onClick={() => updateField(i, "fontStyle", field.fontStyle === "italic" ? "" : "italic")}
-                      className={`border px-1.5 py-0.5 text-[11px] italic ${field.fontStyle === "italic" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
+                      className={`flex size-6 items-center justify-center border text-[11px] italic transition-colors ${field.fontStyle === "italic" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
                       title="Italic"
+                      aria-label="Italic"
                     >
-                      I
+                      <Italic className="size-3" aria-hidden="true" />
                     </button>
                     <button
                       type="button"
                       onClick={() => updateField(i, "textDecoration", field.textDecoration === "underline" ? "" : "underline")}
-                      className={`border px-1.5 py-0.5 text-[11px] underline ${field.textDecoration === "underline" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
+                      className={`flex size-6 items-center justify-center border text-[11px] underline transition-colors ${field.textDecoration === "underline" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
                       title="Underline"
+                      aria-label="Underline"
                     >
-                      U
+                      <Underline className="size-3" aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -1450,13 +1530,16 @@ function TemplateEditor({
                           Label {i + 1}
                         </span>
                         <button
+                          type="button"
                           onClick={() => {
                             setStaticTexts((prev) => prev.filter((_, idx) => idx !== i));
                             if (selectedStaticIdx === i) setSelectedStaticIdx(null);
                           }}
-                          className="text-[10px] text-danger hover:text-danger"
+                          className="p-0.5 text-danger hover:bg-danger/10 focus-visible:outline-none"
+                          title="Remove label"
+                          aria-label="Remove label"
                         >
-                          ×
+                          <X className="size-3" aria-hidden="true" />
                         </button>
                       </div>
                       <textarea
@@ -1465,7 +1548,7 @@ function TemplateEditor({
                           const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, content: e.target.value } : s);
                           setStaticTexts(newSTs);
                         }}
-                        className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px]"
+                        className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 text-[11px] transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                         rows={2}
                       />
                       <div className="mt-1 grid grid-cols-2 gap-1">
@@ -1476,7 +1559,7 @@ function TemplateEditor({
                               const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, xPercent: parseFloat(e.target.value) || 0 } : s);
                               setStaticTexts(newSTs);
                             }}
-                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
+                            className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 font-mono text-[11px] tabular-nums transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             min={0} max={100} step={0.5}
                           />
                         </label>
@@ -1487,7 +1570,7 @@ function TemplateEditor({
                               const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, yPercent: parseFloat(e.target.value) || 0 } : s);
                               setStaticTexts(newSTs);
                             }}
-                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
+                            className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 font-mono text-[11px] tabular-nums transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             min={0} max={100} step={0.5}
                           />
                         </label>
@@ -1499,7 +1582,7 @@ function TemplateEditor({
                               const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, widthPercent: e.target.value === "" ? null : parseFloat(e.target.value) || null } : s);
                               setStaticTexts(newSTs);
                             }}
-                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
+                            className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 font-mono text-[11px] tabular-nums transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             min={2} max={80} step={0.5}
                           />
                         </label>
@@ -1511,7 +1594,7 @@ function TemplateEditor({
                               const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, heightPercent: e.target.value === "" ? null : parseFloat(e.target.value) || null } : s);
                               setStaticTexts(newSTs);
                             }}
-                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
+                            className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 font-mono text-[11px] tabular-nums transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             min={1} max={50} step={0.5}
                           />
                         </label>
@@ -1525,7 +1608,7 @@ function TemplateEditor({
                               const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, fontFamily: e.target.value } : s);
                               setStaticTexts(newSTs);
                             }}
-                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px]"
+                            className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 text-[11px] transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                           >
                             <option value="">Default</option>
                             <option value="Inter, sans-serif">Inter (Sans)</option>
@@ -1545,7 +1628,7 @@ function TemplateEditor({
                               const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, fontSize: parseInt(e.target.value) || 12 } : s);
                               setStaticTexts(newSTs);
                             }}
-                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
+                            className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 font-mono text-[11px] tabular-nums transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             min={6} max={72}
                           />
                         </label>
@@ -1556,7 +1639,7 @@ function TemplateEditor({
                               const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, textAlign: e.target.value as any } : s);
                               setStaticTexts(newSTs);
                             }}
-                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px]"
+                            className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 text-[11px] transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                           >
                             <option value="left">Left</option>
                             <option value="center">Center</option>
@@ -1570,22 +1653,34 @@ function TemplateEditor({
                             const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, fontWeight: s.fontWeight === "bold" ? "" : "bold" } : s);
                             setStaticTexts(newSTs);
                           }}
-                          className={`border px-1.5 py-0.5 text-[11px] font-bold ${st.fontWeight === "bold" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
-                        >B</button>
+                          className={`flex size-6 items-center justify-center border text-[11px] font-bold transition-colors ${st.fontWeight === "bold" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
+                          title="Bold"
+                          aria-label="Bold"
+                        >
+                          <Bold className="size-3" aria-hidden="true" />
+                        </button>
                         <button type="button"
                           onClick={() => {
                             const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, fontStyle: s.fontStyle === "italic" ? "" : "italic" } : s);
                             setStaticTexts(newSTs);
                           }}
-                          className={`border px-1.5 py-0.5 text-[11px] italic ${st.fontStyle === "italic" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
-                        >I</button>
+                          className={`flex size-6 items-center justify-center border text-[11px] italic transition-colors ${st.fontStyle === "italic" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
+                          title="Italic"
+                          aria-label="Italic"
+                        >
+                          <Italic className="size-3" aria-hidden="true" />
+                        </button>
                         <button type="button"
                           onClick={() => {
                             const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, textDecoration: s.textDecoration === "underline" ? "" : "underline" } : s);
                             setStaticTexts(newSTs);
                           }}
-                          className={`border px-1.5 py-0.5 text-[11px] underline ${st.textDecoration === "underline" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
-                        >U</button>
+                          className={`flex size-6 items-center justify-center border text-[11px] underline transition-colors ${st.textDecoration === "underline" ? "border-text bg-text text-bg" : "border-border bg-bg text-text/70 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}`}
+                          title="Underline"
+                          aria-label="Underline"
+                        >
+                          <Underline className="size-3" aria-hidden="true" />
+                        </button>
                         <label className="text-[10px] text-text/60 ml-2">
                           Color
                           <input type="color" value={st.fontColor || "#000000"}
@@ -1593,7 +1688,7 @@ function TemplateEditor({
                               const newSTs = staticTexts.map((s, idx) => idx === i ? { ...s, fontColor: e.target.value } : s);
                               setStaticTexts(newSTs);
                             }}
-                            className="mt-0.5 block h-5 w-8 border border-border px-0.5 py-0"
+                            className="mt-0.5 block h-5 w-8 cursor-pointer border border-border bg-bg px-0.5 py-0 transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                           />
                         </label>
                       </div>
@@ -1619,14 +1714,15 @@ function TemplateEditor({
                           Region {ri + 1}
                         </span>
                         <button
+                          type="button"
                           onClick={() =>
                             setTableRegions((prev) =>
                               prev.filter((_, i) => i !== ri),
                             )
                           }
-                          className="text-[10px] text-danger hover:text-danger"
+                          className="inline-flex items-center gap-1 text-[10px] font-medium text-danger hover:underline focus-visible:outline-none"
                         >
-                          Remove
+                          <Trash2 className="size-2.5" aria-hidden="true" /> Remove
                         </button>
                       </div>
                       <div className="grid grid-cols-2 gap-1">
@@ -1642,7 +1738,7 @@ function TemplateEditor({
                                 parseFloat(e.target.value) || 0,
                               )
                             }
-                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
+                            className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 font-mono text-[11px] tabular-nums transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             min={0}
                             max={100}
                             step={0.5}
@@ -1660,7 +1756,7 @@ function TemplateEditor({
                                 parseFloat(e.target.value) || 0,
                               )
                             }
-                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
+                            className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 font-mono text-[11px] tabular-nums transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             min={0}
                             max={100}
                             step={0.5}
@@ -1678,7 +1774,7 @@ function TemplateEditor({
                                 parseFloat(e.target.value) || 1,
                               )
                             }
-                            className="mt-0.5 block w-full border border-border px-1.5 py-0.5 text-[11px] font-mono"
+                            className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 font-mono text-[11px] tabular-nums transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             min={0.5}
                             max={50}
                             step={0.5}
@@ -1708,7 +1804,7 @@ function TemplateEditor({
                                   parseFloat(e.target.value) || 0,
                                 )
                               }
-                              className="w-16 border border-border px-1 py-0.5 text-[11px] font-mono"
+                              className="w-16 border border-border bg-bg px-1 py-0.5 font-mono text-[11px] tabular-nums transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                               min={0}
                               max={100}
                               step={0.5}

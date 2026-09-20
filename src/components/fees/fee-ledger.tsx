@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { getApiErrorMessage } from "@/lib/utils";
 import { getTodayLocal } from "@/lib/timezone";
@@ -92,7 +92,7 @@ export function FeeLedger() {
     return (
       <div className="space-y-4">
         <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-64 w-full" />
+        <TableSkeleton rows={6} columns={7} />
       </div>
     );
   }
@@ -178,21 +178,32 @@ export function FeeLedger() {
           </div>
           <div className="overflow-x-auto">
             <Table>
-              <THead><TR><TH>Student</TH><TH>Class</TH><TH>Issued</TH><TH className="text-right">Total</TH><TH className="text-right">Paid</TH><TH className="text-right">Balance</TH><TH>Status</TH><TH /></TR></THead>
+              <THead>
+                <TR>
+                  <TH className="min-w-[160px]">Student</TH>
+                  <TH className="min-w-[120px]">Class</TH>
+                  <TH className="min-w-[100px]">Issued</TH>
+                  <TH className="min-w-[90px] text-right">Total</TH>
+                  <TH className="min-w-[90px] text-right">Paid</TH>
+                  <TH className="min-w-[110px] text-right pr-6">Balance</TH>
+                  <TH className="min-w-[120px] pl-3">Status</TH>
+                  <TH className="w-16 text-right pr-4" />
+                </TR>
+              </THead>
               <TBody>
                 {rows.map((row) => {
                   const meta = statusMeta[row.status];
                   const Icon = meta.icon;
                   return (
                     <TR key={row.challanId}>
-                      <TD><div className="font-medium">{row.studentName}</div><div className="text-xs text-text/50">{row.studentId}</div></TD>
-                      <TD>{row.classSection}</TD>
-                      <TD className="tabular-nums">{new Date(row.issuedDate).toLocaleDateString()}</TD>
-                      <TD className="text-right tabular-nums">{money(row.total)}</TD>
-                      <TD className="text-right tabular-nums text-success">{money(row.paidTotal)}</TD>
-                      <TD className="text-right tabular-nums font-semibold text-danger">{money(row.balanceRemaining)}</TD>
-                      <TD><Badge variant={meta.variant} icon={<Icon className="size-3" aria-hidden="true" />}>{row.status}</Badge></TD>
-                      <TD className="text-right"><Link href={`/admin/fees?studentId=${encodeURIComponent(row.studentId)}`} className="text-xs font-medium text-primary hover:underline">View</Link></TD>
+                      <TD className="min-w-[160px]"><div className="font-medium">{row.studentName}</div><div className="text-xs text-text/50">{row.studentId}</div></TD>
+                      <TD className="min-w-[120px]">{row.classSection}</TD>
+                      <TD className="min-w-[100px] tabular-nums">{new Date(row.issuedDate).toLocaleDateString()}</TD>
+                      <TD className="min-w-[90px] text-right tabular-nums">{money(row.total)}</TD>
+                      <TD className="min-w-[90px] text-right tabular-nums text-success">{money(row.paidTotal)}</TD>
+                      <TD className="min-w-[110px] text-right tabular-nums font-semibold text-danger pr-6">{money(row.balanceRemaining)}</TD>
+                      <TD className="min-w-[120px] pl-3"><Badge variant={meta.variant} icon={<Icon className="size-3" aria-hidden="true" />}>{row.status}</Badge></TD>
+                      <TD className="w-16 text-right pr-4"><Link href={`/admin/fees?studentId=${encodeURIComponent(row.studentId)}`} className="text-xs font-medium text-primary hover:underline">View</Link></TD>
                     </TR>
                   );
                 })}

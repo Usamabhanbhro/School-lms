@@ -11,6 +11,7 @@ import {
   Award,
   FileText,
   Banknote,
+  WalletCards,
   ArrowRight,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -51,6 +52,7 @@ export default async function AdminDashboardPage() {
     teachersMissingAttendance,
     teachersMissingSalarySetup,
     yesterdayDraftAttendance,
+    totalFeeChallans,
   ] = await Promise.all([
     prisma.student.count({ where: { isActive: true } }),
     prisma.user.count({ where: { role: "TEACHER" } }),
@@ -80,6 +82,7 @@ export default async function AdminDashboardPage() {
     prisma.studentAttendance.count({
       where: { date: yesterdayDate, isConfirmed: false },
     }),
+    prisma.feeChallan.count(),
   ]);
 
   const totalUsers = totalTeachers + totalAcademics;
@@ -136,6 +139,7 @@ export default async function AdminDashboardPage() {
     { label: "Manage Users", href: "/admin/teachers", icon: UserCheck },
     { label: "Manage Classes", href: "/admin/classes", icon: School },
     { label: "Mark Attendance", href: "/admin/attendance", icon: ClipboardCheck },
+    { label: "Fee Ledger", href: "/admin/fee-ledger", icon: WalletCards },
     { label: "School Settings", href: "/admin/settings", icon: School },
   ];
 
@@ -179,6 +183,13 @@ export default async function AdminDashboardPage() {
           value={null}
           detail="View & override"
           href="/admin/attendance"
+        />
+        <StatCard
+          icon={WalletCards}
+          label="Fee Challans"
+          value={totalFeeChallans}
+          detail="View billing & ledger"
+          href="/admin/fee-ledger"
         />
       </div>
 

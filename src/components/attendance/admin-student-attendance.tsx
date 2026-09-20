@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { ToastContainer, useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
@@ -192,6 +192,16 @@ export function AdminStudentAttendance({ readOnly = false }: { readOnly?: boolea
       <PageHeader
         title="Student Attendance"
         description={readOnly ? "View attendance for any class." : "View attendance for any class. Override locked records when needed."}
+        actions={
+          <Button
+            variant="secondary"
+            onClick={handleExport}
+            disabled={!selectedClassId || !date || loadingRecords}
+          >
+            <Download className="size-4" aria-hidden="true" />
+            Export CSV
+          </Button>
+        }
       />
 
       {/* Selection bar */}
@@ -232,22 +242,14 @@ export function AdminStudentAttendance({ readOnly = false }: { readOnly?: boolea
               className="h-10 border border-border bg-bg px-4 text-sm text-text"
             />
           </div>
-          <div className="flex gap-2">
-            {isLocked && (
-              <span className="inline-flex h-10 items-center gap-1 border border-success/30 bg-success/10 px-3 text-xs font-semibold text-success">
-                <Lock className="size-3" aria-hidden="true" />
+          {isLocked && (
+            <div className="flex items-center">
+              <span className="inline-flex h-10 items-center gap-1.5 border border-success/30 bg-success/10 px-3 text-xs font-semibold text-success">
+                <Lock className="size-3.5" aria-hidden="true" />
                 Locked
               </span>
-            )}
-            <Button
-              variant="ghost"
-              onClick={handleExport}
-              disabled={!selectedClassId || !date || loadingRecords}
-            >
-              <Download className="size-4" aria-hidden="true" />
-              Export CSV
-            </Button>
-          </div>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -270,11 +272,7 @@ export function AdminStudentAttendance({ readOnly = false }: { readOnly?: boolea
           description="Choose a class and date to view attendance."
         />
       ) : loadingRecords ? (
-        <div className="space-y-2">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
+        <TableSkeleton rows={6} columns={4} />
       ) : records.length === 0 ? (
         <EmptyState
           icon={AlertTriangle}
