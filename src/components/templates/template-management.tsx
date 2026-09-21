@@ -597,6 +597,8 @@ function TemplateEditor({
 
   // Snap to 0.5% grid for precise alignment
   const snapToGrid = (val: number, snap = 0.5) => Math.round(val / snap) * snap;
+
+  function pushHistory(newFields: EditorField[]) {
     setHistory((prev) => {
       const trimmed = prev.slice(0, historyIndex + 1);
       return [...trimmed, newFields];
@@ -1102,13 +1104,8 @@ function TemplateEditor({
           <div className="flex-1 overflow-auto bg-surface p-4 sm:p-8">
             <div
               ref={canvasRef}
-<<<<<<< HEAD
-              className="relative mx-auto bg-bg border border-border"
-              style={{ width: "700px", height: "990px", aspectRatio: "210/297" }}
-=======
               className="relative mx-auto w-full max-w-[700px] bg-bg shadow-sm border border-border"
               style={{ aspectRatio: "210/297" }}
->>>>>>> aaba8c9 (feat: animation polish, template fixes, responsive editor)
               onClick={handleCanvasClick}
               onPointerMove={(e) => {
                 handlePointerMove(e);
@@ -1373,17 +1370,10 @@ function TemplateEditor({
                           <button
                             type="button"
                             onClick={() => addDuplicateField(i)}
-<<<<<<< HEAD
                             className="inline-flex items-center gap-0.5 text-[10px] font-medium text-primary hover:underline focus-visible:outline-none"
-                            title="Add another position for this field"
-                          >
-                            <Plus className="size-2.5" aria-hidden="true" /> Position
-=======
-                            className="text-[10px] text-primary hover:text-primary"
                             title="Place multiple instances of this field"
                           >
-                            + Add Duplicate
->>>>>>> aaba8c9 (feat: animation polish, template fixes, responsive editor)
+                            <Plus className="size-2.5" aria-hidden="true" /> Add Duplicate
                           </button>
                           {count > 1 && (
                             <button
