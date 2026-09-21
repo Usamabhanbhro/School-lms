@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Collapsible } from "@/components/ui/collapsible";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -348,7 +349,7 @@ export function AdminAgenda() {
                   )}
                 </button>
 
-                {isExpanded && (
+                <Collapsible open={isExpanded}>
                   <div className="border-t border-border px-4 py-3">
                     <p className="whitespace-pre-wrap text-sm text-text/80">
                       {entry.content}
@@ -364,7 +365,7 @@ export function AdminAgenda() {
                       </span>
                     </div>
                   </div>
-                )}
+                </Collapsible>
               </Card>
             );
           })}

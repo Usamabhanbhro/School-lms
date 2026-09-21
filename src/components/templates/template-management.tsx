@@ -364,6 +364,15 @@ export function TemplateManagement() {
                 <EmptyState
                   title="No templates uploaded"
                   description={`Upload a template image (PNG/JPG) or PDF for ${typeInfo.label}. The file will be converted to an image and used as the background for document generation.`}
+                  action={
+                    <button
+                      onClick={() => triggerUpload(typeInfo.value)}
+                      disabled={uploading}
+                      className="mt-2 inline-flex items-center gap-1.5 border border-primary bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
+                    >
+                      {uploading && uploadingType === typeInfo.value ? "Uploading..." : "Upload Template"}
+                    </button>
+                  }
                 />
               ) : (
                 <div className="divide-y divide-border">
@@ -382,7 +391,7 @@ export function TemplateManagement() {
                       >
                         <div className="flex items-center gap-4">
                           {/* Thumbnail preview */}
-                          <div className="h-12 w-16 overflow-hidden border border-border bg-surface">
+                          <div className="h-24 w-16 sm:h-32 sm:w-24 shrink-0 overflow-hidden border border-border bg-surface">
                             <img
                               src={template.backgroundImageUrl}
                               alt={`Template for ${typeInfo.label}`}
@@ -581,12 +590,13 @@ function TemplateEditor({
   const [selectedStaticIdx, setSelectedStaticIdx] = useState<number | null>(null);
 
   // Interaction state
-  type InteractionMode = "idle" | "dragging" | "resizing";
+  type InteractionMode = "idle" | "dragging" | "resizing" | "draggingStatic" | "resizingStatic";
   const [mode, setMode] = useState<InteractionMode>("idle");
   const [resizeHandle, setResizeHandle] = useState<string | null>(null);
   const interactionStart = useRef<{ x: number; y: number; field: EditorField } | null>(null);
 
-  function pushHistory(newFields: EditorField[]) {
+  // Snap to 0.5% grid for precise alignment
+  const snapToGrid = (val: number, snap = 0.5) => Math.round(val / snap) * snap;
     setHistory((prev) => {
       const trimmed = prev.slice(0, historyIndex + 1);
       return [...trimmed, newFields];
@@ -702,8 +712,8 @@ function TemplateEditor({
       const start = interactionStart.current;
 
       if (mode === "dragging") {
-        const newX = Math.min(100, Math.max(0, start.field.xPercent + dxPercent));
-        const newY = Math.min(100, Math.max(0, start.field.yPercent + dyPercent));
+        const newX = snapToGrid(Math.min(100, Math.max(0, start.field.xPercent + dxPercent)));
+        const newY = snapToGrid(Math.min(100, Math.max(0, start.field.yPercent + dyPercent)));
         setFields((prev) =>
           prev.map((f, i) =>
             i === selectedFieldIdx ? { ...f, xPercent: newX, yPercent: newY } : f,
@@ -745,23 +755,35 @@ function TemplateEditor({
     // Handle static text drag/resize
     if (interactionStartStatic.current !== null && selectedStaticIdx !== null) {
       const start = interactionStartStatic.current;
-      const origW = start.text.widthPercent ?? 15;
-      const origH = start.text.heightPercent ?? 3;
 
-      // Determine which handle is being dragged (stored in resizeHandle during static resize)
-      if (resizeHandle && mode !== "resizing") {
-        // This is a static text resize — resizeHandle is set via data attribute
+      const newX = snapToGrid(Math.min(100, Math.max(0, start.text.xPercent + dxPercent)));
+      const newY = snapToGrid(Math.min(100, Math.max(0, start.text.yPercent + dyPercent)));
+
+      if (mode === "resizingStatic" && resizeHandle) {
+        const origW = start.text.widthPercent ?? 15;
+        const origH = start.text.heightPercent ?? 3;
+        let newW = origW;
+        let newH = origH;
+
+        if (resizeHandle.includes("right")) newW = Math.max(2, Math.min(80, origW + dxPercent));
+        if (resizeHandle.includes("left")) newW = Math.max(2, Math.min(80, origW - dxPercent));
+        if (resizeHandle.includes("bottom")) newH = Math.max(1, Math.min(50, origH + dyPercent));
+        if (resizeHandle.includes("top")) newH = Math.max(1, Math.min(50, origH - dyPercent));
+
+        setStaticTexts((prev) =>
+          prev.map((st, i) =>
+            i === selectedStaticIdx
+              ? { ...st, widthPercent: newW, heightPercent: newH }
+              : st,
+          ),
+        );
+      } else {
+        setStaticTexts((prev) =>
+          prev.map((st, i) =>
+            i === selectedStaticIdx ? { ...st, xPercent: newX, yPercent: newY } : st,
+          ),
+        );
       }
-
-      // For static text, we always do drag (no resize handle tracking yet)
-      // Check if this is a resize by looking at what initiated it
-      const newX = Math.min(100, Math.max(0, start.text.xPercent + dxPercent));
-      const newY = Math.min(100, Math.max(0, start.text.yPercent + dyPercent));
-      setStaticTexts((prev) =>
-        prev.map((st, i) =>
-          i === selectedStaticIdx ? { ...st, xPercent: newX, yPercent: newY } : st,
-        ),
-      );
     }
   }
 
@@ -790,7 +812,7 @@ function TemplateEditor({
     e.preventDefault();
     setSelectedStaticIdx(index);
     setSelectedFieldIdx(null);
-    setMode("idle");
+    setMode("draggingStatic");
     const st = staticTexts[index];
     interactionStartStatic.current = { x: e.clientX, y: e.clientY, text: { ...st } };
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -801,7 +823,8 @@ function TemplateEditor({
     e.preventDefault();
     setSelectedStaticIdx(index);
     setSelectedFieldIdx(null);
-    setMode("idle");
+    setMode("resizingStatic");
+    setResizeHandle(handle);
     const st = staticTexts[index];
     interactionStartStatic.current = { x: e.clientX, y: e.clientY, text: { ...st } };
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -1076,11 +1099,16 @@ function TemplateEditor({
 
         <div className="flex flex-1 overflow-hidden">
           {/* Canvas area */}
-          <div className="flex-1 overflow-auto bg-surface p-8">
+          <div className="flex-1 overflow-auto bg-surface p-4 sm:p-8">
             <div
               ref={canvasRef}
+<<<<<<< HEAD
               className="relative mx-auto bg-bg border border-border"
               style={{ width: "700px", height: "990px", aspectRatio: "210/297" }}
+=======
+              className="relative mx-auto w-full max-w-[700px] bg-bg shadow-sm border border-border"
+              style={{ aspectRatio: "210/297" }}
+>>>>>>> aaba8c9 (feat: animation polish, template fixes, responsive editor)
               onClick={handleCanvasClick}
               onPointerMove={(e) => {
                 handlePointerMove(e);
@@ -1267,6 +1295,7 @@ function TemplateEditor({
                               ...(handle.includes("left") ? { left: "-4px" } : { right: "-4px" }),
                               cursor: handle === "top-left" || handle === "bottom-right" ? "nwse-resize" : "nesw-resize",
                             }}
+                            onPointerDown={(e) => handleStaticResizePointerDown(e, i, handle)}
                           />
                         ))}
                         {(["top", "bottom", "left", "right"] as const).map((handle) => (
@@ -1284,6 +1313,7 @@ function TemplateEditor({
                                 ? { left: "-4px", top: "50%", transform: "translateY(-50%)", width: "6px", height: "20px", cursor: "ew-resize" }
                                 : { right: "-4px", top: "50%", transform: "translateY(-50%)", width: "6px", height: "20px", cursor: "ew-resize" })
                             }}
+                            onPointerDown={(e) => handleStaticResizePointerDown(e, i, handle)}
                           />
                         ))}
                       </>
@@ -1343,10 +1373,17 @@ function TemplateEditor({
                           <button
                             type="button"
                             onClick={() => addDuplicateField(i)}
+<<<<<<< HEAD
                             className="inline-flex items-center gap-0.5 text-[10px] font-medium text-primary hover:underline focus-visible:outline-none"
                             title="Add another position for this field"
                           >
                             <Plus className="size-2.5" aria-hidden="true" /> Position
+=======
+                            className="text-[10px] text-primary hover:text-primary"
+                            title="Place multiple instances of this field"
+                          >
+                            + Add Duplicate
+>>>>>>> aaba8c9 (feat: animation polish, template fixes, responsive editor)
                           </button>
                           {count > 1 && (
                             <button
@@ -1361,7 +1398,7 @@ function TemplateEditor({
                           )}
                         </div>
                       </div>
-                  <div className="grid grid-cols-2 gap-1">
+                  <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                     <label className="text-[10px] text-text/60">
                       X%
                       <input
@@ -1551,7 +1588,7 @@ function TemplateEditor({
                         className="mt-0.5 block w-full border border-border bg-bg px-1.5 py-0.5 text-[11px] transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                         rows={2}
                       />
-                      <div className="mt-1 grid grid-cols-2 gap-1">
+                      <div className="mt-1 grid grid-cols-1 gap-1 sm:grid-cols-2">
                         <label className="text-[10px] text-text/60">
                           X%
                           <input type="number" value={Math.round(st.xPercent * 10) / 10}

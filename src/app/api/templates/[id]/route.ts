@@ -25,6 +25,7 @@ export async function GET(
       where: { id },
       include: {
         fields: true,
+        staticTexts: true,
         tableRegions: true,
         _count: {
           select: {
@@ -98,7 +99,7 @@ export async function PATCH(
 
     const updated = await prisma.documentTemplate.findUnique({
       where: { id },
-      include: { fields: true, tableRegions: true },
+      include: { fields: true, staticTexts: true, tableRegions: true },
     });
 
     return NextResponse.json({ data: updated });

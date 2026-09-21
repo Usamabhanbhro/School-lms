@@ -916,6 +916,7 @@ export function UserManagement() {
       {confirmRevoke && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          style={{ animation: "overlay-fade-in 150ms ease-out both" }}
           onClick={() => setConfirmRevoke(null)}
           onKeyDown={(e) => {
             if (e.key === "Escape") setConfirmRevoke(null);
@@ -926,6 +927,7 @@ export function UserManagement() {
         >
           <Card
             className="mx-4 w-full max-w-md p-6"
+            style={{ animation: "dialog-scale-in 200ms ease-out both" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center gap-3">
@@ -971,6 +973,7 @@ export function UserManagement() {
       {confirmPasswordReset && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          style={{ animation: "overlay-fade-in 150ms ease-out both" }}
           onClick={() => {
             setConfirmPasswordReset(null);
             setNewPassword("");
@@ -987,6 +990,7 @@ export function UserManagement() {
         >
           <Card
             className="mx-4 w-full max-w-md p-6"
+            style={{ animation: "dialog-scale-in 200ms ease-out both" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center gap-3">

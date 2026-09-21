@@ -5,6 +5,16 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ApiError, requireRole } from "@/lib/rbac";
 
+const stringToNullableEnum = <T extends [string, ...string[]]>(values: T) =>
+  z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => {
+      if (!val || val === "" || val === "none") return null;
+      return values.includes(val) ? val : null;
+    });
+
 const fieldSchema = z.object({
   fieldKey: z.string().min(1).max(100),
   xPercent: z.number().min(0).max(100),
@@ -13,11 +23,14 @@ const fieldSchema = z.object({
   heightPercent: z.number().min(0).max(100).nullable().optional(),
   fontSize: z.number().min(6).max(72),
   fontFamily: z.string().max(100).nullable().optional(),
-  fontColor: z.string().max(20).nullable().optional(),
-  fontWeight: z.enum(["normal", "bold"]).nullable().optional(),
-  fontStyle: z.enum(["normal", "italic"]).nullable().optional(),
-  textDecoration: z.enum(["none", "underline"]).nullable().optional(),
-  textAlign: z.enum(["left", "center", "right"]).default("left"),
+  fontColor: z.string().max(30).nullable().optional(),
+  fontWeight: stringToNullableEnum(["normal", "bold"]),
+  fontStyle: stringToNullableEnum(["normal", "italic"]),
+  textDecoration: stringToNullableEnum(["none", "underline"]),
+  textAlign: z.string().optional().transform((val) => {
+    if (val === "center" || val === "right") return val;
+    return "left";
+  }),
 });
 
 const columnSchema = z.object({
@@ -41,11 +54,14 @@ const staticTextSchema = z.object({
   heightPercent: z.number().min(0).max(100).nullable().optional(),
   fontSize: z.number().min(6).max(72),
   fontFamily: z.string().max(100).nullable().optional(),
-  fontColor: z.string().max(20).nullable().optional(),
-  fontWeight: z.enum(["normal", "bold"]).nullable().optional(),
-  fontStyle: z.enum(["normal", "italic"]).nullable().optional(),
-  textDecoration: z.enum(["none", "underline"]).nullable().optional(),
-  textAlign: z.enum(["left", "center", "right"]).default("left"),
+  fontColor: z.string().max(30).nullable().optional(),
+  fontWeight: stringToNullableEnum(["normal", "bold"]),
+  fontStyle: stringToNullableEnum(["normal", "italic"]),
+  textDecoration: stringToNullableEnum(["none", "underline"]),
+  textAlign: z.string().optional().transform((val) => {
+    if (val === "center" || val === "right") return val;
+    return "left";
+  }),
 });
 
 const saveFieldsSchema = z.object({

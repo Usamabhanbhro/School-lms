@@ -4,7 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * Reusable confirmation dialog for destructive or irreversible actions.
@@ -37,6 +37,23 @@ export function ConfirmDialog({
   onConfirm: () => void;
   children?: React.ReactNode;
 }) {
+  const [mounted, setMounted] = useState(open);
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      setIsClosing(false);
+    } else if (mounted) {
+      setIsClosing(true);
+      const timer = setTimeout(() => {
+        setMounted(false);
+        setIsClosing(false);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [open, mounted]);
+
   // Escape key handling
   useEffect(() => {
     if (!open) return;
@@ -51,7 +68,7 @@ export function ConfirmDialog({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, onOpenChange]);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   const iconBg =
     iconVariant === "danger" ? "border-danger/20 bg-danger/10" : "border-primary/20 bg-primary/10";
@@ -60,7 +77,11 @@ export function ConfirmDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      style={{ animation: "overlay-fade-in 150ms ease-out both" }}
+      style={{
+        animation: isClosing
+          ? "overlay-fade-out 150ms ease-out both"
+          : "overlay-fade-in 150ms ease-out both",
+      }}
       onClick={() => onOpenChange(false)}
       onKeyDown={(e) => e.key === "Escape" && onOpenChange(false)}
       role="dialog"
@@ -69,7 +90,11 @@ export function ConfirmDialog({
     >
       <Card
         className="mx-4 w-full max-w-md p-6"
-        style={{ animation: "dialog-scale-in 200ms ease-out both" }}
+        style={{
+          animation: isClosing
+            ? "dialog-scale-out 200ms ease-out both"
+            : "dialog-scale-in 200ms ease-out both",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center gap-3">

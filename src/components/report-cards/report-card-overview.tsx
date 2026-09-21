@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Collapsible } from "@/components/ui/collapsible";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -148,7 +149,7 @@ export function ReportCardOverview() {
                   </div>
                 </button>
 
-                {isExpanded && (
+                <Collapsible open={isExpanded}>
                   <div className="border-t border-border px-4 py-3">
                     <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text/50">
                       Tests Included
@@ -174,7 +175,7 @@ export function ReportCardOverview() {
                       </TBody>
                     </Table>
                   </div>
-                )}
+                </Collapsible>
               </Card>
             );
           })}

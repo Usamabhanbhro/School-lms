@@ -13,6 +13,10 @@
   --color-danger: #dc2626;
   --color-surface: #f1f5f9;
   --color-border: #e2e8f0;
+
+  /* Motion: custom easing for responsive feel */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 body {
@@ -84,86 +88,77 @@ textarea {
 
 /* ─── Mobile drawer animations ─────────────────────────────────── */
 @keyframes drawer-slide-in {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+  animation-timing-function: var(--ease-out);
 }
 @keyframes drawer-slide-out {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(100%);
-  }
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+  animation-timing-function: var(--ease-out);
 }
 @keyframes scrim-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
+  animation-timing-function: var(--ease-out);
 }
 @keyframes scrim-fade-out {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
+  from { opacity: 1; }
+  to { opacity: 0; }
+  animation-timing-function: var(--ease-out);
 }
 
 /* ─── Modal/dialog animations ─────────────────────────────────────── */
 @keyframes overlay-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
+  animation-timing-function: var(--ease-out);
 }
 @keyframes overlay-fade-out {
   from { opacity: 1; }
   to { opacity: 0; }
+  animation-timing-function: var(--ease-out);
 }
 @keyframes dialog-scale-in {
   from { opacity: 0; transform: scale(0.95) translateY(4px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
+  animation-timing-function: var(--ease-out);
 }
 @keyframes dialog-scale-out {
   from { opacity: 1; transform: scale(1) translateY(0); }
   to { opacity: 0; transform: scale(0.95) translateY(4px); }
+  animation-timing-function: var(--ease-out);
 }
 @keyframes dropdown-fade-in {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
+  animation-timing-function: var(--ease-out);
 }
 
 /* ─── Global search: mobile full-screen slide-in ───────────────── */
 @keyframes global-search-slide-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-/* ─── Skeleton shimmer sweep (left-to-right) ──────────────────── */
-@keyframes shimmer {
-  from { background-position: -200% 0; }
-  to { background-position: 200% 0; }
+  animation-timing-function: var(--ease-out);
 }
 
 /* ─── Toast entrance/exit ────────────────────────────────────── */
 @keyframes toast-slide-in {
   from { opacity: 0; transform: translateX(100%); }
   to { opacity: 1; transform: translateX(0); }
+  animation-timing-function: var(--ease-out);
 }
 @keyframes toast-fade-out {
   from { opacity: 1; }
   to { opacity: 0; }
+  animation-timing-function: var(--ease-out);
 }
 
 /* ─── Status badge change flash ──────────────────────────────── */
 @keyframes status-flash {
   0% { background-color: var(--color-primary); opacity: 0.15; }
   100% { background-color: transparent; opacity: 0; }
+  animation-timing-function: var(--ease-out);
 }
 
 /* ─── Print stylesheet (Phase 6) ──────────────────────────────────── */

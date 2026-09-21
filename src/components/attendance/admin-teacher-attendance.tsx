@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Collapsible } from "@/components/ui/collapsible";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -334,11 +335,8 @@ export function AdminTeacherAttendance() {
       </Card>
 
       {/* Monthly totals panel */}
-      {showMonthly && (
-        <Card
-          className="mb-6 p-4"
-          style={{ animation: "dialog-scale-in 200ms ease-out both" }}
-        >
+      <Collapsible open={showMonthly}>
+        <Card className="mb-6 p-4">
           <div className="mb-3 flex flex-wrap items-end gap-4">
             <h3 className="text-sm font-semibold">Monthly Attendance Summary</h3>
             <div>
@@ -402,7 +400,7 @@ export function AdminTeacherAttendance() {
             <p className="text-sm text-text/50">Select a date range and click Load to see monthly totals.</p>
           )}
         </Card>
-      )}
+      </Collapsible>
 
       {/* Error */}
       {error && (
