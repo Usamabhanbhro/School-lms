@@ -18,10 +18,12 @@ export function Collapsible({
         gridTemplateRows: open ? "1fr" : "0fr",
         opacity: open ? 1 : 0,
         transition:
-          `grid-template-rows 200ms ${EASE_OUT}, opacity 200ms ${EASE_OUT}`,
+          `grid-template-rows 200ms ${EASE_OUT}, opacity 200ms ${EASE_OUT}, transform 200ms ${EASE_OUT}`,
       }}
     >
-      <div style={{ overflow: "hidden" }}>{children}</div>
+      <div style={{ overflow: "hidden", transform: open ? "translateY(0)" : "translateY(-4px)" }}>
+        {children}
+      </div>
     </div>
   );
 }

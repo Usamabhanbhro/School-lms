@@ -433,9 +433,9 @@ export function TeacherAttendance() {
                   <THead>
                     <TR>
                       <TH className="w-8">#</TH>
-                      <TH>Student ID</TH>
-                      <TH>Student Name</TH>
-                      <TH>Guardian</TH>
+                      <TH className="hidden sm:table-cell">Student ID</TH>
+                      <TH>Student</TH>
+                      <TH className="hidden md:table-cell">Guardian</TH>
                       <TH className="text-center">Status</TH>
                     </TR>
                   </THead>
@@ -445,9 +445,16 @@ export function TeacherAttendance() {
                   return (
                     <TR key={s.id}>
                       <TD className="tabular-nums text-text/50">{i + 1}</TD>
-                      <TD className="tabular-nums text-text/60">{s.studentId ?? "—"}</TD>
-                      <TD className="font-medium">{s.name}</TD>
-                      <TD className="text-text/60">{s.guardianName}</TD>
+                      <TD className="hidden tabular-nums text-text/60 sm:table-cell">{s.studentId ?? "—"}</TD>
+                      <TD>
+                        <div className="font-medium">{s.name}</div>
+                        <div className="text-xs text-text/50 sm:hidden">
+                          {s.studentId ? `ID: ${s.studentId}` : null}
+                          {s.studentId && s.guardianName ? " · " : null}
+                          {s.guardianName ? `G: ${s.guardianName}` : null}
+                        </div>
+                      </TD>
+                      <TD className="hidden text-text/60 md:table-cell">{s.guardianName}</TD>
                       <TD>
                         <div className="flex justify-center gap-1">
                           {STATUS_OPTIONS.map((opt) => {
@@ -459,13 +466,13 @@ export function TeacherAttendance() {
                                 onClick={() => setStatus(s.id, opt.value)}
                                 disabled={isLocked}
                                 className={cn(
-                                  "inline-flex h-8 w-8 items-center justify-center border",
+                                  "inline-flex h-11 w-11 shrink-0 lg:h-8 lg:w-8 items-center justify-center border",
                                   status === opt.value
                                     ? opt.color
                                     : "border-border bg-bg text-text/30",
                                   isLocked
                                     ? "cursor-default opacity-60"
-                                    : "cursor-pointer hover:border-text/20",
+                                    : "cursor-pointer hover:border-text/20 active:scale-95 active:bg-surface",
                                 )}
                                 aria-label={`${s.name}: ${opt.label}`}
                                 title={opt.label}

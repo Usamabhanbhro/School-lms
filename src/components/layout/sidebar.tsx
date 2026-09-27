@@ -207,7 +207,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={() => setUserMenuOpen(!userMenuOpen)}
-            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-text/70 hover:bg-surface"
+            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-text/70 hover:bg-surface active:bg-surface"
             aria-expanded={userMenuOpen}
             aria-haspopup="true"
           >
@@ -263,7 +263,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="inline-flex size-8 items-center justify-center border border-transparent text-text/60 hover:bg-surface"
+          className="inline-flex size-8 items-center justify-center border border-transparent text-text/60 hover:bg-surface active:bg-surface"
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileOpen}
         >

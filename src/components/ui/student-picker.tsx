@@ -132,7 +132,7 @@ export function StudentPicker({
                 onSelect(s.id);
                 setSearch("");
               }}
-              className="flex min-h-10 w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors duration-150 hover:bg-surface focus-visible:bg-surface focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary motion-reduce:transition-none"
+              className="flex min-h-10 w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors duration-150 hover:bg-surface active:bg-surface/80 focus-visible:bg-surface focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary motion-reduce:transition-none"
             >
               <span className="font-medium">
                 {s.studentId && (

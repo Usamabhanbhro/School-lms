@@ -49,7 +49,7 @@ export function ConfirmDialog({
       const timer = setTimeout(() => {
         setMounted(false);
         setIsClosing(false);
-      }, 200);
+      }, 150);
       return () => clearTimeout(timer);
     }
   }, [open, mounted]);
@@ -79,7 +79,7 @@ export function ConfirmDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
       style={{
         animation: isClosing
-          ? "overlay-fade-out 150ms ease-out both"
+          ? "overlay-fade-out 150ms ease-in both"
           : "overlay-fade-in 150ms ease-out both",
       }}
       onClick={() => onOpenChange(false)}
@@ -92,7 +92,7 @@ export function ConfirmDialog({
         className="mx-4 w-full max-w-md p-6"
         style={{
           animation: isClosing
-            ? "dialog-scale-out 200ms ease-out both"
+            ? "dialog-scale-out 150ms ease-in both"
             : "dialog-scale-in 200ms ease-out both",
         }}
         onClick={(e) => e.stopPropagation()}

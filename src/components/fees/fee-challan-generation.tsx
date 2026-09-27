@@ -361,8 +361,8 @@ export function FeeChallanGeneration() {
             {/* Actions */}
             <div className="mt-4 flex gap-3">
               <Button onClick={handleSaveAndPrint} disabled={saving || !bankSettings}>
-                <Printer className="size-3.5" aria-hidden="true" />
-                {saving ? "Saving…" : "Save & Print"}
+                {saving ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <Printer className="size-3.5" aria-hidden="true" />}
+                {saving ? "Generating & opening print…" : "Save & Print"}
               </Button>
               <Button
                 variant="secondary"

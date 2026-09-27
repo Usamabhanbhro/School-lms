@@ -502,9 +502,9 @@ export function AdminTeacherAttendance() {
                                   }}
                                   disabled={savingThis}
                                   className={cn(
-                                    "inline-flex h-8 w-8 items-center justify-center border",
+                                    "inline-flex h-11 w-11 shrink-0 lg:h-8 lg:w-8 items-center justify-center border",
                                     isCurrent ? opt.color : "border-border bg-bg text-text/30",
-                                    "cursor-pointer hover:border-text/20",
+                                    "cursor-pointer hover:border-text/20 active:scale-95 active:bg-surface",
                                     savingThis && "opacity-50",
                                   )}
                                   aria-label={`${t.name}: ${opt.label}`}

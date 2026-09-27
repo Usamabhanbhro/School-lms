@@ -52,8 +52,8 @@ function ToastItem({
       className={cn(
         "relative flex items-center gap-2 overflow-hidden border text-sm font-medium",
         toast.type === "success"
-          ? "border-success/30 bg-success/10 text-success"
-          : "border-danger/30 bg-danger/10 text-danger",
+          ? "border-success/30 bg-success/20 text-text"
+          : "border-danger/30 bg-danger/20 text-text",
       )}
       style={{ animation: "toast-slide-in 200ms ease-out both" }}
       role="status"
